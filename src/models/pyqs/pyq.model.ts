@@ -15,7 +15,7 @@ const pyqSchema = new Schema({
         ref: "User",
         required: true,
     },
-    branch: {
+    program: {
         type: String,
         required: true,
         trim: true,
