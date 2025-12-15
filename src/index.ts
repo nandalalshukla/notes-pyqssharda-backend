@@ -1,6 +1,8 @@
 import "./config/env.js";
 import express from "express";
 import connectDB from "./config/db.js";
+import usersRouter from "./routes/users-routes/register.route.js";
+import verifyEmailRouter from "./routes/users-routes/verifyEmail.route.js";
 
 //connecting to the database
 connectDB();
@@ -16,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");
 });
+app.use("/api/auth", usersRouter);
+app.use("/api/auth", verifyEmailRouter);
 
 
 

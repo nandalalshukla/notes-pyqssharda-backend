@@ -1,11 +1,6 @@
 import mongoose from "mongoose";
 import { Schema } from "mongoose";
 const syllabusSchema = new Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-  },
   fileUrl: {
     type: String,
     required: true,

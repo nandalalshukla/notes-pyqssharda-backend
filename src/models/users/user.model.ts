@@ -10,7 +10,6 @@ const userSchema = new Schema(
       minlength: [2, "Name must be at least 2 characters"],
     },
 
-
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -50,13 +49,13 @@ const userSchema = new Schema(
       default: false,
     },
 
-    emailVerificationToken: {
+    emailOtpHash: {
       type: String,
-      select: false,
     },
 
-    emailVerificationExpiry: Date,
-
+    emailOtpExpiry: {
+      type: Date,
+    },
 
     forgotPasswordToken: {
       type: String,
@@ -64,7 +63,7 @@ const userSchema = new Schema(
     },
 
     forgotPasswordExpiry: Date,
-  
+
     refreshToken: {
       type: String,
       select: false,
