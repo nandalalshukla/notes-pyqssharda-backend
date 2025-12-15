@@ -1,7 +1,9 @@
 import { User } from "../../models/users/user.model";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp";
-import { generateVerifyToken } from "../../utils/generateJwtTokens";
+import { generateEmailVerifyToken } from "../../utils/generateJwtTokens";
+import { hashPassword } from "../../utils/hashPassword";
+
 export const registerUser = async (req: Request, res: Response) => {
   const { name, email, password, confirmPassword } = req.body;
   if (!name || !email || !password || !confirmPassword) {
@@ -24,14 +26,15 @@ export const registerUser = async (req: Request, res: Response) => {
     });
   }
   try {
+    const hashedPwd = await hashPassword(password);
     const newUser = new User({
       name,
       email,
-      password,
+      password: hashedPwd,
     });
     await newUser.save();
     await sendAndStoreOtp(newUser.email);
-    const verifyToken = generateVerifyToken((newUser._id).toString());
+    const verifyToken = generateEmailVerifyToken(newUser._id.toString());
     return res.status(201).json({
       success: true,
       verifyToken,

@@ -49,11 +49,18 @@ export default async function verifyEmail(req: Request, res: Response) {
   }
   try {
     const verifyEmail = await verifyOtp(otp, hashedOtp);
+    if (!verifyEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
     user.refreshToken = refreshToken;
+    user.isEmailVerified = true;
+    user.emailOtpHash = undefined;
     await user.save();
-
     res.cookie("accessToken", accessToken, accessTokenCookieOptions);
     res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
     return res.status(200).json({

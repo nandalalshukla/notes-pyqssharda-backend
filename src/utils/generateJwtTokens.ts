@@ -11,8 +11,20 @@ export function generateRefreshToken(userId: string) {
     expiresIn: "7d",
   });
 }
-export function generateVerifyToken(userId: string) {
-  return jwt.sign({ userId }, process.env.EMAIL_VERIFY_TOKEN_SECRET!, {
+export function generateEmailVerifyToken(userId: string) {
+  return jwt.sign({ userId }, process.env.VERIFY_EMAIL_TOKEN_SECRET!, {
     expiresIn: "10m",
+  });
+}
+
+export function generateForgetPswdToken(userId: string) {
+  return jwt.sign({ userId }, process.env.FORGET_PSWD_TOKEN_SECRET!, {
+    expiresIn: "10m",
+  });
+}
+
+export function generateChangePswdToken(userId: string) {
+  return jwt.sign({ userId }, process.env.RESET_PSWD_TOKEN_SECRET!, {
+    expiresIn: "15m",
   });
 }
