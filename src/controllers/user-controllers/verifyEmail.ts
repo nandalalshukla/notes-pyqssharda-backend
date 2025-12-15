@@ -55,7 +55,7 @@ export default async function verifyEmail(req: Request, res: Response) {
         message: "Invalid or expired OTP",
       });
     }
-    const accessToken = generateAccessToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString(), user.role);
     const refreshToken = generateRefreshToken(user._id.toString());
     user.refreshToken = refreshToken;
     user.isEmailVerified = true;

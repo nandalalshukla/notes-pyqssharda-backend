@@ -31,7 +31,7 @@ export const loginUser = async (req: Request, res: Response) => {
         message: "Invalid password",
       });
     }
-    const accessToken = generateAccessToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString(), user.role);
     const refreshToken = generateRefreshToken(user._id.toString());
     user.refreshToken = refreshToken;
     await user.save();
