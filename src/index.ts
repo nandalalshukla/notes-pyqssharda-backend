@@ -2,6 +2,7 @@ import "./config/env.js";
 import express from "express";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/users-routes/auth.route.js";
+import corsConfig from "./config/cors";
 
 
 //connecting to the database
@@ -12,6 +13,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(corsConfig);
 app.use("/api/v1/auth", authRouter);
 
 //default route to check if the server is running

@@ -17,6 +17,7 @@ interface VerifyEmailTokenPayload extends JwtPayload {
 }
 
 export default async function verifyEmail(req: Request, res: Response) {
+  console.log("Received body:", req.body);
   const { token, otp } = req.body;
   const secret = process.env.VERIFY_EMAIL_TOKEN_SECRET;
 
@@ -24,54 +25,63 @@ export default async function verifyEmail(req: Request, res: Response) {
     throw new Error("VERIFY_EMAIL_TOKEN_SECRET is not defined");
   }
 
-  const decoded = jwt.verify(token, secret) as VerifyEmailTokenPayload;
+  if (!token || !otp) {
+    return res.status(400).json({
+      success: false,
+      message: "Token and OTP are required",
+    });
+  }
 
-  const userId = decoded.userId;
-  const user = await User.findById(userId);
+  let decoded: VerifyEmailTokenPayload;
+
+  try {
+    decoded = jwt.verify(token, secret) as VerifyEmailTokenPayload;
+  } catch {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid or expired verification token",
+    });
+  }
+
+  const user = await User.findById(decoded.userId);
   if (!user) {
     return res.status(404).json({
       success: false,
       message: "User not found",
     });
   }
-  if (!otp) {
+
+  if (!user.emailOtpHash) {
     return res.status(400).json({
       success: false,
-      message: "OTP is required",
+      message: "OTP expired or not found",
     });
   }
-  const hashedOtp = user.emailOtpHash;
-  if (!hashedOtp) {
+  console.log("User found:", user);
+  console.log("Stored OTP:", user.emailOtpHash);
+
+  const isValidOtp = await verifyOtp(otp.toString(), user.emailOtpHash);
+  console.log("Is valid OTP:", isValidOtp);
+  if (!isValidOtp) {
     return res.status(400).json({
       success: false,
-      message: "No OTP found for this user, please request a new one",
+      message: "Invalid OTP",
     });
   }
-  try {
-    const verifyEmail = await verifyOtp(otp, hashedOtp);
-    if (!verifyEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP",
-      });
-    }
-    const accessToken = generateAccessToken(user._id.toString(), user.role);
-    const refreshToken = generateRefreshToken(user._id.toString());
-    user.refreshToken = refreshToken;
-    user.isEmailVerified = true;
-    user.emailOtpHash = undefined;
-    await user.save();
-    res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-    res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
-    return res.status(200).json({
-      success: true,
-      message: "Email verified successfully",
-    });
-  } catch (error) {
-    console.error("Error verifying email:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
+
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
+
+  user.isEmailVerified = true;
+  user.refreshToken = refreshToken;
+  user.emailOtpHash = undefined;
+  await user.save();
+
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+
+  return res.status(200).json({
+    success: true,
+    message: "Email verified successfully",
+  });
 }

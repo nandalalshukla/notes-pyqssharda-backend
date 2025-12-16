@@ -24,8 +24,7 @@ import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 
 const router = Router();
 
-/* ---------------- PUBLIC ROUTES ---------------- */
-
+//pubic routes
 //signup
 router.post("/register", validateMiddleware(registerSchema), registerUser);
 
@@ -49,11 +48,11 @@ router.post(
 // verify email
 router.post("/verify-email", verifyEmail);
 
-/* ---------------- PROTECTED ROUTES ---------------- */
-// logout
+//protected rotues
+//logout
 router.post("/logout", authMiddleware, logout);
 
-// change password
+//change password
 router.post(
   "/change-password",
   validateMiddleware(changePasswordSchema),

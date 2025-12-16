@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 export function generateAccessToken(userId: string, userRole: string) {
   return jwt.sign({ userId ,userRole}, process.env.ACCESS_TOKEN_SECRET!, {
-    expiresIn: "15m",
+    expiresIn: "35m",
   });
 }
 
@@ -14,18 +14,18 @@ export function generateRefreshToken(userId: string) {
 }
 export function generateEmailVerifyToken(userId: string) {
   return jwt.sign({ userId }, process.env.VERIFY_EMAIL_TOKEN_SECRET!, {
-    expiresIn: "10m",
+    expiresIn: "30m",
   });
 }
 
 export function generateForgetPswdToken(userId: string) {
   return jwt.sign({ userId }, process.env.FORGET_PSWD_TOKEN_SECRET!, {
-    expiresIn: "10m",
+    expiresIn: "30m",
   });
 }
 
 export function generateChangePswdToken(userId: string) {
   return jwt.sign({ userId }, process.env.RESET_PSWD_TOKEN_SECRET!, {
-    expiresIn: "15m",
+    expiresIn: "35m",
   });
 }
