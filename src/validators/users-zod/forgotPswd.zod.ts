@@ -22,9 +22,6 @@ export const createNewPasswordSchema = z
       .regex(/[a-z]/, { message: "One lowercase letter required" })
       .regex(/[0-9]/, { message: "One number required" })
       .regex(/[@$!%*?&#]/, { message: "One special character required" }),
-    confirmNewPassword: z.string(),
   })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "Passwords do not match",
-  });
+
 

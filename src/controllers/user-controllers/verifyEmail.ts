@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { verifyOtp } from "../../utils/Otp";
 import { User } from "../../models/users/user.model";
-import jwt from "jsonwebtoken";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
@@ -10,40 +9,20 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../../utils/generateJwtTokens";
-import { JwtPayload } from "jsonwebtoken";
-
-interface VerifyEmailTokenPayload extends JwtPayload {
-  userId: string;
-}
 
 export default async function verifyEmail(req: Request, res: Response) {
   console.log("Received body:", req.body);
-  const { token, otp } = req.body;
+  const { email, otp } = req.body;
   const secret = process.env.VERIFY_EMAIL_TOKEN_SECRET;
 
-  if (!secret) {
-    throw new Error("VERIFY_EMAIL_TOKEN_SECRET is not defined");
-  }
-
-  if (!token || !otp) {
+  if (!email || !otp) {
     return res.status(400).json({
       success: false,
-      message: "Token and OTP are required",
+      message: "email and OTP are required",
     });
   }
 
-  let decoded: VerifyEmailTokenPayload;
-
-  try {
-    decoded = jwt.verify(token, secret) as VerifyEmailTokenPayload;
-  } catch {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid or expired verification token",
-    });
-  }
-
-  const user = await User.findById(decoded.userId);
+  const user = await User.findOne({ email });
   if (!user) {
     return res.status(404).json({
       success: false,

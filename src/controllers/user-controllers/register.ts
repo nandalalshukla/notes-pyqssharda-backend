@@ -3,20 +3,15 @@ import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp";
 import { generateEmailVerifyToken } from "../../utils/generateJwtTokens";
 import { hashPassword } from "../../utils/hashPassword";
-import { resolve } from "dns";
+
 
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, password, confirmPassword } = req.body;
-  if (!name || !email || !password || !confirmPassword) {
+  console.log("Register User called");
+  const { name, email, password} = req.body;
+  if (!name || !email || !password) {
     return res.status(400).json({
       success: false,
       message: "All fields are required",
-    });
-  }
-  if (password !== confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Passwords do not match",
     });
   }
   const existingUser = await User.findOne({ email });

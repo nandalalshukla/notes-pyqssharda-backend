@@ -8,7 +8,7 @@ import { changePassword } from "../../controllers/user-controllers/changePswd";
 import { forgetPassword } from "../../controllers/user-controllers/forgetPswd";
 import { createNewPassword } from "../../controllers/user-controllers/createNewPswd";
 import verifyEmail from "../../controllers/user-controllers/verifyEmail";
-import { getMe } from "../controllers/auth.controller";
+import { getMe } from "../../controllers/user-controllers/loadAuth";
 
 //import zod schemas
 import { loginSchema } from "../../validators/users-zod/login.zod";

@@ -31,9 +31,6 @@ export const registerSchema = z
       .regex(/[0-9]/, { message: "One number required" })
       .regex(/[@$!%*?&#]/, { message: "One special character required" }),
 
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"], // 👈 error shown on confirmPassword
-  });
+  }).required();
+
+  
