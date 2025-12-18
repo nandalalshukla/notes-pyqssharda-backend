@@ -1,12 +1,18 @@
 import mongoose from "mongoose";
 import { Schema } from "mongoose";
+const ObjectId = Schema.Types.ObjectId;
 const syllabusSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   fileUrl: {
     type: String,
     required: true,
   },
-  uploadedBy: {
-    type: Schema.Types.ObjectId,
+  userId: {
+    type: ObjectId,
     ref: "User",
     required: true,
   },

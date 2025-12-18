@@ -7,7 +7,6 @@ export const pyqsSchema = z.object({
     .min(2, { message: "title too short" })
     .max(100, { message: "title too long" }),
   fileUrl: z.string().url({ message: "invalid file URL" }),
-  uploadedBy: z.string().trim(),
   program: z
     .string()
     .trim()
