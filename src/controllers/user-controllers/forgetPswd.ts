@@ -2,7 +2,6 @@
 import { User } from "../../models/users/user.model";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp";
-import { generateForgetPswdToken } from "../../utils/generateJwtTokens";
 
 export const forgetPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -21,11 +20,10 @@ export const forgetPassword = async (req: Request, res: Response) => {
       });
     }
     await sendAndStoreOtp(user.email);
-    const forgetPswdToken = generateForgetPswdToken(user._id.toString());
     return res.status(200).json({
       success: true,
-      forgetPswdToken,
-      message: "Enter your new password along with the OTP sent to your email",
+      message:
+        "If an account exists, a password reset OTP has been sent to your email.",
     });
   } catch (error) {
     console.error("Error in forget password:", error);

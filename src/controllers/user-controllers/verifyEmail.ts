@@ -68,20 +68,36 @@ export default async function verifyEmail(req: Request, res: Response) {
       message: "Invalid OTP",
     });
   }
+  try {
+    const accessToken = generateAccessToken(user._id.toString(), user.role);
+    const refreshToken = generateRefreshToken(user._id.toString());
 
-  const accessToken = generateAccessToken(user._id.toString(), user.role);
-  const refreshToken = generateRefreshToken(user._id.toString());
+    user.isEmailVerified = true;
+    user.refreshToken = refreshToken;
+    user.emailOtpHash = undefined;
+    await user.save();
 
-  user.isEmailVerified = true;
-  user.refreshToken = refreshToken;
-  user.emailOtpHash = undefined;
-  await user.save();
+    res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+    res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
 
-  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
-
-  return res.status(200).json({
-    success: true,
-    message: "Email verified successfully",
-  });
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+        },
+      },
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    console.error("Error generating tokens:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 }

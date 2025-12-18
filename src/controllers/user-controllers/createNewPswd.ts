@@ -5,27 +5,22 @@ import { hashPassword } from "../../utils/hashPassword";
 import { verifyOtp } from "../../utils/Otp";
 
 export const createNewPassword = async (req: Request, res: Response) => {
-    const {token, otp, newPassword, confirmNewPassword} = req.body;
-    if (!token || !otp || !newPassword|| !confirmNewPassword) {
+    const {email, otp, newPassword, confirmNewPassword} = req.body;
+    if (!email || !otp || !newPassword) {
         return res.status(400).json({   
             success: false,
             message: "Token, OTP and new password are required",
         });
     }
-    if (newPassword !== confirmNewPassword) {
-        return res.status(400).json({
-            success: false,
-            message: "New password and confirm new password do not match",
-        });
-    }
     try {
-        const user = await User.findById(token);
+        const user = await User.findById(email);
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
             });
         }
+        
         const hashedOtp = user.emailOtpHash;
         if (!hashedOtp) {
             return res.status(400).json({

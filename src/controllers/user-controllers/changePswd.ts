@@ -4,19 +4,13 @@ import { Request, Response } from "express";
 import { hashPassword, comparePassword } from "../../utils/hashPassword";
 
 export const changePassword = async (req: Request, res: Response) => {
-    const{email, currentPassword, newPassword, confirmNewPassword} = req.body;
-    if (!email || !currentPassword || !newPassword|| !confirmNewPassword) {
+    const{email, currentPassword, newPassword} = req.body;
+    if (!email || !currentPassword || !newPassword) {
         return res.status(400).json({   
             success: false,
             message: "Email, current password and new password are required",
         });
-    }
-    if (newPassword !== confirmNewPassword) {
-        return res.status(400).json({
-            success: false,
-            message: "New password and confirm new password do not match",
-        });
-    }   
+    } 
     try {
         const user = await User.findOne({email});
         if (!user) {

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp";
 import { generateEmailVerifyToken } from "../../utils/generateJwtTokens";
 import { hashPassword } from "../../utils/hashPassword";
+import { resolve } from "dns";
 
 export const registerUser = async (req: Request, res: Response) => {
   const { name, email, password, confirmPassword } = req.body;
@@ -38,6 +39,16 @@ export const registerUser = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       verifyToken,
+      data: {
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          isEmailVerified: false,
+        },
+      },
+
       message: "User registered successfully please verify your email",
     });
   } catch (error) {

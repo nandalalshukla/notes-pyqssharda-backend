@@ -39,6 +39,15 @@ export const loginUser = async (req: Request, res: Response) => {
     res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
     return res.status(200).json({
       success: true,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+        },
+      },
       message: "Login successful",
     });
   } catch (error) {
