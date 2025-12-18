@@ -12,13 +12,15 @@ export const changePassword = async (req: Request, res: Response) => {
         });
     } 
     try {
-        const user = await User.findOne({email});
+        const user = await User.findOne({email}).select("+password");
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
             });
         }
+        console.log("User found:", user);
+        console.log(user.password);
         const isMatch = await comparePassword(currentPassword, user.password!);
         if (!isMatch) {
             return res.status(400).json({

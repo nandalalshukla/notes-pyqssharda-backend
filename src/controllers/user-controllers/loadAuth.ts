@@ -1,9 +1,16 @@
-import { Response,Request } from "express";
+import { Response, Request } from "express";
 import { User } from "../../models/users/user.model";
 
+declare global {
+  namespace Express {
+    interface Request {
+      data?: { user: { id: string } };
+    }
+  }
+}
 
 export const getMe = async (req: Request, res: Response) => {
-  const userId = req.user!.id;
+  const userId = req.data?.user.id;
 
   const user = await User.findById(userId).select(
     "_id name email role isEmailVerified"

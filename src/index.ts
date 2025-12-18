@@ -3,7 +3,9 @@ import express from "express";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/users-routes/auth.route.js";
 import corsConfig from "./config/cors";
+import cookieParser from "cookie-parser";
 
+//middleware to parse cookies
 
 //connecting to the database
 connectDB();
@@ -13,6 +15,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(corsConfig);
 app.use("/api/v1/auth", authRouter);
 
@@ -20,7 +23,6 @@ app.use("/api/v1/auth", authRouter);
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");
 });
-
 
 //to start the server
 app.listen(process.env.PORT, () => {

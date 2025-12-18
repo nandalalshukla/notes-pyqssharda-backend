@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 export function generateAccessToken(userId: string, userRole: string) {
   return jwt.sign({ userId ,userRole}, process.env.ACCESS_TOKEN_SECRET!, {
-    expiresIn: "35m",
+    expiresIn: "55m",
   });
 }
 

@@ -46,6 +46,7 @@ export const loginUser = async (req: Request, res: Response) => {
           email: user.email,
           role: user.role,
           isEmailVerified: user.isEmailVerified,
+          
         },
       },
       message: "Login successful",
