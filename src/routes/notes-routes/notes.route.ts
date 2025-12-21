@@ -1,14 +1,25 @@
-import {Router } from "express";
+import { Router } from "express";
 import { uploadNotes } from "../../controllers/notes-controllers/uploadNotes";
 import { editNotes } from "../../controllers/notes-controllers/editNotes";
 import { searchNotes } from "../../controllers/notes-controllers/searchNotes";
 import { deleteNotes } from "../../controllers/notes-controllers/deleteNotes";
+import { fetchSpecificUserNotes } from "../../controllers/notes-controllers/specificUserNotes";
+import { fetchAllNotes } from "../../controllers/notes-controllers/fetchAllNotes";
+import { upload } from "../../config/multer";
+import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 
 const router = Router();
 
-router.post("/upload", uploadNotes);
-router.put("/edit/:id", editNotes);
-router.delete("/delete/:id", deleteNotes);
-router.get("/search", searchNotes);
+router.post(
+  "/upload-notes",
+  authMiddleware,
+  upload.single("file"),
+  uploadNotes
+);
+router.put("/edit-notes/:id", editNotes);
+router.delete("/delete-notes/:id", deleteNotes);
+router.get("/search-notes", searchNotes);
+router.get("/my-notes", fetchSpecificUserNotes);
+router.get("/all-notes", fetchAllNotes);
 
 export default router;

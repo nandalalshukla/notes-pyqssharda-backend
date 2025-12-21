@@ -35,6 +35,10 @@ const syllabusSchema = new Schema({
     type: Number,
     required: true,
   },
+  publicId: {
+    type: String,
+    required: true,
+  },
 });
 
 export const Syllabus = mongoose.model("Syllabus", syllabusSchema, "syllabus");

@@ -15,10 +15,13 @@ connectDB();
 //initializing the main express app
 const app = express();
 
+//middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(corsConfig);
+
+//routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/notes", notesRouter);
 app.use("/api/v1/pyqs", pyqsRouter);

@@ -35,5 +35,9 @@ const pyqSchema = new Schema({
     type: Number,
     required: true,
   },
+  publicId: {
+    type: String,
+    required: true,
+  }
 });
 export const Note = mongoose.model("Note", pyqSchema, "notes");

@@ -1,7 +1,7 @@
 import {Request, Response} from 'express';
 import { Note } from '../../models/notes/notes.model.js';
 
-export const specificUserPyqs = async (req: Request, res: Response) => {
+export const fetchSpecificUserPyqs = async (req: Request, res: Response) => {
     try {
         const userId = req.user!.id;
         if (!userId) {

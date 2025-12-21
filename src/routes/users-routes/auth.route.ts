@@ -52,7 +52,7 @@ router.post("/verify-email", verifyEmail);
 
 //protected rotues
 //logout
-router.post("/logout", authMiddleware, logout);
+router.post("/logout",logout);
 
 //change password
 router.post(
