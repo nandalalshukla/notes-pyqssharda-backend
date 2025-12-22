@@ -4,24 +4,23 @@ import { Note } from "../../models/notes/notes.model.js";
 
 export const fetchSpecificUserNotes = async (req: Request, res: Response) => {
   try {
-        const userId = req.user!.id;
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-        const notes = await Note.find({ userId }).sort({ createdAt: -1 });   
-        res.status(200).json({
-            success: true,
-            notes
-        });
+    const userId = req.user!.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-    catch (error) {
-        console.error("Error fetching user notes:", error);
-        res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
+    const notes = await Note.find({ userId }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      notes,
+    });
+  } catch (error) {
+    console.error("Error fetching user notes:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };

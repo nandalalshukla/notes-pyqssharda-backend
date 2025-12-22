@@ -4,9 +4,18 @@ import { success } from "zod";
 
 export const uploadPyqs = async (req: Request, res: Response) => {
   try {
-    const { title, fileUrl, program, courseCode, courseName, semester } =
-      req.body;
-    const userId = req.user!.id;
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+
+    if (!req.file) {
+      return res.status(400).json({ message: "File is required" });
+    }
+
+    const { title, program, courseCode, courseName, semester } = req.body;
+
+    const fileUrl = req.file.path; // 🔥 Cloudinary URL
+    const publicId = req.file.filename; // 🔥 Cloudinary public_id
+    const userId = req.user!.userId; // Fixed: JWT payload uses 'userId' not 'id'
     if (
       !title ||
       !fileUrl ||
@@ -15,16 +24,16 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       !courseName ||
       !semester
     ) {
-        return res.status(400).json({
-            success: false,
-            message: "All fields are required"
-        });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
     }
     if (!userId) {
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized"
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
     const newPyq = new Pyq({
       title,
@@ -34,6 +43,7 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       courseCode,
       courseName,
       semester,
+      publicId,
     });
     await newPyq.save();
     res.status(201).json({

@@ -16,10 +16,10 @@ router.post(
   upload.single("file"),
   uploadNotes
 );
-router.put("/edit-notes/:id", editNotes);
-router.delete("/delete-notes/:id", deleteNotes);
+router.put("/edit-notes/:id", authMiddleware, editNotes);
+router.delete("/delete-notes/:id", authMiddleware, deleteNotes);
 router.get("/search-notes", searchNotes);
-router.get("/my-notes", fetchSpecificUserNotes);
+router.get("/my-notes", authMiddleware, fetchSpecificUserNotes);
 router.get("/all-notes", fetchAllNotes);
 
 export default router;

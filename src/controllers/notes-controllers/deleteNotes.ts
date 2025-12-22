@@ -5,7 +5,7 @@ import { success } from "zod";
 export const deleteNotes = async (req: Request, res: Response) => {
   try {
     const noteId = req.params.id;
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
     if (!userId) {
       return res.status(401).json({
         success: false,
