@@ -2,10 +2,10 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model";
 
-//fetch all pyqs
-export const fetchAllPyqs = async (req: Request, res: Response) => {
+//fetch approved pyqs
+export const fetchApprovedPyqs = async (req: Request, res: Response) => {
     try {
-        const pyqs = await Pyq.find({}).lean();
+        const pyqs = await Pyq.find({ status: 'approved' }).lean();
         res.status(200).json({ success: true, pyqs });
     } catch (error) {
         res.status(500).json({ success: false, message: "Failed to fetch pyqs" });
@@ -17,7 +17,7 @@ export const fetchAllPyqs = async (req: Request, res: Response) => {
 export const deletePyq = async (req: Request, res: Response) => {
     const { pyqId } = req.params;
     try {
-        const pyq = await Pyq.findOneAndDelete({status: 'approved', _id: pyqId});
+        const pyq = await Pyq.findByIdAndDelete(pyqId);
         if (!pyq) {
             return res.status(404).json({ success: false, message: 'Pyq not found' });
         }

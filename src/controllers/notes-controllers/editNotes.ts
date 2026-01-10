@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Note } from "../../models/notes/notes.model.js";
-import { success } from "zod";
+import cloudinary from "../../config/cloudinary.js";
 
 export const editNotes = async (req: Request, res: Response) => {
   try {
@@ -40,6 +40,18 @@ export const editNotes = async (req: Request, res: Response) => {
         message: "Forbidden: You can only edit your own notes",
       });
     }
+    // If a new file is uploaded, delete the old file from Cloudinary and upload the new one
+    if (fileUrl !== note.fileUrl) {
+      await cloudinary.uploader.destroy(note.publicId, {
+        resource_type: "raw",
+      });
+      const uploadResult = await cloudinary.uploader.upload(fileUrl, {
+        resource_type: "raw",
+      });
+      note.publicId = uploadResult.public_id;
+      note.fileUrl = uploadResult.secure_url;
+    }
+
     note.title = title;
     note.fileUrl = fileUrl;
     note.program = program;

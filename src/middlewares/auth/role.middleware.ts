@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-export const authorizeRoles = (...roles: string[]) => {
+export const  roleMiddleware = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const userRole = (req as any).user?.role;
     if (!roles.includes(userRole)) {
@@ -13,4 +13,4 @@ export const authorizeRoles = (...roles: string[]) => {
     next();
   };
 };
-export default authorizeRoles;
+export default roleMiddleware;

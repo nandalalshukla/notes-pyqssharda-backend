@@ -1,6 +1,18 @@
 import { Request, Response } from "express";
 import { Syllabus } from "../../models/syllabus/syllabus.model";
 
+//fetch pending syllabus
+export const fetchPendingSyllabus = async (req: Request, res: Response) => {
+    try {
+        const syllabus = await Syllabus.find({ status: 'pending' }).lean();
+        res.status(200).json({ success: true, syllabus });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Failed to fetch syllabus" });
+    }
+};
+
+
+//reject a syllabus pending approval
 export const rejectSyllabus = async (req: Request, res: Response) => {
     const { syllabusId } = req.params;
     const { rejectionReason } = req.body;
@@ -19,6 +31,7 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
 
 export const approveSyllabus = async (req: Request, res: Response) => {
     const { syllabusId } = req.params;

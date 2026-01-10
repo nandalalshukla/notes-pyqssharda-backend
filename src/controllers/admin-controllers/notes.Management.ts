@@ -3,10 +3,10 @@
 import { Request, Response } from "express";
 import { Note } from "../../models/notes/notes.model";
 
-//fetch all notes
-export const fetchAllNotes = async (req: Request, res: Response) => {
+//fetch approved notes
+export const fetchApprovedNotes = async (req: Request, res: Response) => {
     try {
-        const notes = await Note.find({}).lean();
+        const notes = await Note.find({ status: 'approved' }).lean();
         res.status(200).json({ success: true, notes });
     } catch (error) {
         res.status(500).json({ success: false, message: "Failed to fetch notes" });
@@ -17,7 +17,7 @@ export const fetchAllNotes = async (req: Request, res: Response) => {
 export const deleteNote = async (req: Request, res: Response) => {
     const { noteId } = req.params;
     try {
-        const note = await Note.findOneAndDelete({status: 'approved', _id: noteId});
+        const note = await Note.findByIdAndDelete(noteId);
         if (!note) {
             return res.status(404).json({ success: false, message: 'Note not found' });
         }

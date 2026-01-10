@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model.js";
+import cloudinary from "../../config/cloudinary.js";
 
 export const editPyqs = async (req: Request, res: Response) => {
   try {
@@ -39,6 +40,17 @@ export const editPyqs = async (req: Request, res: Response) => {
         message: "Forbidden: You can only edit your own pyqs",
       });
     }
+        // If a new pyq is uploaded, delete the old file from Cloudinary and upload the new one
+        if (fileUrl !== pyq.fileUrl) {
+          await cloudinary.uploader.destroy(pyq.publicId, {
+            resource_type: "raw",
+          });
+          const uploadResult = await cloudinary.uploader.upload(fileUrl, {
+            resource_type: "raw",
+          });
+          pyq.publicId = uploadResult.public_id;
+          pyq.fileUrl = uploadResult.secure_url;
+        }
     pyq.title = title;
     pyq.fileUrl = fileUrl;
     pyq.program = program;
