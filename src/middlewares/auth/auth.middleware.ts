@@ -6,9 +6,6 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("you reached auth middleware");
-  console.log("All cookies:", req.cookies); // Debug: see all cookies
-  console.log("Cookie header:", req.headers.cookie); // Debug: raw cookie header
   const token = req.cookies?.accessToken;
   const refreshToken = req.cookies?.refreshToken;
   console.log("Access Token from cookie:", token ? "exists" : "MISSING");

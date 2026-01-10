@@ -4,6 +4,7 @@ import { Pyq } from "../../models/pyqs/pyq.model.js";
 export const fetchAllPyqs = async (req: Request, res: Response) => {
   try {
     const pyqs = await Pyq.find().sort({ createdAt: -1 });
+    console.log("all pyqs", pyqs);
     res.status(200).json({
       success: true,
       pyqs,

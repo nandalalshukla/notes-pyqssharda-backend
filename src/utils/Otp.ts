@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { User } from "../models/users/user.model";
-import { sendMail } from "./email";
+import { sendOTPMail } from "./email";
 
 async function generateOtp(): Promise<string> {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -22,7 +22,7 @@ async function otpExpiryTime(minutes: number) {
 async function sendAndStoreOtp(email: string): Promise<void> {
   const otp = await generateOtp();
   console.log(`Sending OTP ${otp} to email: ${email}`);
-  sendMail(email, otp);
+  sendOTPMail(email, otp);
   const hashedOtp = await hashOtp(otp);
   const otpExpiry = await otpExpiryTime(3);
   const user = await User.findOne({ email });

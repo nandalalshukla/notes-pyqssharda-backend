@@ -6,7 +6,7 @@ import { hashPassword } from "../../utils/hashPassword";
 
 
 export const registerUser = async (req: Request, res: Response) => {
-  console.log("Register User called");
+ 
   const { name, email, password} = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({

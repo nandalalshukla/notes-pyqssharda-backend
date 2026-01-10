@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model.js";
+import cloudinary from "../../config/cloudinary.js";
 
 export const deletePyqs = async (req: Request, res: Response) => {
   try {
+    console.log("entered deletePyqs controller");
+    console.log("Params:", req.params);
     const pyqId = req.params.id;
     const userId = req.user!.userId;
     if (!userId) {
@@ -18,6 +21,9 @@ export const deletePyqs = async (req: Request, res: Response) => {
         message: "Pyq not found",
       });
     }
+    await cloudinary.uploader.destroy(pyq.publicId, {
+      resource_type: "raw",
+    });
     await pyq.deleteOne();
     res.status(200).json({
       success: true,

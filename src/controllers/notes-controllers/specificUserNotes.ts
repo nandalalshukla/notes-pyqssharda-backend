@@ -12,6 +12,7 @@ export const fetchSpecificUserNotes = async (req: Request, res: Response) => {
       });
     }
     const notes = await Note.find({ userId }).sort({ createdAt: -1 });
+    console.log("specific user notes",notes);
     res.status(200).json({
       success: true,
       notes,

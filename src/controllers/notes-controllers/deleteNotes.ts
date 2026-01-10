@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Note } from "../../models/notes/notes.model.js";
-import { success } from "zod";
+import cloudinary from "../../config/cloudinary.js";
 
 export const deleteNotes = async (req: Request, res: Response) => {
   try {
@@ -25,6 +25,10 @@ export const deleteNotes = async (req: Request, res: Response) => {
         message: "Forbidden: You can only delete your own notes",
       });
     }
+    
+    await cloudinary.uploader.destroy(note.publicId, {
+      resource_type: "raw",
+    });
     await Note.findByIdAndDelete(noteId);
     res.status(200).json({
       success: true,

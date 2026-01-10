@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { Syllabus } from "../../models/syllabus/syllabus.model";
+import cloudinary from "../../config/cloudinary.js";
 
 export const deleteSyllabus = async (req: Request, res: Response) => {
   try {
-    const { syllabusId } = req.params;
+    const syllabusId = req.params.id;
     const userId = req.user!.userId;
     if (!userId) {
       return res.status(401).json({
@@ -24,6 +25,9 @@ export const deleteSyllabus = async (req: Request, res: Response) => {
         message: "Forbidden: You can only delete your own syllabus",
       });
     }
+    await cloudinary.uploader.destroy(syllabus.publicId, {
+      resource_type: "raw",
+    });
     await Syllabus.findByIdAndDelete(syllabusId);
     res.status(200).json({
       success: true,

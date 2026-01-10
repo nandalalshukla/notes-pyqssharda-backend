@@ -3,7 +3,8 @@ import { Note } from '../../models/notes/notes.model.js';
 
 export const fetchAllNotes = async (req: Request, res: Response) => {
     try {
-        const notes = await Note.find().sort({ createdAt: -1 });   
+        const notes = await Note.find().sort({ createdAt: -1 });
+        console.log("all note:", notes);
         res.status(200).json({
             success: true,
             notes

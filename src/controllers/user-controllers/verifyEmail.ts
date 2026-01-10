@@ -11,7 +11,7 @@ import {
 } from "../../utils/generateJwtTokens";
 
 export default async function verifyEmail(req: Request, res: Response) {
-  console.log("Received body:", req.body);
+
   const { email, otp } = req.body;
   const secret = process.env.VERIFY_EMAIL_TOKEN_SECRET;
 
@@ -36,11 +36,10 @@ export default async function verifyEmail(req: Request, res: Response) {
       message: "OTP expired or not found",
     });
   }
-  console.log("User found:", user);
-  console.log("Stored OTP:", user.emailOtpHash);
+
 
   const isValidOtp = await verifyOtp(otp.toString(), user.emailOtpHash);
-  console.log("Is valid OTP:", isValidOtp);
+
   if (!isValidOtp) {
     return res.status(400).json({
       success: false,

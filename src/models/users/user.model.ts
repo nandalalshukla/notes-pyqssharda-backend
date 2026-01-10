@@ -1,6 +1,5 @@
 import mongoose, { Schema } from "mongoose";
 
-
 const userSchema = new Schema(
   {
     name: {
@@ -34,14 +33,37 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["student", "moderator", "admin"],
-      default: "student",
+      enum: ["user", "mod", "admin"],
+      default: "user",
     },
 
     isActive: {
       type: Boolean,
       default: true,
       select: false,
+    },
+    
+    modRequest: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    contactNo: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    modRequestAt: {
+      type: Date,
+      default: null,
+    },
+    
+    modMotivation: {
+      type: String,
+      trim: true,
+      default: null,
     },
 
     isEmailVerified: {

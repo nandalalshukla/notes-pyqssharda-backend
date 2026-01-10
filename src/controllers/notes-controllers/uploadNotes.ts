@@ -3,8 +3,6 @@ import { Request, Response } from "express";
 
 export const uploadNotes = async (req: Request, res: Response) => {
   try {
-    console.log("Body:", req.body);
-    console.log("File:", req.file);
 
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
@@ -12,8 +10,8 @@ export const uploadNotes = async (req: Request, res: Response) => {
 
     const { title, program, courseCode, courseName, semester } = req.body;
 
-    const fileUrl = req.file.path; // 🔥 Cloudinary URL
-    const publicId = req.file.filename; // 🔥 Cloudinary public_id
+    const fileUrl = req.file.path; // 🔥Cloudinary URL
+    const publicId = req.file.filename; // 🔥Cloudinary public_id
     const userId = req.user!.userId; // Fixed: JWT payload uses 'userId' not 'id'
     if (
       !title ||

@@ -5,7 +5,7 @@ import { searchNotes } from "../../controllers/notes-controllers/searchNotes";
 import { deleteNotes } from "../../controllers/notes-controllers/deleteNotes";
 import { fetchSpecificUserNotes } from "../../controllers/notes-controllers/specificUserNotes";
 import { fetchAllNotes } from "../../controllers/notes-controllers/fetchAllNotes";
-import { upload } from "../../config/multer";
+import { uploadNotesMulter } from "../../config/multer";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 
 const router = Router();
@@ -13,7 +13,7 @@ const router = Router();
 router.post(
   "/upload-notes",
   authMiddleware,
-  upload.single("file"),
+  uploadNotesMulter.single("file"),
   uploadNotes
 );
 router.put("/edit-notes/:id", authMiddleware, editNotes);

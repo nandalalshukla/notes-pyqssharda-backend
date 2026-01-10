@@ -39,6 +39,42 @@ const syllabusSchema = new Schema({
     type: String,
     required: true,
   },
-});
+    //MODERATION SYSTEM
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    approvedBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+  },
+    
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+
+    rejectedBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+
+    rejectionReason: {
+      type: String,
+      default: null,
+    }
+  },
+  {
+    timestamps: true // createdAt, updatedAt
+  }
+);
 
 export const Syllabus = mongoose.model("Syllabus", syllabusSchema, "syllabus");

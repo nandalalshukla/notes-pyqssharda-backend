@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Note } from "../../models/notes/notes.model.js";
+import { Pyq } from "../../models/pyqs/pyq.model";
 
 export const fetchSpecificUserPyqs = async (req: Request, res: Response) => {
   try {
@@ -10,7 +10,8 @@ export const fetchSpecificUserPyqs = async (req: Request, res: Response) => {
         message: "Unauthorized",
       });
     }
-    const pyqs = await Note.find({ userId }).sort({ createdAt: -1 });
+    const pyqs = await Pyq.find({ userId }).sort({ createdAt: -1 });
+    console.log("specific user pyqs", pyqs);
     res.status(200).json({
       success: true,
       pyqs,
