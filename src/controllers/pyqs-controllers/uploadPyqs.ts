@@ -11,7 +11,7 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "File is required" });
     }
 
-    const { title, program, courseCode, courseName, semester } = req.body;
+    const { title, program, courseCode, courseName, semester, year } = req.body;
 
     const fileUrl = req.file.path; // 🔥 Cloudinary URL
     const publicId = req.file.filename; // 🔥 Cloudinary public_id
@@ -22,7 +22,8 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       !program ||
       !courseCode ||
       !courseName ||
-      !semester
+      !semester ||
+      !year
     ) {
       return res.status(400).json({
         success: false,
@@ -43,6 +44,7 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       courseCode,
       courseName,
       semester,
+      year,
       publicId,
     });
     await newPyq.save();

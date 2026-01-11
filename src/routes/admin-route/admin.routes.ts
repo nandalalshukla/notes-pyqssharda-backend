@@ -3,7 +3,7 @@ import { Router } from "express";
 import {
   fetchApprovedNotes,
   deleteNote,
-} from "../../controllers/admin-controllers/notes.Management";
+} from "../../controllers/admin-controllers/notesManagement";
 import {
   fetchApprovedPyqs,
   deletePyq,
@@ -17,6 +17,8 @@ import {
   deleteUser,
   deactivateUser,
   activateUser,
+  fetchActiveUsers,
+  fetchInactiveUsers,
 } from "../../controllers/admin-controllers/userManagement";
 import {
   fetchAllMods,
@@ -26,7 +28,7 @@ import {
 } from "../../controllers/admin-controllers/modManagement";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware";
-import { fetchAllNotes } from "../../controllers/notes-controllers/fetchAllNotes";
+
 
 const router = Router();
 
@@ -35,7 +37,7 @@ router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
 //notes management routes
-router.get("/notes", fetchAllNotes);
+router.get("/notes", fetchApprovedNotes);
 router.delete("/notes/:noteId", deleteNote);
 
 //pyq management routes
@@ -49,13 +51,15 @@ router.delete("/syllabus/:syllabusId", deleteSyllabus);
 //user management routes
 router.get("/users", fetchAllUsers);
 router.delete("/users/:userId", deleteUser);
+router.get("/users/active", fetchActiveUsers);
+router.get("/users/inactive", fetchInactiveUsers);
 router.patch("/users/deactivate/:userId", deactivateUser);
 router.patch("/users/activate/:userId", activateUser);
 
 //moderator management routes
 router.get("/mods", fetchAllMods);
 router.get("/mods/requests", fetchModRequests);
-router.post("/mods/review/:userId", reviewModRequest);
+router.patch("/mods/review/:userId", reviewModRequest);
 router.patch("/mods/remove/:userId", removeModRole);
 
 export default router;

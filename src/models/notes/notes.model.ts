@@ -20,11 +20,6 @@ const noteSchema = new Schema(
       required: true,
     },
 
-    resourceType: {
-      type: String,
-      enum: ["image", "raw"], // 🔥 important
-      required: true,
-    },
 
     userId: {
       type: ObjectId,

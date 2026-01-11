@@ -13,6 +13,9 @@ export const uploadNotes = async (req: Request, res: Response) => {
     const fileUrl = req.file.path; // 🔥Cloudinary URL
     const publicId = req.file.filename; // 🔥Cloudinary public_id
     const userId = req.user!.userId; // Fixed: JWT payload uses 'userId' not 'id'
+
+  
+
     if (
       !title ||
       !fileUrl ||

@@ -13,6 +13,26 @@ export const fetchAllUsers = async (req: Request, res: Response) => {
     }
 };
 
+export const fetchActiveUsers = async (req: Request, res: Response) => {
+    try {
+        const users = await User.find({ isActive: true }, "-password -__v").lean();
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Failed to fetch active users" });
+    }
+};
+
+export const fetchInactiveUsers = async (req: Request, res: Response) => {
+    try {
+        const users = await User.find({ isActive: false }, "-password -__v").lean();
+        res.status(200).json({ success: true, users });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: "Failed to fetch inactive users" });
+    }
+};
+
+
 //deactivate a user account
 export const deactivateUser = async (req: Request, res: Response) => {
     const { userId } = req.params;

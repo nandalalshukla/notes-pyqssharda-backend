@@ -8,13 +8,9 @@ export const authMiddleware = (
 ) => {
   const token = req.cookies?.accessToken;
   const refreshToken = req.cookies?.refreshToken;
-  console.log("Access Token from cookie:", token ? "exists" : "MISSING");
-  console.log(
-    "Refresh Token from cookie:",
-    refreshToken ? "exists" : "MISSING"
-  );
 
   if (!token) {
+    console.log("❌ Auth failed: No access token found in cookies");
     return res.status(401).json({ message: "Unauthorized" });
   }
 
@@ -24,8 +20,10 @@ export const authMiddleware = (
       process.env.ACCESS_TOKEN_SECRET as string
     );
     (req as any).user = decoded;
+    console.log(`✅ Auth success: User ${(decoded as any).userId}`);
     next();
-  } catch {
+  } catch (error) {
+    console.log("❌ Auth failed: Invalid or expired token");
     return res.status(401).json({ message: "Invalid token" });
   }
 };

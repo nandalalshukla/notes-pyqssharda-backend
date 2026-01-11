@@ -21,17 +21,17 @@ const router = Router();
 router.use(authMiddleware, roleMiddleware("mod", "admin"));
 //notes management routes
 router.get("/notes/pending", fetchPendingNotes);
-router.post("/notes/:noteId/approve", approveNote);
-router.post("/notes/:noteId/reject", rejectNote);
+router.patch("/notes/:noteId/approve", approveNote);
+router.patch("/notes/:noteId/reject", rejectNote);
 
 //pyq management routes
 router.get("/pyqs/pending", fetchPendingPyqs);
-router.post("/pyqs/:pyqId/approve", approvePyq);
-router.post("/pyqs/:pyqId/reject", rejectPyq);
+router.patch("/pyqs/:pyqId/approve", approvePyq);
+router.patch("/pyqs/:pyqId/reject", rejectPyq);
 
 //syllabus management routes
 router.get("/syllabus/pending", fetchPendingSyllabus);
-router.post("/syllabus/:syllabusId/approve", approveSyllabus);
-router.post("/syllabus/:syllabusId/reject", rejectSyllabus);
+router.patch("/syllabus/:syllabusId/approve", approveSyllabus);
+router.patch("/syllabus/:syllabusId/reject", rejectSyllabus);
 
 export default router;

@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 
-export const  roleMiddleware = (...roles: string[]) => {
+export const roleMiddleware = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = (req as any).user?.role;
+    // JWT stores role as 'userRole', not 'role'
+    const userRole = (req as any).user?.userRole;
     if (!roles.includes(userRole)) {
-        return res.status(403).json({
-          success: false,
-          message: "Forbidden",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden",
+      });
     }
 
     next();

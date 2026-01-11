@@ -18,3 +18,6 @@ export const fetchAllNotes = async (req: Request, res: Response) => {
         });
     }
 };
+
+
+

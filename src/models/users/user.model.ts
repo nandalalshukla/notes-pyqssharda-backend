@@ -28,7 +28,12 @@ const userSchema = new Schema(
       minlength: [8, "Password must be at least 8 characters"],
       select: false, // 🔐 never return password
     },
-
+    
+    contributions: {
+      type: Number,
+      default: 0,
+    },
+    
     passwordChangedAt: Date,
 
     role: {
@@ -46,7 +51,7 @@ const userSchema = new Schema(
     modRequest: {
       type: String,
       enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      default: null,
     },
 
     contactNo: {
@@ -59,7 +64,7 @@ const userSchema = new Schema(
       type: Date,
       default: null,
     },
-    
+
     modMotivation: {
       type: String,
       trim: true,

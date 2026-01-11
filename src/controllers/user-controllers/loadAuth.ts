@@ -31,6 +31,9 @@ export const getMe = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      isActive: user.isActive,
+      contributions: user.contributions,
+      createdAt: user.createdAt,
     },
   });
 };

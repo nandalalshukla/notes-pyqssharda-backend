@@ -10,6 +10,8 @@ import { createNewPassword } from "../../controllers/user-controllers/createNewP
 import verifyEmail from "../../controllers/user-controllers/verifyEmail";
 import { getMe } from "../../controllers/user-controllers/loadAuth";
 import { refreshAccessToken } from "../../controllers/user-controllers/refreshToken";
+import { becomeModerator } from "../../controllers/user-controllers/becomeMod";
+import { fetchContributors } from "../../controllers/user-controllers/fetchContributors";
 
 //import zod schemas
 import { loginSchema } from "../../validators/users-zod/login.zod";
@@ -52,7 +54,7 @@ router.post("/verify-email", verifyEmail);
 
 //protected rotues
 //logout
-router.post("/logout",logout);
+router.post("/logout", logout);
 
 //change password
 router.post(
@@ -67,5 +69,11 @@ router.get("/me", authMiddleware, getMe);
 
 //refresh token route
 router.post("/refresh-token", refreshAccessToken);
+
+//mod request route
+router.post("/request-mod", authMiddleware, becomeModerator);
+
+//fetch contributors/leaderboard
+router.get("/contributors", fetchContributors);
 
 export default router;
