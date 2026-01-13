@@ -28,6 +28,11 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Syllabus not found" });
     }
+    if(!rejectionReason){
+      return res
+        .status(400)
+        .json({ success: false, message: "Rejection reason is required" });
+    }
     const user = await User.findById(syllabus.userId.toString());
     if (!user) {
       return res

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model";
-
+import { User } from "../../models/users/user.model";
+import { contentRejectionMail, contentApprovalMail } from "../../utils/email";
 
 
 //fetch pending pyqs for moderator review
@@ -23,6 +24,24 @@ export const rejectPyq = async (req: Request, res: Response) => {
         if (!pyq) {
             return res.status(404).json({ success: false, message: 'Pyq not found' });
         }
+        if(!rejectionReason){
+          return res
+            .status(400)
+            .json({ success: false, message: "Rejection reason is required" });
+        }
+        const user = await User.findById(pyq.userId.toString());
+        if (!user) {
+            return res
+                .status(404)
+                .json({ success: false, message: 'User not found' });
+        }
+
+        await contentRejectionMail(
+          user.email,
+          user.name,
+          "pyq",
+          rejectionReason || "No reason provided"
+        );
         pyq.status = 'rejected';
         pyq.rejectionReason = rejectionReason;
         pyq.rejectedAt = new Date();
@@ -44,6 +63,14 @@ export const approvePyq = async (req: Request, res: Response) => {
         pyq.status = 'approved';
         pyq.approvedAt = new Date();
         await pyq.save();
+                const user = await User.findById(pyq.userId.toString());
+                if (!user) {
+                  return res
+                    .status(404)
+                    .json({ success: false, message: "User not found" });
+        }
+        await contentApprovalMail(user.email, user.name, "pyq");
+        
         return res.status(200).json({ success: true, message: 'Pyq approved successfully' });
     } catch (error) {
         console.error('Error in approving pyq:', error);
