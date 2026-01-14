@@ -6,9 +6,13 @@ import { User } from "../../models/users/user.model";
 //fetch pending syllabus
 export const fetchPendingSyllabus = async (req: Request, res: Response) => {
   try {
-    const syllabus = await Syllabus.find({ status: "pending" }).lean();
+    const syllabus = await Syllabus.find({ status: "pending" })
+      .populate("userId", "name email username")
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json({ success: true, syllabus });
   } catch (error) {
+    console.error("Error fetching pending syllabus:", error);
     res
       .status(500)
       .json({ success: false, message: "Failed to fetch syllabus" });
@@ -28,7 +32,7 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Syllabus not found" });
     }
-    if(!rejectionReason){
+    if (!rejectionReason) {
       return res
         .status(400)
         .json({ success: false, message: "Rejection reason is required" });

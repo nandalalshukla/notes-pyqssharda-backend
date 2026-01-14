@@ -7,9 +7,13 @@ import { contentApprovalMail } from "../../utils/email.js";
 //fetch all notes pending approval
 export const fetchPendingNotes = async (req: Request, res: Response) => {
   try {
-    const notes = await Note.find({ status: "pending" }).lean();
+    const notes = await Note.find({ status: "pending" })
+      .populate("userId", "name email username")
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json({ success: true, notes });
   } catch (error) {
+    console.error("Error fetching pending notes:", error);
     res
       .status(500)
       .json({ success: false, message: "Failed to fetch pending notes" });
@@ -27,7 +31,7 @@ export const rejectNote = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Note not found" });
     }
-    if(!rejectionReason){
+    if (!rejectionReason) {
       return res
         .status(400)
         .json({ success: false, message: "Rejection reason is required" });

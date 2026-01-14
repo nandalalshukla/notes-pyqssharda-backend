@@ -4,7 +4,7 @@ import { editNotes } from "../../controllers/notes-controllers/editNotes";
 import { searchNotes } from "../../controllers/notes-controllers/searchNotes";
 import { deleteNotes } from "../../controllers/notes-controllers/deleteNotes";
 import { fetchSpecificUserNotes } from "../../controllers/notes-controllers/specificUserNotes";
-import { fetchApprovedNotes } from "../../controllers/admin-controllers/notesManagement";
+import { fetchAllNotes } from "../../controllers/notes-controllers/fetchNotes";
 import { uploadNotesMulter } from "../../config/multer";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 
@@ -20,6 +20,6 @@ router.put("/:id", authMiddleware, editNotes);
 router.delete("/:id", authMiddleware, deleteNotes);
 router.get("/search-notes", searchNotes);
 router.get("/my-notes", authMiddleware, fetchSpecificUserNotes);
-router.get("/all-notes", fetchApprovedNotes);
+router.get("/all-notes", fetchAllNotes);
 
 export default router;

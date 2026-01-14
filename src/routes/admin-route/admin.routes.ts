@@ -29,7 +29,6 @@ import {
 import { authMiddleware } from "../../middlewares/auth/auth.middleware";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware";
 
-
 const router = Router();
 
 //all routes here will be protected and will start with /admin
@@ -49,16 +48,16 @@ router.get("/syllabus", fetchApprovedSyllabus);
 router.delete("/syllabus/:syllabusId", deleteSyllabus);
 
 //user management routes
-router.get("/users", fetchAllUsers);
-router.delete("/users/:userId", deleteUser);
 router.get("/users/active", fetchActiveUsers);
 router.get("/users/inactive", fetchInactiveUsers);
+router.get("/users", fetchAllUsers);
+router.delete("/users/:userId", deleteUser);
 router.patch("/users/deactivate/:userId", deactivateUser);
 router.patch("/users/activate/:userId", activateUser);
 
 //moderator management routes
-router.get("/mods", fetchAllMods);
 router.get("/mods/requests", fetchModRequests);
+router.get("/mods", fetchAllMods);
 router.patch("/mods/review/:userId", reviewModRequest);
 router.patch("/mods/remove/:userId", removeModRole);
 
