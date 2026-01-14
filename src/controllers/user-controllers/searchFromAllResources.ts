@@ -15,42 +15,35 @@ export const searchFromAllResources = async (req: Request, res: Response) => {
     const regex = new RegExp(query, "i");
     let results: any[] = [];
 
+    // Build search conditions - only use regex for string fields
+    const buildSearchQuery = () => {
+      const searchConditions: any[] = [
+        { title: regex },
+        { program: regex },
+        { courseCode: regex },
+        { courseName: regex },
+        { year: regex },
+      ];
+
+      // Check if query is a number for semester field
+      const numQuery = parseInt(query);
+      if (!isNaN(numQuery)) {
+        searchConditions.push({ semester: numQuery });
+      }
+
+      return { $or: searchConditions };
+    };
+
     if (!type || type === "all" || type === "notes") {
-      const notes = await Note.find({
-        $or: [
-          { title: regex },
-          { program: regex },
-          { courseCode: regex },
-          { courseName: regex },
-          { year: regex },
-          { semester: regex },
-        ],
-      });
+      const notes = await Note.find(buildSearchQuery());
       results = results.concat(notes);
     }
     if (!type || type === "all" || type === "pyqs") {
-      const pyqs = await Pyq.find({
-        $or: [
-          { title: regex },
-          { program: regex },
-          { courseCode: regex },
-          { courseName: regex },
-          { year: regex },
-        ],
-      });
+      const pyqs = await Pyq.find(buildSearchQuery());
       results = results.concat(pyqs);
     }
     if (!type || type === "all" || type === "syllabus") {
-      const syllabus = await Syllabus.find({
-        $or: [
-          { title: regex },
-          { program: regex },
-          { courseCode: regex },
-          { courseName: regex },
-          { year: regex },
-          { semester: regex },
-        ],
-      });
+      const syllabus = await Syllabus.find(buildSearchQuery());
       results = results.concat(syllabus);
     }
     res.status(200).json({

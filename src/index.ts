@@ -6,6 +6,7 @@ import notesRouter from "./routes/notes-routes/notes.route.js";
 import pyqsRouter from "./routes/pyqs-routes/pyqs.route.js";
 import syllabusRouter from "./routes/syllabus-routes/syllabus.route.js";
 import adminRoutes from "./routes/admin-route/admin.routes";
+import resourceRoutes from "./routes/users-routes/resources.route.js";
 import modRoutes from "./routes/mod-routes/mod.routes";
 import corsConfig from "./config/cors";
 import cookieParser from "cookie-parser";
@@ -30,6 +31,7 @@ app.use("/api/v1/pyqs", pyqsRouter);
 app.use("/api/v1/syllabus", syllabusRouter);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/mod", modRoutes);
+app.use("/api/v1/resources", resourceRoutes);
 
 //default route to check if the server is running
 app.get("/", (req, res) => {
