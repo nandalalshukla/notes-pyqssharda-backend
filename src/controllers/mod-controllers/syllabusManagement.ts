@@ -25,35 +25,45 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
   const { rejectionReason } = req.body;
 
   try {
-    const syllabus = await Syllabus.findById(syllabusId);
+    if (!rejectionReason || rejectionReason.trim() === "") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rejection reason is required" });
+    }
+
+    const syllabus = await Syllabus.findOne({
+      status: "pending",
+      _id: syllabusId,
+    });
 
     if (!syllabus) {
       return res
         .status(404)
         .json({ success: false, message: "Syllabus not found" });
     }
-    if (!rejectionReason) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Rejection reason is required" });
-    }
+
     const user = await User.findById(syllabus.userId.toString());
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    syllabus.status = "rejected";
-    syllabus.rejectionReason = rejectionReason;
-    syllabus.rejectedAt = new Date();
 
-    await syllabus.save();
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Syllabus.findByIdAndUpdate(syllabusId, {
+      status: "rejected",
+      rejectionReason: rejectionReason,
+      rejectedAt: new Date(),
+      rejectedBy: req.user!.userId,
+    });
+
     await contentRejectionMail(
       user.email,
       user.name,
       "syllabus",
-      rejectionReason || "No reason provided"
+      rejectionReason
     );
+
     return res
       .status(200)
       .json({ success: true, message: "Syllabus rejected successfully" });
@@ -77,6 +87,7 @@ export const approveSyllabus = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Syllabus not found" });
     }
+
     const user = await User.findById(syllabus.userId.toString());
     if (!user) {
       return res
@@ -84,11 +95,15 @@ export const approveSyllabus = async (req: Request, res: Response) => {
         .json({ success: false, message: "User not found" });
     }
 
-    syllabus.status = "approved";
-    syllabus.approvedAt = new Date();
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Syllabus.findByIdAndUpdate(syllabusId, {
+      status: "approved",
+      approvedAt: new Date(),
+      approvedBy: req.user!.userId,
+    });
 
-    await syllabus.save();
     await contentApprovalMail(user.email, user.name, "syllabus");
+
     return res
       .status(200)
       .json({ success: true, message: "Syllabus approved successfully" });

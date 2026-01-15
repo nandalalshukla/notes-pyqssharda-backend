@@ -25,17 +25,19 @@ export const rejectNote = async (req: Request, res: Response) => {
   const { noteId } = req.params;
   const { rejectionReason } = req.body;
   try {
-    const note = await Note.findById(noteId);
+    if (!rejectionReason || rejectionReason.trim() === "") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rejection reason is required" });
+    }
+
+    const note = await Note.findOne({ status: "pending", _id: noteId });
     if (!note) {
       return res
         .status(404)
         .json({ success: false, message: "Note not found" });
     }
-    if (!rejectionReason) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Rejection reason is required" });
-    }
+
     const user = await User.findById(note.userId.toString());
     if (!user) {
       return res
@@ -43,16 +45,16 @@ export const rejectNote = async (req: Request, res: Response) => {
         .json({ success: false, message: "User not found" });
     }
 
-    note.status = "rejected";
-    note.rejectionReason = rejectionReason;
-    note.rejectedAt = new Date();
-    await note.save();
-    await contentRejectionMail(
-      user.email,
-      user.name,
-      "note",
-      rejectionReason || "No reason provided"
-    );
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Note.findByIdAndUpdate(noteId, {
+      status: "rejected",
+      rejectionReason: rejectionReason,
+      rejectedAt: new Date(),
+      rejectedBy: req.user!.userId,
+    });
+
+    await contentRejectionMail(user.email, user.name, "note", rejectionReason);
+
     return res
       .status(200)
       .json({ success: true, message: "Note rejected successfully" });
@@ -74,16 +76,23 @@ export const approveNote = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Note not found" });
     }
+
     const user = await User.findById(note.userId.toString());
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    note.status = "approved";
-    note.approvedAt = new Date();
-    await note.save();
+
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Note.findByIdAndUpdate(noteId, {
+      status: "approved",
+      approvedAt: new Date(),
+      approvedBy: req.user!.userId,
+    });
+
     await contentApprovalMail(user.email, user.name, "note");
+
     return res
       .status(200)
       .json({ success: true, message: "Note approved successfully" });

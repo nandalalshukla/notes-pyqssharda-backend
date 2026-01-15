@@ -24,15 +24,17 @@ export const rejectPyq = async (req: Request, res: Response) => {
   const { pyqId } = req.params;
   const { rejectionReason } = req.body;
   try {
-    const pyq = await Pyq.findOne({ status: "pending", _id: pyqId });
-    if (!pyq) {
-      return res.status(404).json({ success: false, message: "Pyq not found" });
-    }
-    if (!rejectionReason) {
+    if (!rejectionReason || rejectionReason.trim() === "") {
       return res
         .status(400)
         .json({ success: false, message: "Rejection reason is required" });
     }
+
+    const pyq = await Pyq.findOne({ status: "pending", _id: pyqId });
+    if (!pyq) {
+      return res.status(404).json({ success: false, message: "Pyq not found" });
+    }
+
     const user = await User.findById(pyq.userId.toString());
     if (!user) {
       return res
@@ -40,16 +42,16 @@ export const rejectPyq = async (req: Request, res: Response) => {
         .json({ success: false, message: "User not found" });
     }
 
-    await contentRejectionMail(
-      user.email,
-      user.name,
-      "pyq",
-      rejectionReason || "No reason provided"
-    );
-    pyq.status = "rejected";
-    pyq.rejectionReason = rejectionReason;
-    pyq.rejectedAt = new Date();
-    await pyq.save();
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Pyq.findByIdAndUpdate(pyqId, {
+      status: "rejected",
+      rejectionReason: rejectionReason,
+      rejectedAt: new Date(),
+      rejectedBy: req.user!.userId,
+    });
+
+    await contentRejectionMail(user.email, user.name, "pyq", rejectionReason);
+
     return res
       .status(200)
       .json({ success: true, message: "Pyq rejected successfully" });
@@ -64,19 +66,25 @@ export const rejectPyq = async (req: Request, res: Response) => {
 export const approvePyq = async (req: Request, res: Response) => {
   const { pyqId } = req.params;
   try {
-    const pyq = await Pyq.findById(pyqId);
+    const pyq = await Pyq.findOne({ status: "pending", _id: pyqId });
     if (!pyq) {
       return res.status(404).json({ success: false, message: "Pyq not found" });
     }
-    pyq.status = "approved";
-    pyq.approvedAt = new Date();
-    await pyq.save();
+
     const user = await User.findById(pyq.userId.toString());
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
+
+    // Use findByIdAndUpdate to avoid validation errors on unchanged fields
+    await Pyq.findByIdAndUpdate(pyqId, {
+      status: "approved",
+      approvedAt: new Date(),
+      approvedBy: req.user!.userId,
+    });
+
     await contentApprovalMail(user.email, user.name, "pyq");
 
     return res
