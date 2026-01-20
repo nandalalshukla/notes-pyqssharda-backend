@@ -31,22 +31,16 @@ export const registerUser = async (req: Request, res: Response) => {
     });
     await newUser.save();
 
-    // Send OTP email with error handling
+    // Send OTP email (don't fail registration if email fails)
     try {
       await sendAndStoreOtp(newUser.email);
+      console.log(`✅ OTP sent successfully to ${email}`);
     } catch (emailError) {
-      console.error("Failed to send OTP email:", emailError);
-      // Delete the user if email fails to send
-      try {
-        await User.deleteOne({ _id: newUser._id });
-        console.log(`Cleaned up user ${email} after email failure`);
-      } catch (deleteError) {
-        console.error("Failed to delete user after email error:", deleteError);
-      }
-      return res.status(500).json({
-        success: false,
-        message: "Failed to send verification email. Please try again later.",
-      });
+      console.error("⚠️ Failed to send OTP email:", emailError);
+      console.error(
+        "User created but email not sent. User can request resend OTP.",
+      );
+      // Continue with registration even if email fails
     }
 
     const verifyToken = generateEmailVerifyToken(newUser._id.toString());
