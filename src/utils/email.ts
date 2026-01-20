@@ -2,7 +2,7 @@ import { transporter } from "../config/nodemailer.js";
 
 export async function sendOTPMail(email: string, otp: string) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Your OTP Verification Code",
     html: `
@@ -26,7 +26,7 @@ export async function sendOTPMail(email: string, otp: string) {
 
 export async function sendWelcomeMail(email: string, name: string) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Welcome to Sharda Online Library!",
     html: `
@@ -51,7 +51,7 @@ export async function sendWelcomeMail(email: string, name: string) {
 
 export async function requestForModeratorMail(email: string, name: string) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: process.env.ADMIN_EMAIL,
     subject: "New Moderator Request Received",
     html: `
@@ -76,7 +76,7 @@ export async function requestForModeratorMail(email: string, name: string) {
 
 export async function moderatorApprovalMail(email: string, name: string) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Your Request to Become a Moderator is Approved!",
     html: `
@@ -101,7 +101,7 @@ export async function moderatorApprovalMail(email: string, name: string) {
 
 export async function moderatorRejectionMail(email: string, name: string) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Update on Your Moderator Request",
     html: `
@@ -130,7 +130,7 @@ export async function contentApprovalMail(
   contentType: string,
 ) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Your ${contentType} has been Approved!`,
     html: `
@@ -159,7 +159,7 @@ export async function contentRejectionMail(
   reason: string,
 ) {
   await transporter.sendMail({
-    from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
+    from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Update on Your ${contentType} Submission`,
     html: `

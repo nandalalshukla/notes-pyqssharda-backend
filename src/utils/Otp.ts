@@ -22,7 +22,17 @@ async function otpExpiryTime(minutes: number) {
 async function sendAndStoreOtp(email: string): Promise<void> {
   const otp = await generateOtp();
   console.log(`Sending OTP ${otp} to email: ${email}`);
-  sendOTPMail(email, otp);
+
+  try {
+    await sendOTPMail(email, otp);
+    console.log(`✓ OTP email sent successfully to: ${email}`);
+  } catch (error) {
+    console.error(`✗ Failed to send OTP email to ${email}:`, error);
+    throw new Error(
+      "Failed to send OTP email. Please check your email configuration.",
+    );
+  }
+
   const hashedOtp = await hashOtp(otp);
   const otpExpiry = await otpExpiryTime(3);
   const user = await User.findOne({ email });

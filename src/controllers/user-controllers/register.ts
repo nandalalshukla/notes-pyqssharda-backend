@@ -27,7 +27,20 @@ export const registerUser = async (req: Request, res: Response) => {
       password: hashedPwd,
     });
     await newUser.save();
-    await sendAndStoreOtp(newUser.email);
+
+    // Send OTP email with error handling
+    try {
+      await sendAndStoreOtp(newUser.email);
+    } catch (emailError) {
+      console.error("Failed to send OTP email:", emailError);
+      // Delete the user if email fails to send
+      await User.deleteOne({ _id: newUser._id });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again later.",
+      });
+    }
+
     const verifyToken = generateEmailVerifyToken(newUser._id.toString());
     return res.status(201).json({
       success: true,
