@@ -15,18 +15,11 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const existingUser = await User.findOne({ email });
 
-  // If user exists and is verified, block registration
-  if (existingUser && existingUser.isEmailVerified) {
+  if (existingUser) {
     return res.status(409).json({
       success: false,
       message: "User with this email already exists",
     });
-  }
-
-  // If user exists but is NOT verified, delete and allow re-registration
-  if (existingUser && !existingUser.isEmailVerified) {
-    console.log(`Deleting unverified user: ${email} to allow re-registration`);
-    await User.deleteOne({ _id: existingUser._id });
   }
 
   try {
