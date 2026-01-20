@@ -12,13 +12,23 @@ export const registerUser = async (req: Request, res: Response) => {
       message: "All fields are required",
     });
   }
+
   const existingUser = await User.findOne({ email });
-  if (existingUser) {
+
+  // If user exists and is verified, block registration
+  if (existingUser && existingUser.isEmailVerified) {
     return res.status(409).json({
       success: false,
       message: "User with this email already exists",
     });
   }
+
+  // If user exists but is NOT verified, delete and allow re-registration
+  if (existingUser && !existingUser.isEmailVerified) {
+    console.log(`Deleting unverified user: ${email} to allow re-registration`);
+    await User.deleteOne({ _id: existingUser._id });
+  }
+
   try {
     const hashedPwd = await hashPassword(password);
     const newUser = new User({
@@ -34,7 +44,12 @@ export const registerUser = async (req: Request, res: Response) => {
     } catch (emailError) {
       console.error("Failed to send OTP email:", emailError);
       // Delete the user if email fails to send
-      await User.deleteOne({ _id: newUser._id });
+      try {
+        await User.deleteOne({ _id: newUser._id });
+        console.log(`Cleaned up user ${email} after email failure`);
+      } catch (deleteError) {
+        console.error("Failed to delete user after email error:", deleteError);
+      }
       return res.status(500).json({
         success: false,
         message: "Failed to send verification email. Please try again later.",
