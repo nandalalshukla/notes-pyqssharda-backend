@@ -1,12 +1,12 @@
-import { comparePassword } from "../../utils/hashPassword";
-import { User } from "../../models/users/user.model";
+import { comparePassword } from "../../utils/hashPassword.js";
+import { User } from "../../models/users/user.model.js";
 import { Request, Response } from "express";
-import { generateAccessToken } from "../../utils/generateJwtTokens";
-import { generateRefreshToken } from "../../utils/generateJwtTokens";
+import { generateAccessToken } from "../../utils/generateJwtTokens.js";
+import { generateRefreshToken } from "../../utils/generateJwtTokens.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
-} from "../../config/cookies";
+} from "../../config/cookies.js";
 
 export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;

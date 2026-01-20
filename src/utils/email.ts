@@ -1,4 +1,4 @@
-import { transporter } from "../config/nodemailer";
+import { transporter } from "../config/nodemailer.js";
 
 export async function sendOTPMail(email: string, otp: string) {
   await transporter.sendMail({
@@ -74,7 +74,6 @@ export async function requestForModeratorMail(email: string, name: string) {
   });
 }
 
-
 export async function moderatorApprovalMail(email: string, name: string) {
   await transporter.sendMail({
     from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
@@ -128,7 +127,7 @@ export async function moderatorRejectionMail(email: string, name: string) {
 export async function contentApprovalMail(
   email: string,
   name: string,
-  contentType: string
+  contentType: string,
 ) {
   await transporter.sendMail({
     from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,
@@ -157,7 +156,7 @@ export async function contentRejectionMail(
   email: string,
   name: string,
   contentType: string,
-  reason: string
+  reason: string,
 ) {
   await transporter.sendMail({
     from: `"Sharda Online Library" <${process.env.SMTP_USER}>`,

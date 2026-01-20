@@ -1,11 +1,11 @@
-import { deleteSyllabus } from "../../controllers/syllabus-controllers/deleteSyllabus";
-import { editSyllabus } from "../../controllers/syllabus-controllers/editSyllabus";
-import { uploadSyllabus } from "../../controllers/syllabus-controllers/uploadSyllabus";
-import { searchSyllabus } from "../../controllers/syllabus-controllers/searchSyllabus";
-import { fetchSpecificUserSyllabus } from "../../controllers/syllabus-controllers/specificUserSyllabus";
-import { fetchAllSyllabus } from "../../controllers/syllabus-controllers/fetchAllSyllabus";
-import { authMiddleware } from "../../middlewares/auth/auth.middleware";
-import { uploadSyllabusMulter } from "../../config/multer";
+import { deleteSyllabus } from "../../controllers/syllabus-controllers/deleteSyllabus.js";
+import { editSyllabus } from "../../controllers/syllabus-controllers/editSyllabus.js";
+import { uploadSyllabus } from "../../controllers/syllabus-controllers/uploadSyllabus.js";
+import { searchSyllabus } from "../../controllers/syllabus-controllers/searchSyllabus.js";
+import { fetchSpecificUserSyllabus } from "../../controllers/syllabus-controllers/specificUserSyllabus.js";
+import { fetchAllSyllabus } from "../../controllers/syllabus-controllers/fetchAllSyllabus.js";
+import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import { uploadSyllabusMulter } from "../../config/multer.js";
 
 import { Router } from "express";
 
@@ -17,7 +17,7 @@ router.post(
   "/upload-syllabus",
   authMiddleware,
   uploadSyllabusMulter.single("file"),
-  uploadSyllabus
+  uploadSyllabus,
 );
 router.put("/edit-syllabus/:id", authMiddleware, editSyllabus);
 router.delete("/delete-syllabus/:id", authMiddleware, deleteSyllabus);

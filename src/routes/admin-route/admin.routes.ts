@@ -3,15 +3,15 @@ import { Router } from "express";
 import {
   fetchApprovedNotes,
   deleteNote,
-} from "../../controllers/admin-controllers/notesManagement";
+} from "../../controllers/admin-controllers/notesManagement.js";
 import {
   fetchApprovedPyqs,
   deletePyq,
-} from "../../controllers/admin-controllers/pyqManagement";
+} from "../../controllers/admin-controllers/pyqManagement.js";
 import {
   fetchApprovedSyllabus,
   deleteSyllabus,
-} from "../../controllers/admin-controllers/syllabusManagement";
+} from "../../controllers/admin-controllers/syllabusManagement.js";
 import {
   fetchAllUsers,
   deleteUser,
@@ -19,15 +19,15 @@ import {
   activateUser,
   fetchActiveUsers,
   fetchInactiveUsers,
-} from "../../controllers/admin-controllers/userManagement";
+} from "../../controllers/admin-controllers/userManagement.js";
 import {
   fetchAllMods,
   fetchModRequests,
   removeModRole,
   reviewModRequest,
-} from "../../controllers/admin-controllers/modManagement";
-import { authMiddleware } from "../../middlewares/auth/auth.middleware";
-import { roleMiddleware } from "../../middlewares/auth/role.middleware";
+} from "../../controllers/admin-controllers/modManagement.js";
+import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
 
 const router = Router();
 

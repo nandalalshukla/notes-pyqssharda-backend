@@ -1,7 +1,7 @@
 //to manage all the users
 
 import { Request, Response } from "express";
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 
 //fetch all users
 export const fetchAllUsers = async (req: Request, res: Response) => {

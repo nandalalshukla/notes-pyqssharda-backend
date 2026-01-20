@@ -1,5 +1,5 @@
 import {Request, Response} from 'express';
-import { User } from '../../models/users/user.model';
+import { User } from '../../models/users/user.model.js';
 
 export const deactivateUser = async (req: Request, res: Response) => {
     const { userId } = req.params;

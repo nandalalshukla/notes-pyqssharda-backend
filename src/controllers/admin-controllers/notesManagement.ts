@@ -1,7 +1,7 @@
 //admin will manage all the notes via this controller
 
 import { Request, Response } from "express";
-import { Note } from "../../models/notes/notes.model";
+import { Note } from "../../models/notes/notes.model.js";
 
 //fetch approved notes
 export const fetchApprovedNotes = async (req: Request, res: Response) => {

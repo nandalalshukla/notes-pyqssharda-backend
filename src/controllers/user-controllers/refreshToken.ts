@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import { User } from "../../models/users/user.model";
-import { generateAccessToken } from "../../utils/generateJwtTokens";
+import { User } from "../../models/users/user.model.js";
+import { generateAccessToken } from "../../utils/generateJwtTokens.js";
 import { Request, Response } from "express";
-import { accessTokenCookieOptions } from "../../config/cookies";
+import { accessTokenCookieOptions } from "../../config/cookies.js";
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;

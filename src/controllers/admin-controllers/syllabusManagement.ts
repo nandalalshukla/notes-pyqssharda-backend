@@ -1,7 +1,7 @@
 //admin will manage all the syllabus via this controller
 
 import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model";
+import { Syllabus } from "../../models/syllabus/syllabus.model.js";
 
 //fetch approved syllabus
 export const fetchApprovedSyllabus = async (req: Request, res: Response) => {

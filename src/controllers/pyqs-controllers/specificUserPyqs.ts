@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Pyq } from "../../models/pyqs/pyq.model";
+import { Pyq } from "../../models/pyqs/pyq.model.js";
 
 export const fetchSpecificUserPyqs = async (req: Request, res: Response) => {
   try {

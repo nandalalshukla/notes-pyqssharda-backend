@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model";
-import { contentApprovalMail } from "../../utils/email";
-import { contentRejectionMail } from "../../utils/email";
-import { User } from "../../models/users/user.model";
+import { Syllabus } from "../../models/syllabus/syllabus.model.js";
+import { contentApprovalMail } from "../../utils/email.js";
+import { contentRejectionMail } from "../../utils/email.js";
+import { User } from "../../models/users/user.model.js";
 //fetch pending syllabus
 export const fetchPendingSyllabus = async (req: Request, res: Response) => {
   try {

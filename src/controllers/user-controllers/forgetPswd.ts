@@ -1,7 +1,7 @@
 //forgot password controller
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 import { Request, Response } from "express";
-import { sendAndStoreOtp } from "../../utils/Otp";
+import { sendAndStoreOtp } from "../../utils/Otp.js";
 
 export const forgetPassword = async (req: Request, res: Response) => {
   const { email } = req.body;

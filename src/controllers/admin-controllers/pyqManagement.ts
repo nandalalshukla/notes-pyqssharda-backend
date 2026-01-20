@@ -1,6 +1,6 @@
 //handle admin related pyq management
 import { Request, Response } from "express";
-import { Pyq } from "../../models/pyqs/pyq.model";
+import { Pyq } from "../../models/pyqs/pyq.model.js";
 
 //fetch approved pyqs
 export const fetchApprovedPyqs = async (req: Request, res: Response) => {

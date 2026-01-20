@@ -5,10 +5,10 @@ import authRouter from "./routes/users-routes/auth.route.js";
 import notesRouter from "./routes/notes-routes/notes.route.js";
 import pyqsRouter from "./routes/pyqs-routes/pyqs.route.js";
 import syllabusRouter from "./routes/syllabus-routes/syllabus.route.js";
-import adminRoutes from "./routes/admin-route/admin.routes";
+import adminRoutes from "./routes/admin-route/admin.routes.js";
 import resourceRoutes from "./routes/users-routes/resources.route.js";
-import modRoutes from "./routes/mod-routes/mod.routes";
-import corsConfig from "./config/cors";
+import modRoutes from "./routes/mod-routes/mod.routes.js";
+import corsConfig from "./config/cors.js";
 import cookieParser from "cookie-parser";
 //middleware to parse cookies
 
@@ -39,6 +39,7 @@ app.get("/", (req, res) => {
 });
 
 //to start the server
-app.listen(process.env.PORT, () => {
-  console.log(`Server started on http://localhost:${process.env.PORT}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
 });

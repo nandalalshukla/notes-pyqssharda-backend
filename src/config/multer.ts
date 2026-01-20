@@ -1,6 +1,6 @@
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "./cloudinary";
+import cloudinary from "./cloudinary.js";
 
 const notesStorage = new CloudinaryStorage({
   cloudinary,
@@ -39,15 +39,14 @@ export const uploadNotesMulter = multer({
     fileSize: 100 * 1024 * 1024, // 100 MB
   },
   fileFilter(req, file, cb) {
- const allowed = [
-   "application/pdf",
-   "image/png",
-   "image/jpeg",
-   "image/jpg",
-   "application/msword", // .doc
-   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
- ];
-
+    const allowed = [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "application/msword", // .doc
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+    ];
 
     if (!allowed.includes(file.mimetype)) {
       cb(new Error("File type not allowed"));
@@ -82,7 +81,6 @@ export const uploadPyqsMulter = multer({
   },
 });
 
-
 export const uploadSyllabusMulter = multer({
   storage: syllabusStorage,
   limits: {
@@ -106,4 +104,3 @@ export const uploadSyllabusMulter = multer({
     cb(null, true);
   },
 });
-

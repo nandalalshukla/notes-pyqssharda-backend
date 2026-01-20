@@ -1,6 +1,6 @@
 //fetch all syllabus
 import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model";
+import { Syllabus } from "../../models/syllabus/syllabus.model.js";
 
 export const fetchAllSyllabus = async (req: Request, res: Response) => {
   try {

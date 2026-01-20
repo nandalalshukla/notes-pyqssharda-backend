@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { Pyq } from "../../models/pyqs/pyq.model";
-import { User } from "../../models/users/user.model";
-import { contentRejectionMail, contentApprovalMail } from "../../utils/email";
+import { Pyq } from "../../models/pyqs/pyq.model.js";
+import { User } from "../../models/users/user.model.js";
+import { contentRejectionMail, contentApprovalMail } from "../../utils/email.js";
 
 //fetch pending pyqs for moderator review
 export const fetchPendingPyqs = async (req: Request, res: Response) => {

@@ -1,8 +1,8 @@
 //change password controller
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 import { Request, Response } from "express";
-import { hashPassword } from "../../utils/hashPassword";
-import { verifyOtp } from "../../utils/Otp";
+import { hashPassword } from "../../utils/hashPassword.js";
+import { verifyOtp } from "../../utils/Otp.js";
 
 export const createNewPassword = async (req: Request, res: Response) => {
   const { email, otp, newPassword, confirmNewPassword } = req.body;

@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import { User } from "../models/users/user.model";
-import { sendOTPMail } from "./email";
+import { User } from "../models/users/user.model.js";
+import { sendOTPMail } from "./email.js";
 
 async function generateOtp(): Promise<string> {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();

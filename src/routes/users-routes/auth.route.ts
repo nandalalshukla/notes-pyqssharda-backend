@@ -1,30 +1,30 @@
 import { Router } from "express";
 
 //import controllers
-import { loginUser } from "../../controllers/user-controllers/login";
-import { registerUser } from "../../controllers/user-controllers/register";
-import { logout } from "../../controllers/user-controllers/logout";
-import { changePassword } from "../../controllers/user-controllers/changePswd";
-import { forgetPassword } from "../../controllers/user-controllers/forgetPswd";
-import { createNewPassword } from "../../controllers/user-controllers/createNewPswd";
-import verifyEmail from "../../controllers/user-controllers/verifyEmail";
-import { getMe } from "../../controllers/user-controllers/loadAuth";
-import { refreshAccessToken } from "../../controllers/user-controllers/refreshToken";
-import { becomeModerator } from "../../controllers/user-controllers/becomeMod";
-import { fetchContributors } from "../../controllers/user-controllers/fetchContributors";
+import { loginUser } from "../../controllers/user-controllers/login.js";
+import { registerUser } from "../../controllers/user-controllers/register.js";
+import { logout } from "../../controllers/user-controllers/logout.js";
+import { changePassword } from "../../controllers/user-controllers/changePswd.js";
+import { forgetPassword } from "../../controllers/user-controllers/forgetPswd.js";
+import { createNewPassword } from "../../controllers/user-controllers/createNewPswd.js";
+import verifyEmail from "../../controllers/user-controllers/verifyEmail.js";
+import { getMe } from "../../controllers/user-controllers/loadAuth.js";
+import { refreshAccessToken } from "../../controllers/user-controllers/refreshToken.js";
+import { becomeModerator } from "../../controllers/user-controllers/becomeMod.js";
+import { fetchContributors } from "../../controllers/user-controllers/fetchContributors.js";
 
 //import zod schemas
-import { loginSchema } from "../../validators/users-zod/login.zod";
-import { registerSchema } from "../../validators/users-zod/register.zod";
-import { changePasswordSchema } from "../../validators/users-zod/changePswd.zod";
+import { loginSchema } from "../../validators/users-zod/login.zod.js";
+import { registerSchema } from "../../validators/users-zod/register.zod.js";
+import { changePasswordSchema } from "../../validators/users-zod/changePswd.zod.js";
 import {
   createNewPasswordSchema,
   forgotPasswordSchema,
-} from "../../validators/users-zod/forgotPswd.zod";
+} from "../../validators/users-zod/forgotPswd.zod.js";
 
 //import middlewares
-import { validateMiddleware } from "../../middlewares/auth/validate.middleware";
-import { authMiddleware } from "../../middlewares/auth/auth.middleware";
+import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 
 const router = Router();
 
@@ -39,14 +39,14 @@ router.post("/login", validateMiddleware(loginSchema), loginUser);
 router.post(
   "/forgot-password",
   validateMiddleware(forgotPasswordSchema),
-  forgetPassword
+  forgetPassword,
 );
 
 //reset password
 router.post(
   "/reset-password",
   validateMiddleware(createNewPasswordSchema),
-  createNewPassword
+  createNewPassword,
 );
 
 // verify email
@@ -61,7 +61,7 @@ router.post(
   "/change-password",
   validateMiddleware(changePasswordSchema),
   authMiddleware,
-  changePassword
+  changePassword,
 );
 
 //get logged in user details on app load

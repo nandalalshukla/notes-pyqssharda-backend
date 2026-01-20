@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Pyq } from "../../models/pyqs/pyq.model";
+import { Pyq } from "../../models/pyqs/pyq.model.js";
 import { success } from "zod";
 
 export const uploadPyqs = async (req: Request, res: Response) => {

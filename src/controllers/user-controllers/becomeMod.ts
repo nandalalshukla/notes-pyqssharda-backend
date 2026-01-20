@@ -1,6 +1,6 @@
 //handle user request to become a moderator
 import { Request, Response } from "express";
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 
 export const becomeModerator = async (req: Request, res: Response) => {
     const userId = req.user?.userId;

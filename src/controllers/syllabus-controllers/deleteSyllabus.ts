@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model";
+import { Syllabus } from "../../models/syllabus/syllabus.model.js";
 import cloudinary from "../../config/cloudinary.js";
 
 export const deleteSyllabus = async (req: Request, res: Response) => {

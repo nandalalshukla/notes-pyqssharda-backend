@@ -1,11 +1,11 @@
 //admin will manage all the moderators via this controller
 
 import { Request, Response } from "express";
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 import {
   moderatorRejectionMail,
   moderatorApprovalMail,
-} from "../../utils/email";
+} from "../../utils/email.js";
 
 export const fetchModRequests = async (req: Request, res: Response) => {
   try {

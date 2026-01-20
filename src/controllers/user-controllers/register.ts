@@ -1,13 +1,11 @@
-import { User } from "../../models/users/user.model";
+import { User } from "../../models/users/user.model.js";
 import { Request, Response } from "express";
-import { sendAndStoreOtp } from "../../utils/Otp";
-import { generateEmailVerifyToken } from "../../utils/generateJwtTokens";
-import { hashPassword } from "../../utils/hashPassword";
-
+import { sendAndStoreOtp } from "../../utils/Otp.js";
+import { generateEmailVerifyToken } from "../../utils/generateJwtTokens.js";
+import { hashPassword } from "../../utils/hashPassword.js";
 
 export const registerUser = async (req: Request, res: Response) => {
- 
-  const { name, email, password} = req.body;
+  const { name, email, password } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({
       success: false,

@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
-import { verifyOtp } from "../../utils/Otp";
-import { User } from "../../models/users/user.model";
+import { verifyOtp } from "../../utils/Otp.js";
+import { User } from "../../models/users/user.model.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
-} from "../../config/cookies";
+} from "../../config/cookies.js";
 import {
   generateAccessToken,
   generateRefreshToken,
-} from "../../utils/generateJwtTokens";
+} from "../../utils/generateJwtTokens.js";
 
 export default async function verifyEmail(req: Request, res: Response) {
 

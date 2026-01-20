@@ -4,16 +4,19 @@ import {
   fetchPendingNotes,
   approveNote,
   rejectNote,
-} from "../../controllers/mod-controllers/notesManagement";
+} from "../../controllers/mod-controllers/notesManagement.js";
 import {
-    fetchPendingPyqs,
+  fetchPendingPyqs,
   approvePyq,
   rejectPyq,
-} from "../../controllers/mod-controllers/pyqManagement";
-import { fetchPendingSyllabus, approveSyllabus, rejectSyllabus } from "../../controllers/mod-controllers/syllabusManagement";
-import { authMiddleware } from "../../middlewares/auth/auth.middleware";
-import { roleMiddleware } from "../../middlewares/auth/role.middleware";
-
+} from "../../controllers/mod-controllers/pyqManagement.js";
+import {
+  fetchPendingSyllabus,
+  approveSyllabus,
+  rejectSyllabus,
+} from "../../controllers/mod-controllers/syllabusManagement.js";
+import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
 
 const router = Router();
 

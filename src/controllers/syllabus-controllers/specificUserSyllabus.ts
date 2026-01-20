@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model";
+import { Syllabus } from "../../models/syllabus/syllabus.model.js";
 
 export const fetchSpecificUserSyllabus = async (req: Request, res: Response) => {
   try {
