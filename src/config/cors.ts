@@ -1,7 +1,7 @@
 import cors from "cors";
 
 const corsOptions: cors.CorsOptions = {
-  origin: "http://localhost:3100",
+  origin: process.env.VERCEL_FRONTEND_URL,
   credentials: true,
 };
 
