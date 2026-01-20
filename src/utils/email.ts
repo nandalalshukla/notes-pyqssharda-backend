@@ -1,7 +1,17 @@
 import { transporter } from "../config/nodemailer.js";
 
+// Helper function to add timeout to email sending
+async function sendMailWithTimeout(mailOptions: any, timeoutMs = 10000) {
+  return Promise.race([
+    transporter.sendMail(mailOptions),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Email sending timeout")), timeoutMs),
+    ),
+  ]);
+}
+
 export async function sendOTPMail(email: string, otp: string) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Your OTP Verification Code",

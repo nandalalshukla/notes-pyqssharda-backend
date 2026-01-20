@@ -31,17 +31,13 @@ export const registerUser = async (req: Request, res: Response) => {
     });
     await newUser.save();
 
-    // Send OTP email (don't fail registration if email fails)
-    try {
-      await sendAndStoreOtp(newUser.email);
-      console.log(`✅ OTP sent successfully to ${email}`);
-    } catch (emailError) {
-      console.error("⚠️ Failed to send OTP email:", emailError);
-      console.error(
-        "User created but email not sent. User can request resend OTP.",
-      );
-      // Continue with registration even if email fails
-    }
+    // Send OTP email in background (non-blocking for instant response)
+    sendAndStoreOtp(newUser.email)
+      .then(() => console.log(`✅ OTP sent successfully to ${email}`))
+      .catch((emailError) => {
+        console.error("⚠️ Failed to send OTP email:", emailError);
+        console.error("User can request resend OTP later.");
+      });
 
     const verifyToken = generateEmailVerifyToken(newUser._id.toString());
     return res.status(201).json({
