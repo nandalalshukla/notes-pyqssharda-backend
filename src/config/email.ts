@@ -9,6 +9,10 @@ export const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  from: {
+    name: "Sharda Online Library",
+    address: process.env.EMAIL_USER || "shardaonlinelibrary@gmail.com",
+  },
 });
 
 // Verify transporter configuration on startup
