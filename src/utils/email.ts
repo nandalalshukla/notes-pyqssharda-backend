@@ -4,7 +4,7 @@ const EMAIL_FROM =
   process.env.EMAIL_FROM || "Sharda Online Library <shuklanandalal@gmail.com>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shuklanandalal@gmail.com";
 
-// Enhanced email wrapper with better styling
+// Clean, professional email wrapper aligned with Sharda Online Library branding
 const emailWrapper = (content: string) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -13,51 +13,44 @@ const emailWrapper = (content: string) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sharda Online Library</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 40px 20px;">
+<body style="margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden;">
-          <!-- Header with gradient -->
+        <table width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background-color:#ffffff;border-radius:12px;border:1px solid #E5E7EB;box-shadow:0 12px 30px rgba(15,23,42,0.06);">
+          <!-- Header -->
           <tr>
-            <td style="padding: 40px 32px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-              <div style="background-color: white; width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                <span style="font-size: 32px;">📚</span>
-              </div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                Sharda Online Library
-              </h1>
-              <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
-                Your Academic Resource Hub
-              </p>
+            <td style="padding:24px 28px 20px 28px;border-bottom:1px solid #E5E7EB;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-size:18px;font-weight:700;color:#111827;">
+                    Sharda Online Library
+                  </td>
+                  <td align="right" style="font-size:12px;color:#6B7280;">
+                    Your academic resource hub
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <!-- Content -->
           <tr>
-            <td style="padding: 48px 40px;">
+            <td style="padding:32px 28px 28px 28px;">
               ${content}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="padding: 32px 40px; text-align: center; background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%); border-top: 1px solid #dee2e6;">
-              <p style="margin: 0 0 12px 0; color: #6c757d; font-size: 13px; line-height: 1.6;">
+            <td style="padding:20px 28px 24px 28px;border-top:1px solid #E5E7EB;text-align:center;background-color:#F9FAFB;">
+              <p style="margin:0 0 4px 0;font-size:12px;color:#6B7280;">
                 © ${new Date().getFullYear()} Sharda Online Library. All rights reserved.
               </p>
-              <div style="margin-top: 16px;">
-                <a href="#" style="display: inline-block; margin: 0 8px; color: #667eea; text-decoration: none; font-size: 12px;">Help Center</a>
-                <span style="color: #dee2e6;">•</span>
-                <a href="#" style="display: inline-block; margin: 0 8px; color: #667eea; text-decoration: none; font-size: 12px;">Contact Us</a>
-                <span style="color: #dee2e6;">•</span>
-                <a href="#" style="display: inline-block; margin: 0 8px; color: #667eea; text-decoration: none; font-size: 12px;">Privacy Policy</a>
-              </div>
+              <p style="margin:4px 0 0 0;font-size:11px;color:#9CA3AF;">
+                You are receiving this email because you use Sharda Online Library.
+              </p>
             </td>
           </tr>
         </table>
-        <!-- Extra spacing -->
-        <p style="margin: 24px 0 0 0; color: rgba(255,255,255,0.7); font-size: 11px; text-align: center;">
-          This email was sent to you by Sharda Online Library
-        </p>
       </td>
     </tr>
   </table>
@@ -100,238 +93,116 @@ async function sendEmail(to: string, subject: string, html: string) {
 
 export async function sendOTPMail(email: string, otp: string) {
   const content = `
-    <div style="text-align: center;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
-        <span style="font-size: 40px;">🔐</span>
-      </div>
-      <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 28px; font-weight: 700;">
-        Verify Your Email
-      </h2>
-      <p style="margin: 0 0 32px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-        Enter this verification code to complete your registration:
-      </p>
+    <h2 style="margin:0 0 16px 0;font-size:22px;font-weight:600;color:#111827;">
+      Verify your email address
+    </h2>
+    <p style="margin:0 0 24px 0;font-size:14px;line-height:1.7;color:#4B5563;">
+      Use the verification code below to confirm your email for Sharda Online Library.
+    </p>
+    <div style="margin:0 0 24px 0;padding:18px 24px;border-radius:10px;border:1px solid #E5E7EB;background-color:#F9FAFB;text-align:center;">
+      <span style="display:inline-block;font-family:'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:26px;font-weight:700;letter-spacing:10px;color:#4C1D95;">
+        ${otp}
+      </span>
     </div>
-    
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 32px; text-align: center; margin: 0 0 32px 0; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);">
-      <div style="background-color: white; border-radius: 8px; padding: 20px; display: inline-block;">
-        <div style="font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 12px; font-family: 'Courier New', monospace;">
-          ${otp}
-        </div>
-      </div>
-    </div>
-    
-    <div style="background-color: #f7fafc; border-left: 4px solid #667eea; border-radius: 6px; padding: 20px; margin: 0 0 24px 0;">
-      <p style="margin: 0; color: #2d3748; font-size: 14px; line-height: 1.6;">
-        ⏰ <strong>Valid for 10 minutes</strong><br>
-        <span style="color: #718096;">This code will expire soon. Please verify your email promptly.</span>
-      </p>
-    </div>
-    
-    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center; line-height: 1.6;">
-      If you didn't request this verification code, please ignore this email or contact support if you have concerns.
+    <p style="margin:0 0 8px 0;font-size:13px;color:#6B7280;">
+      This code will expire in <strong>10 minutes</strong>.
+    </p>
+    <p style="margin:0;font-size:12px;color:#9CA3AF;line-height:1.6;">
+      If you did not request this, you can safely ignore this email.
     </p>
   `;
 
-  return sendEmail(
-    email,
-    "🔐 Verify Your Email - Sharda Online Library",
-    content,
-  );
+  return sendEmail(email, "Verify Your Email - Sharda Online Library", content);
 }
 
 export async function sendWelcomeMail(email: string, name: string) {
   const content = `
-    <div style="text-align: center;">
-      <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(72, 187, 120, 0.3);">
-        <span style="font-size: 40px;">🎉</span>
-      </div>
-      <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 28px; font-weight: 700;">
-        Welcome, ${name}!
-      </h2>
-      <p style="margin: 0 0 32px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-        Thank you for joining Sharda Online Library. We're thrilled to have you as part of our academic community!
+    <h2 style="margin:0 0 16px 0;font-size:22px;font-weight:600;color:#111827;">
+      Welcome to Sharda Online Library, ${name}
+    </h2>
+    <p style="margin:0 0 20px 0;font-size:14px;line-height:1.7;color:#4B5563;">
+      We're excited to have you on board. Sharda Online Library is built to make your exam preparation and coursework simpler, clearer, and more organized.
+    </p>
+    <div style="margin:0 0 20px 0;padding:18px 20px;border-radius:10px;background-color:#F9FAFB;border:1px solid #E5E7EB;">
+      <p style="margin:0 0 10px 0;font-size:13px;font-weight:600;color:#111827;">
+        With your account, you can:
       </p>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#4B5563;">
+        <li>Browse structured notes for your subjects</li>
+        <li>Practice from previous year question papers</li>
+        <li>Quickly access syllabus information</li>
+        <li>Stay organized throughout the semester</li>
+      </ul>
     </div>
-    
-    <div style="background: linear-gradient(to bottom right, #f7fafc, #edf2f7); border-radius: 12px; padding: 28px; margin: 0 0 28px 0; border: 1px solid #e2e8f0;">
-      <h3 style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; font-weight: 600;">
-        🚀 What You Can Explore:
-      </h3>
-      <table style="width: 100%;">
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">📝</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Study Notes & Materials</strong><br>
-            <span style="color: #718096; font-size: 14px;">Comprehensive notes curated by students</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">📊</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Previous Year Questions</strong><br>
-            <span style="color: #718096; font-size: 14px;">Practice with past exam papers</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">📚</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Course Syllabus</strong><br>
-            <span style="color: #718096; font-size: 14px;">Stay on track with curriculum guides</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">🤝</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Collaborative Learning</strong><br>
-            <span style="color: #718096; font-size: 14px;">Connect with fellow students</span>
-          </td>
-        </tr>
-      </table>
-    </div>
-    
-    <div style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
-      <p style="margin: 0; color: white; font-size: 15px; font-weight: 600;">
-        ✨ Ready to Start Your Academic Journey?
-      </p>
-    </div>
-    
-    <p style="margin: 0; color: #718096; font-size: 14px; text-align: center;">
-      If you have any questions, our support team is here to help!
+    <p style="margin:0;font-size:13px;color:#6B7280;">
+      If you have any questions or suggestions, just reply to this email—we'd love to hear from you.
     </p>
   `;
 
-  return sendEmail(email, "🎉 Welcome to Sharda Online Library!", content);
+  return sendEmail(email, "Welcome to Sharda Online Library", content);
 }
 
 export async function requestForModeratorMail(email: string, name: string) {
   const content = `
-    <div style="text-align: center;">
-      <div style="background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(246, 173, 85, 0.3);">
-        <span style="font-size: 40px;">📫</span>
-      </div>
-      <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 26px; font-weight: 700;">
-        New Moderator Application
-      </h2>
-      <p style="margin: 0 0 32px 0; color: #4a5568; font-size: 15px;">
-        A new user has requested moderator access
-      </p>
-    </div>
-    
-    <div style="background: linear-gradient(to bottom right, #fff5f0, #fef5e7); border-radius: 12px; padding: 28px; margin: 0 0 28px 0; border-left: 4px solid #f6ad55; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-      <h3 style="margin: 0 0 20px 0; color: #2d3748; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-        📄 Application Details
-      </h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 14px 0; color: #744210; font-size: 14px; font-weight: 600;">Full Name</td>
-          <td style="padding: 14px 0; color: #1a202c; font-size: 15px; font-weight: 500; text-align: right;">${name}</td>
-        </tr>
-        <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 14px 0; color: #744210; font-size: 14px; font-weight: 600;">Email Address</td>
-          <td style="padding: 14px 0; color: #1a202c; font-size: 15px; font-weight: 500; text-align: right;">${email}</td>
-        </tr>
-        <tr>
-          <td style="padding: 14px 0; color: #744210; font-size: 14px; font-weight: 600;">Submitted On</td>
-          <td style="padding: 14px 0; color: #1a202c; font-size: 15px; font-weight: 500; text-align: right;">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</td>
-        </tr>
-      </table>
-    </div>
-    
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px; text-align: center;">
-      <p style="margin: 0; color: white; font-size: 14px; font-weight: 600;">
-        ⚡ Please review this request in the admin dashboard
-      </p>
-    </div>
+    <h2 style="margin:0 0 16px 0;font-size:20px;font-weight:600;color:#111827;">
+      New moderator application
+    </h2>
+    <p style="margin:0 0 20px 0;font-size:14px;line-height:1.7;color:#4B5563;">
+      A new user has requested moderator access on Sharda Online Library. Review the details below and take action in the admin dashboard.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:0 0 16px 0;font-size:13px;color:#111827;">
+      <tr style="border-bottom:1px solid #E5E7EB;">
+        <td style="padding:10px 0;color:#6B7280;width:40%;">Full name</td>
+        <td style="padding:10px 0;text-align:right;font-weight:500;">${name}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #E5E7EB;">
+        <td style="padding:10px 0;color:#6B7280;">Email address</td>
+        <td style="padding:10px 0;text-align:right;font-weight:500;">${email}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;color:#6B7280;">Submitted on</td>
+        <td style="padding:10px 0;text-align:right;font-weight:500;">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</td>
+      </tr>
+    </table>
+    <p style="margin:12px 0 0 0;font-size:13px;color:#6B7280;">
+      Open the moderation dashboard to approve or reject this request.
+    </p>
   `;
 
   return sendEmail(
     process.env.ADMIN_EMAIL!,
-    "📫 New Moderator Application - Action Required",
+    "New Moderator Application",
     content,
   );
 }
 
 export async function moderatorApprovalMail(email: string, name: string) {
   const content = `
-    <div style="text-align: center;">
-      <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(72, 187, 120, 0.4);">
-        <span style="font-size: 50px;">✅</span>
-      </div>
-      <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); display: inline-block; padding: 12px 32px; border-radius: 24px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(72, 187, 120, 0.2);">
-        <span style="color: white; font-size: 16px; font-weight: 700; letter-spacing: 1px;">✓ APPROVED</span>
-      </div>
-      <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 30px; font-weight: 700;">
-        Congratulations, ${name}!
-      </h2>
-      <p style="margin: 0 0 32px 0; color: #4a5568; font-size: 17px; line-height: 1.6;">
-        Your application to become a moderator has been <strong style="color: #38a169;">approved</strong>! Welcome to the moderation team.
+    <h2 style="margin:0 0 16px 0;font-size:22px;font-weight:600;color:#111827;">
+      Your moderator application has been approved
+    </h2>
+    <p style="margin:0 0 20px 0;font-size:14px;line-height:1.7;color:#4B5563;">
+      Hi ${name},
+      <br/>
+      <br/>
+      Thank you for wanting to contribute to Sharda Online Library. Your moderator request has been approved and your account now has moderator access.
+    </p>
+    <div style="margin:0 0 20px 0;padding:18px 20px;border-radius:10px;background-color:#F9FAFB;border:1px solid #E5E7EB;">
+      <p style="margin:0 0 10px 0;font-size:13px;font-weight:600;color:#111827;">
+        As a moderator, you will:
       </p>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#4B5563;">
+        <li>Review and approve submitted notes, PYQs, and syllabus content</li>
+        <li>Help maintain the accuracy and quality of study material</li>
+        <li>Support students by keeping resources clean and well organized</li>
+      </ul>
     </div>
-    
-    <div style="background: linear-gradient(to bottom right, #f0fff4, #e6fffa); border-radius: 12px; padding: 28px; margin: 0 0 28px 0; border-left: 4px solid #48bb78; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-      <h3 style="margin: 0 0 20px 0; color: #2d3748; font-size: 18px; font-weight: 600;">
-        🎖️ Your Responsibilities:
-      </h3>
-      <table style="width: 100%;">
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">✔️</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Review & Approve Content</strong><br>
-            <span style="color: #718096; font-size: 14px;">Ensure quality standards are maintained</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">🛡️</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Maintain Quality Standards</strong><br>
-            <span style="color: #718096; font-size: 14px;">Keep content accurate and relevant</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">🤝</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Support the Community</strong><br>
-            <span style="color: #718096; font-size: 14px;">Help students find what they need</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 12px 0; vertical-align: top;">
-            <span style="font-size: 24px; margin-right: 12px;">💬</span>
-          </td>
-          <td style="padding: 12px 0;">
-            <strong style="color: #2d3748; font-size: 15px;">Respond to User Concerns</strong><br>
-            <span style="color: #718096; font-size: 14px;">Address issues promptly and fairly</span>
-          </td>
-        </tr>
-      </table>
-    </div>
-    
-    <div style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 24px;">
-      <p style="margin: 0; color: white; font-size: 16px; font-weight: 600;">
-        🚀 Welcome to the team! Let's make learning better together.
-      </p>
-    </div>
+    <p style="margin:0;font-size:13px;color:#6B7280;">
+      You can manage content from your moderator dashboard. Thank you for helping us build a better learning experience.
+    </p>
   `;
 
-  return sendEmail(
-    email,
-    "✅ Moderator Application Approved - Welcome Aboard!",
-    content,
-  );
+  return sendEmail(email, "Moderator Application Approved", content);
 }
 
 export async function moderatorRejectionMail(email: string, name: string) {
@@ -371,29 +242,17 @@ export async function contentApprovalMail(
   contentType: string,
 ) {
   const content = `
-    <h2 style="margin: 0 0 24px 0; color: #000000; font-size: 24px; font-weight: 600;">
-      Content Published!
+    <h2 style="margin:0 0 16px 0;font-size:22px;font-weight:600;color:#111827;">
+      Your ${contentType.toLowerCase()} is now live
     </h2>
-    <p style="margin: 0 0 24px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-      Great news, ${name}!
+    <p style="margin:0 0 24px 0;font-size:14px;line-height:1.7;color:#4B5563;">
+      Hi ${name}, your ${contentType.toLowerCase()} has been reviewed and approved. It is now available to students on Sharda Online Library.
     </p>
-    <p style="margin: 0 0 32px 0; color: #333333; font-size: 15px; line-height: 1.6;">
-      Your ${contentType} submission has been approved and is now live on Sharda Online Library.
-    </p>
-    <div style="border: 2px solid #4ADE80; background-color: #F2F4F8; padding: 24px; margin: 0 0 32px 0; text-align: center;">
-      <p style="margin: 0 0 8px 0; color: #4ADE80; font-size: 12px; font-weight: 700; letter-spacing: 1px;">
-        STATUS
-      </p>
-      <p style="margin: 0; color: #000000; font-size: 18px; font-weight: 600;">
-        PUBLISHED
-      </p>
+    <div style="margin:0 0 24px 0;padding:14px 18px;border-radius:999px;display:inline-block;background-color:#ECFDF5;border:1px solid #A7F3D0;font-size:12px;font-weight:600;color:#065F46;">
+      PUBLISHED · VISIBLE TO STUDENTS
     </div>
-    <p style="margin: 0 0 32px 0; color: #333333; font-size: 15px; line-height: 1.6;">
-      Thank you for your valuable contribution! Your effort helps thousands of students in their academic journey.
-    </p>
-    <p style="margin: 0; color: #666666; font-size: 14px;">
-      Best Regards,<br>
-      The Sharda Online Library Team
+    <p style="margin:24px 0 0 0;font-size:13px;color:#6B7280;line-height:1.7;">
+      Thank you for contributing to the library. High‑quality content like yours makes it easier for other students to prepare with clarity and confidence.
     </p>
   `;
 
