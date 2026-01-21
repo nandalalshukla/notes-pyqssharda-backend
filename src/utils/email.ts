@@ -71,15 +71,25 @@ async function sendEmail(to: string, subject: string, html: string) {
     console.log(`📧 Attempting to send email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
 
-    const info = await transporter.sendMail({
+    const mailData = {
       from: EMAIL_FROM,
       to,
       subject,
       html: emailWrapper(html),
+    };
+
+    const info = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailData, (err, info) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(info);
+        }
+      });
     });
 
     console.log(`✅ Email sent successfully to: ${to}`);
-    console.log(`📬 Message ID: ${info.messageId}`);
+    console.log(`📬 Message ID: ${(info as any).messageId}`);
     return info;
   } catch (error: any) {
     console.error(`❌ Failed to send email to: ${to}`);
