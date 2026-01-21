@@ -1,7 +1,8 @@
-import { resend } from "../config/email.js";
+import { transporter } from "../config/email.js";
 
 const EMAIL_FROM =
-  process.env.EMAIL_FROM || "Sharda Online Library <onboarding@resend.dev>";
+  process.env.EMAIL_FROM || "Sharda Online Library <shuklanandalal@gmail.com>";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shuklanandalal@gmail.com";
 
 // Clean, minimal email wrapper matching website theme
 const emailWrapper = (content: string) => `
@@ -50,28 +51,22 @@ const emailWrapper = (content: string) => `
 </html>
 `;
 
-// Helper function to send email with Resend
+// Helper function to send email with Nodemailer
 async function sendEmail(to: string, subject: string, html: string) {
   try {
     console.log(`📧 Attempting to send email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
 
-    const { data, error } = await resend.emails.send({
+    const info = await transporter.sendMail({
       from: EMAIL_FROM,
       to,
       subject,
       html: emailWrapper(html),
     });
 
-    if (error) {
-      console.error(`❌ Failed to send email to: ${to}`);
-      console.error(`❌ Error:`, error);
-      throw new Error(error.message);
-    }
-
     console.log(`✅ Email sent successfully to: ${to}`);
-    console.log(`📬 Email ID: ${data?.id}`);
-    return data;
+    console.log(`📬 Message ID: ${info.messageId}`);
+    return info;
   } catch (error: any) {
     console.error(`❌ Failed to send email to: ${to}`);
     console.error(`❌ Error details:`, error.message);

@@ -11,16 +11,11 @@ dotenv.config({
   path: path.resolve(__dirname, "../.env"),
 });
 
-console.log("🧪 Testing Resend Email Integration\n");
+console.log("🧪 Testing Nodemailer Email Integration\n");
 console.log("Environment check:");
-console.log(
-  "RESEND_API_KEY:",
-  process.env.RESEND_API_KEY ? "✅ Set" : "❌ Not set",
-);
-console.log(
-  "EMAIL_FROM:",
-  process.env.EMAIL_FROM || "Using default: onboarding@resend.dev",
-);
+console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Set" : "❌ Not set");
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "✅ Set" : "❌ Not set");
+console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "Using default email");
 console.log();
 
 // Import email functions after env is loaded
