@@ -1,13 +1,28 @@
 import { transporter } from "../config/nodemailer.js";
 
-// Helper function to add timeout to email sending
-async function sendMailWithTimeout(mailOptions: any, timeoutMs = 10000) {
-  return Promise.race([
-    transporter.sendMail(mailOptions),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Email sending timeout")), timeoutMs),
-    ),
-  ]);
+// Helper function to add timeout to email sending with better error logging
+async function sendMailWithTimeout(mailOptions: any, timeoutMs = 30000) {
+  try {
+    console.log(`📧 Attempting to send email to: ${mailOptions.to}`);
+    console.log(`📧 Subject: ${mailOptions.subject}`);
+    console.log(`📧 From: ${mailOptions.from}`);
+
+    const result = await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Email sending timeout")), timeoutMs),
+      ),
+    ]);
+
+    console.log(`✅ Email sent successfully to: ${mailOptions.to}`);
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Failed to send email to: ${mailOptions.to}`);
+    console.error(`❌ Error details:`, error.message);
+    console.error(`❌ Error code:`, error.code);
+    console.error(`❌ Full error:`, error);
+    throw error;
+  }
 }
 
 export async function sendOTPMail(email: string, otp: string) {
@@ -35,7 +50,7 @@ export async function sendOTPMail(email: string, otp: string) {
 }
 
 export async function sendWelcomeMail(email: string, name: string) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Welcome to Sharda Online Library!",
@@ -60,7 +75,7 @@ export async function sendWelcomeMail(email: string, name: string) {
 }
 
 export async function requestForModeratorMail(email: string, name: string) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: process.env.ADMIN_EMAIL,
     subject: "New Moderator Request Received",
@@ -85,7 +100,7 @@ export async function requestForModeratorMail(email: string, name: string) {
 }
 
 export async function moderatorApprovalMail(email: string, name: string) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Your Request to Become a Moderator is Approved!",
@@ -110,7 +125,7 @@ export async function moderatorApprovalMail(email: string, name: string) {
 }
 
 export async function moderatorRejectionMail(email: string, name: string) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Update on Your Moderator Request",
@@ -139,7 +154,7 @@ export async function contentApprovalMail(
   name: string,
   contentType: string,
 ) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Your ${contentType} has been Approved!`,
@@ -168,7 +183,7 @@ export async function contentRejectionMail(
   contentType: string,
   reason: string,
 ) {
-  await transporter.sendMail({
+  await sendMailWithTimeout({
     from: `"Sharda Online Library" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Update on Your ${contentType} Submission`,
