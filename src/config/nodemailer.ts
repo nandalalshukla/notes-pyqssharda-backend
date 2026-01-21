@@ -13,17 +13,20 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
 }
 
 export const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587, // Use port 587 instead of 465 (Render blocks 465)
+  secure: false, // Use STARTTLS (true for 465, false for 587)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Add these options for better compatibility with cloud hosting
-  secure: true, // Use TLS
   tls: {
-    // Don't fail on invalid certificates (for development only)
-    rejectUnauthorized: true,
+    ciphers: "SSLv3",
+    rejectUnauthorized: false, // Allow self-signed certificates in cloud environments
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 30000,
   pool: true, // Use connection pooling
   maxConnections: 5,
   maxMessages: 100,
