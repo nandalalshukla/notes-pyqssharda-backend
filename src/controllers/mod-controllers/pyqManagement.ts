@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model.js";
 import { User } from "../../models/users/user.model.js";
-import { contentRejectionMail, contentApprovalMail } from "../../utils/email.js";
+import {
+  contentRejectionMail,
+  contentApprovalMail,
+} from "../../utils/email.js";
 
 //fetch pending pyqs for moderator review
 export const fetchPendingPyqs = async (req: Request, res: Response) => {
@@ -50,7 +53,12 @@ export const rejectPyq = async (req: Request, res: Response) => {
       rejectedBy: req.user!.userId,
     });
 
-    await contentRejectionMail(user.email, user.name, "pyq", rejectionReason);
+    // Send email asynchronously (non-blocking) - don't await
+    contentRejectionMail(user.email, user.name, "pyq", rejectionReason).catch(
+      (err) => {
+        console.error("Failed to send rejection email:", err);
+      },
+    );
 
     return res
       .status(200)
@@ -85,7 +93,10 @@ export const approvePyq = async (req: Request, res: Response) => {
       approvedBy: req.user!.userId,
     });
 
-    await contentApprovalMail(user.email, user.name, "pyq");
+    // Send email asynchronously (non-blocking) - don't await
+    contentApprovalMail(user.email, user.name, "pyq").catch((err) => {
+      console.error("Failed to send approval email:", err);
+    });
 
     return res
       .status(200)

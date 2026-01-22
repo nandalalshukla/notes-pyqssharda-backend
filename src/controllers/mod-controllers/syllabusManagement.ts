@@ -57,12 +57,15 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
       rejectedBy: req.user!.userId,
     });
 
-    await contentRejectionMail(
+    // Send email asynchronously (non-blocking) - don't await
+    contentRejectionMail(
       user.email,
       user.name,
       "syllabus",
-      rejectionReason
-    );
+      rejectionReason,
+    ).catch((err) => {
+      console.error("Failed to send rejection email:", err);
+    });
 
     return res
       .status(200)
@@ -102,7 +105,10 @@ export const approveSyllabus = async (req: Request, res: Response) => {
       approvedBy: req.user!.userId,
     });
 
-    await contentApprovalMail(user.email, user.name, "syllabus");
+    // Send email asynchronously (non-blocking) - don't await
+    contentApprovalMail(user.email, user.name, "syllabus").catch((err) => {
+      console.error("Failed to send approval email:", err);
+    });
 
     return res
       .status(200)
