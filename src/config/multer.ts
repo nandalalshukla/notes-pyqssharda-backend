@@ -6,8 +6,7 @@ import path from "path";
 /**
  * Helper function to determine the correct Cloudinary resource type
  * Images: resource_type = 'image'
- * PDFs: resource_type = 'image' with format = 'pdf' (for inline viewing)
- * DOCs, PPTs: resource_type = 'raw'
+ * PDFs, DOCs, PPTs: resource_type = 'raw' (for proper viewing and download)
  */
 function getResourceType(mimetype: string): "image" | "raw" {
   const imageMimeTypes = [
@@ -20,10 +19,9 @@ function getResourceType(mimetype: string): "image" | "raw" {
     "image/svg+xml",
   ];
 
-  // PDFs should use 'image' type for inline viewing
-  const pdfMimetype = "application/pdf";
-
-  if (imageMimeTypes.includes(mimetype) || mimetype === pdfMimetype) {
+  // Only true images use 'image' type
+  // PDFs, DOCs, and PPTs must use 'raw' type
+  if (imageMimeTypes.includes(mimetype)) {
     return "image";
   }
 

@@ -1,23 +1,27 @@
 import cors from "cors";
 
-const allowedOrigins = [
+const allowedOrigins: (string | RegExp)[] = [
   process.env.VERCEL_FRONTEND_URL, // Production frontend
   "http://localhost:3000", // Local development (default Next.js port)
   "http://localhost:3100", // Alternative local port
-].filter(Boolean); // Remove any undefined values
+  /https:\/\/res\.cloudinary\.com/, // Cloudinary CDN
+].filter(Boolean) as (string | RegExp)[]; // Remove any undefined values
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (
-      allowedOrigins.some(
-        (allowedOrigin) =>
-          origin.startsWith(allowedOrigin as string) ||
-          allowedOrigin === origin,
-      )
-    ) {
+    const isAllowed = allowedOrigins.some((allowedOrigin) => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return (
+        origin.startsWith(allowedOrigin as string) || allowedOrigin === origin
+      );
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
