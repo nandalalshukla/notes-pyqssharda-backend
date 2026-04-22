@@ -3,14 +3,15 @@ import { z } from "zod";
 
 
 export const forgotPasswordSchema = z.object({
-    email: z
-        .email({ message: "Invalid email format" })
-        .trim()
-        .toLowerCase(),
+  body: z.object({
+    email: z.email({ message: "Invalid email format" }).trim().toLowerCase(),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
 });
 
-export const createNewPasswordSchema = z
-  .object({
+export const createNewPasswordSchema = z.object({
+  body: z.object({
     otp: z
       .string()
       .length(6, { message: "OTP must be 6 digits" })
@@ -22,6 +23,9 @@ export const createNewPasswordSchema = z
       .regex(/[a-z]/, { message: "One lowercase letter required" })
       .regex(/[0-9]/, { message: "One number required" })
       .regex(/[@$!%*?&#]/, { message: "One special character required" }),
-  })
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
 
 

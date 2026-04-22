@@ -10,21 +10,9 @@ import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
 } from "../../config/cookies.js";
-import { loginSchema } from "../../validators/social-zod/social.zod.js";
 
 export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-
-  // Validate input with Zod schema
-  try {
-    loginSchema.parse({ email, password });
-  } catch (validationError: any) {
-    return res.status(400).json({
-      success: false,
-      message: "Validation error",
-      errors: validationError.errors,
-    });
-  }
 
   try {
     // Find user and select password field

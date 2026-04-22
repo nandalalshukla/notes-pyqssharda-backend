@@ -3,7 +3,7 @@ import { Session } from "../../models/sharda-social/session.model.js";
 
 export const logout = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const refreshToken = req.cookies?.refreshToken;
 
     // Delete the session from database

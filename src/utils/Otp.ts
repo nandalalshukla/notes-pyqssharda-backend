@@ -2,9 +2,13 @@ import crypto from "crypto";
 import { User } from "../models/sharda-social/user.model.js";
 import { sendOTPMail } from "./email.js";
 
+const OTP_EXPIRY_MINUTES = 10;
+
 async function generateOtp(): Promise<string> {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log("Generated OTP:", otp); //for testing purposes only
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Generated OTP:", otp);
+  }
   return otp;
 }
 
@@ -21,7 +25,9 @@ async function otpExpiryTime(minutes: number) {
 
 async function sendAndStoreOtp(email: string): Promise<void> {
   const otp = await generateOtp();
-  console.log(`Sending OTP ${otp} to email: ${email}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`Sending OTP ${otp} to email: ${email}`);
+  }
 
   try {
     await sendOTPMail(email, otp);
@@ -34,7 +40,7 @@ async function sendAndStoreOtp(email: string): Promise<void> {
   }
 
   const hashedOtp = await hashOtp(otp);
-  const otpExpiry = await otpExpiryTime(3);
+  const otpExpiry = await otpExpiryTime(OTP_EXPIRY_MINUTES);
   const user = await User.findOne({ email });
   if (!user) {
     throw new Error("User not found");
@@ -48,14 +54,16 @@ async function isOtpExpired(expiryTime: Date) {
   return new Date() > expiryTime;
 }
 
-async function verifyOtp(otp: string, hashedOtp: string): Promise<boolean> {
-  const expiryTime = await otpExpiryTime(100000);
+async function verifyOtp(
+  otp: string,
+  hashedOtp: string,
+  expiryTime?: Date,
+): Promise<boolean> {
+  if (!expiryTime) {
+    return false;
+  }
+
   const hashedInputOtp = await hashOtp(otp);
-  console.log("Hashed Input OTP:", hashedInputOtp);
-  console.log("Stored Hashed OTP:", hashedOtp);
-  console.log("OTP Expiry Time:", expiryTime);
-  console.log("Is OTP valid:", hashedInputOtp === hashedOtp);
-  console.log("Is OTP expired:", await isOtpExpired(expiryTime));
   const otpExpired = await isOtpExpired(expiryTime);
   return hashedInputOtp === hashedOtp && !otpExpired;
 }

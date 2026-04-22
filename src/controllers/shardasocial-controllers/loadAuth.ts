@@ -1,16 +1,15 @@
 import { Response, Request } from "express";
 import { User } from "../../models/sharda-social/user.model.js";
 
-declare global {
-  namespace Express {
-    interface Request {
-      data?: { user: { id: string } };
-    }
-  }
-}
-
 export const getMe = async (req: Request, res: Response) => {
-  const userId = req.data?.user.id;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
 
   const user = await User.findById(userId).select(
     "_id name email role isEmailVerified",

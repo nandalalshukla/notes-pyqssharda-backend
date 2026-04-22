@@ -28,7 +28,7 @@ export const createNewPassword = async (req: Request, res: Response) => {
         message: "No OTP found for this user, please request a new one",
       });
     }
-    const isOtpValid = await verifyOtp(otp, hashedOtp);
+    const isOtpValid = await verifyOtp(otp, hashedOtp, user.emailOtpExpiry);
     if (!isOtpValid) {
       return res.status(400).json({
         success: false,
@@ -38,6 +38,7 @@ export const createNewPassword = async (req: Request, res: Response) => {
     const hashedNewPassword = await hashPassword(newPassword);
     user.password = hashedNewPassword;
     user.emailOtpHash = undefined;
+    user.emailOtpExpiry = undefined;
     await user.save();
     return res.status(200).json({
       success: true,

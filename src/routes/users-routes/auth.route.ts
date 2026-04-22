@@ -23,29 +23,29 @@ import {
 } from "../../validators/users-zod/forgotPswd.zod.js";
 
 //import middlewares
-import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 
 const router = Router();
 
 //pubic routes
 //signup
-router.post("/register", validateMiddleware(registerSchema), registerUser);
+router.post("/register", validateRequest(registerSchema), registerUser);
 
 //login (rate limited)
-router.post("/login", validateMiddleware(loginSchema), loginUser);
+router.post("/login", validateRequest(loginSchema), loginUser);
 
 //forgot password
 router.post(
   "/forgot-password",
-  validateMiddleware(forgotPasswordSchema),
+  validateRequest(forgotPasswordSchema),
   forgetPassword,
 );
 
 //reset password
 router.post(
   "/reset-password",
-  validateMiddleware(createNewPasswordSchema),
+  validateRequest(createNewPasswordSchema),
   createNewPassword,
 );
 
@@ -59,7 +59,7 @@ router.post("/logout", logout);
 //change password
 router.post(
   "/change-password",
-  validateMiddleware(changePasswordSchema),
+  validateRequest(changePasswordSchema),
   authMiddleware,
   changePassword,
 );

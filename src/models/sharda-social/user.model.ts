@@ -94,6 +94,11 @@ const userSchema = new Schema(
       default: 0,
     },
 
+    contributions: {
+      type: Number,
+      default: 0,
+    },
+
     // 🔹 Account State
     isActive: {
       type: Boolean,
@@ -108,6 +113,24 @@ const userSchema = new Schema(
 
     // 🔹 Security / Auth Flows
     passwordChangedAt: Date,
+
+    modRequest: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: null,
+      index: true,
+    },
+
+    modMotivation: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    modRequestAt: {
+      type: Date,
+      default: null,
+    },
 
     emailOtpHash: {
       type: String,

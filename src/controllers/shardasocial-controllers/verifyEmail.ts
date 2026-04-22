@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { verifyOtp } from "../../utils/Otp.js";
 import { User } from "../../models/sharda-social/user.model.js";
+import { Session } from "../../models/sharda-social/session.model.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
@@ -12,8 +13,6 @@ import {
 
 export default async function verifyEmail(req: Request, res: Response) {
   const { email, otp } = req.body;
-  const secret = process.env.VERIFY_EMAIL_TOKEN_SECRET;
-
   if (!email || !otp) {
     return res.status(400).json({
       success: false,
@@ -36,7 +35,11 @@ export default async function verifyEmail(req: Request, res: Response) {
     });
   }
 
-  const isValidOtp = await verifyOtp(otp.toString(), user.emailOtpHash);
+  const isValidOtp = await verifyOtp(
+    otp.toString(),
+    user.emailOtpHash,
+    user.emailOtpExpiry,
+  );
 
   if (!isValidOtp) {
     return res.status(400).json({
@@ -48,10 +51,22 @@ export default async function verifyEmail(req: Request, res: Response) {
     const accessToken = generateAccessToken(user._id.toString(), user.role);
     const refreshToken = generateRefreshToken(user._id.toString());
 
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    const ipAddress = req.ip || req.socket.remoteAddress || "Unknown";
+
+    const session = new Session({
+      userId: user._id,
+      refreshToken,
+      deviceInfo: userAgent,
+      ipAddress,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
     user.isEmailVerified = true;
-    user.refreshToken = refreshToken;
     user.emailOtpHash = undefined;
+    user.emailOtpExpiry = undefined;
     await user.save();
+    await session.save();
 
     res.cookie("accessToken", accessToken, accessTokenCookieOptions);
     res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);

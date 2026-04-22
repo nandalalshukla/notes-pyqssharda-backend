@@ -9,7 +9,7 @@ export const isAuthenticated = (
   next: NextFunction,
 ) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
 
     if (!user || !user.userId) {
       return res.status(401).json({
@@ -36,7 +36,7 @@ export const isModerator = (
   next: NextFunction,
 ) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
 
     if (!user || !user.userId) {
       return res.status(401).json({
@@ -66,7 +66,7 @@ export const isModerator = (
  */
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
 
     if (!user || !user.userId) {
       return res.status(401).json({
@@ -100,7 +100,7 @@ export const isEmailVerified = (
   next: NextFunction,
 ) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
 
     if (!user || !user.userId) {
       return res.status(401).json({

@@ -17,10 +17,10 @@ export const authMiddleware = (
   try {
     const decoded = jwt.verify(
       token,
-      process.env.ACCESS_TOKEN_SECRET as string
+      process.env.ACCESS_TOKEN_SECRET as string,
     );
-    (req as any).user = decoded;
-    console.log(`✅ Auth success: User ${(decoded as any).userId}`);
+    req.user = decoded as Express.Request["user"];
+    console.log(`✅ Auth success: User ${req.user?.userId}`);
     next();
   } catch (error) {
     console.log("❌ Auth failed: Invalid or expired token");

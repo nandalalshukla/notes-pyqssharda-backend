@@ -2,7 +2,6 @@ import { User } from "../../models/sharda-social/user.model.js";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { hashPassword } from "../../utils/hashPassword.js";
-import { registerSchema } from "../../validators/social-zod/social.zod.js";
 
 export const registerUser = async (req: Request, res: Response) => {
   const {
@@ -15,26 +14,6 @@ export const registerUser = async (req: Request, res: Response) => {
     bio,
     profilePic,
   } = req.body;
-
-  // Validate input with Zod schema
-  try {
-    registerSchema.parse({
-      name,
-      email,
-      password,
-      username,
-      course,
-      contactNo,
-      bio,
-      profilePic,
-    });
-  } catch (validationError: any) {
-    return res.status(400).json({
-      success: false,
-      message: "Validation error",
-      errors: validationError.errors,
-    });
-  }
 
   try {
     // Check if user with email already exists
