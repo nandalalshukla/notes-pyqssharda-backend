@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Syllabus } from "../../models/syllabus/syllabus.model.js";
 import { contentApprovalMail } from "../../utils/email.js";
 import { contentRejectionMail } from "../../utils/email.js";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 //fetch pending syllabus
 export const fetchPendingSyllabus = async (req: Request, res: Response) => {
   try {

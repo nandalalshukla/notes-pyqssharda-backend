@@ -1,4 +1,4 @@
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { generateEmailVerifyToken } from "../../utils/generateJwtTokens.js";
@@ -52,7 +52,6 @@ export const registerUser = async (req: Request, res: Response) => {
           isEmailVerified: false,
         },
       },
-
       message: "User registered successfully please verify your email",
     });
   } catch (error) {

@@ -19,8 +19,7 @@ const noteSchema = new Schema(
       type: String,
       required: true,
     },
-
-
+    
     userId: {
       type: ObjectId,
       ref: "User",
@@ -86,7 +85,7 @@ const noteSchema = new Schema(
   },
   {
     timestamps: true, // createdAt, updatedAt
-  }
+  },
 );
 
 export const Note = mongoose.model("Note", noteSchema, "notes");

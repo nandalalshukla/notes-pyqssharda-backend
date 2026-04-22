@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Note } from "../../models/notes/notes.model.js";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import { contentRejectionMail } from "../../utils/email.js";
 import { contentApprovalMail } from "../../utils/email.js";
 

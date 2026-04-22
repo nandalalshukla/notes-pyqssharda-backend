@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Pyq } from "../../models/pyqs/pyq.model.js";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import {
   contentRejectionMail,
   contentApprovalMail,

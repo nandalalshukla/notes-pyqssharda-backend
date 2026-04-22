@@ -1,5 +1,5 @@
 //forgot password controller
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 

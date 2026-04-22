@@ -1,5 +1,5 @@
 import { comparePassword } from "../../utils/hashPassword.js";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import { Request, Response } from "express";
 import { generateAccessToken } from "../../utils/generateJwtTokens.js";
 import { generateRefreshToken } from "../../utils/generateJwtTokens.js";

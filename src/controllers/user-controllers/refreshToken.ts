@@ -1,12 +1,11 @@
 import jwt from "jsonwebtoken";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import { generateAccessToken } from "../../utils/generateJwtTokens.js";
 import { Request, Response } from "express";
 import { accessTokenCookieOptions } from "../../config/cookies.js";
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
-
 
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token missing" });
@@ -15,7 +14,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
   try {
     const payload = jwt.verify(
       refreshToken,
-      process.env.REFRESH_TOKEN_SECRET!
+      process.env.REFRESH_TOKEN_SECRET!,
     ) as { userId: string };
 
     // Must use .select("+refreshToken") because it has select: false in the model

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { verifyOtp } from "../../utils/Otp.js";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
@@ -11,7 +11,6 @@ import {
 } from "../../utils/generateJwtTokens.js";
 
 export default async function verifyEmail(req: Request, res: Response) {
-
   const { email, otp } = req.body;
   const secret = process.env.VERIFY_EMAIL_TOKEN_SECRET;
 
@@ -36,7 +35,6 @@ export default async function verifyEmail(req: Request, res: Response) {
       message: "OTP expired or not found",
     });
   }
-
 
   const isValidOtp = await verifyOtp(otp.toString(), user.emailOtpHash);
 

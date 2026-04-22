@@ -1,7 +1,7 @@
 //admin will manage all the moderators via this controller
 
 import { Request, Response } from "express";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 import {
   moderatorRejectionMail,
   moderatorApprovalMail,
@@ -11,7 +11,7 @@ export const fetchModRequests = async (req: Request, res: Response) => {
   try {
     const mods = await User.find(
       { modRequest: "pending", role: "user" },
-      "-password -__v"
+      "-password -__v",
     ).lean();
     res.status(200).json({ success: true, mods });
   } catch (error) {
@@ -83,7 +83,7 @@ export const removeModRole = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne(
       { _id: userId, role: "mod" },
-      "-password -__v"
+      "-password -__v",
     );
     if (!user) {
       return res

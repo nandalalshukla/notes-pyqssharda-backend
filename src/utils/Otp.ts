@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { User } from "../models/users/user.model.js";
+import { User } from "../models/sharda-social/user.model.js";
 import { sendOTPMail } from "./email.js";
 
 async function generateOtp(): Promise<string> {

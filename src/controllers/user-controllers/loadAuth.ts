@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { User } from "../../models/users/user.model.js";
+import { User } from "../../models/sharda-social/user.model.js";
 
 declare global {
   namespace Express {
@@ -13,7 +13,7 @@ export const getMe = async (req: Request, res: Response) => {
   const userId = req.data?.user.id;
 
   const user = await User.findById(userId).select(
-    "_id name email role isEmailVerified"
+    "_id name email role isEmailVerified",
   );
 
   if (!user) {
