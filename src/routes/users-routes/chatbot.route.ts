@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   chatWithBot,
   clearChatHistory,
-} from "../../controllers/user-controllers/chatbot.js";
+} from "../../controllers/shardasocial-controllers/chatbot.js";
 
 const chatbotRouter = Router();
 

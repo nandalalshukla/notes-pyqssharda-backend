@@ -60,10 +60,15 @@ const userSchema = new Schema(
       maxlength: [200, "Bio cannot exceed 200 characters"],
       default: "",
     },
-
     profilePic: {
-      type: String, // URL (Cloudinary / S3)
-      default: "",
+      url: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
     },
 
     course: {

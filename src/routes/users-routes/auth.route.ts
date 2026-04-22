@@ -1,17 +1,17 @@
 import { Router } from "express";
 
 //import controllers
-import { loginUser } from "../../controllers/user-controllers/login.js";
-import { registerUser } from "../../controllers/user-controllers/register.js";
-import { logout } from "../../controllers/user-controllers/logout.js";
-import { changePassword } from "../../controllers/user-controllers/changePswd.js";
-import { forgetPassword } from "../../controllers/user-controllers/forgetPswd.js";
-import { createNewPassword } from "../../controllers/user-controllers/createNewPswd.js";
-import verifyEmail from "../../controllers/user-controllers/verifyEmail.js";
-import { getMe } from "../../controllers/user-controllers/loadAuth.js";
-import { refreshAccessToken } from "../../controllers/user-controllers/refreshToken.js";
-import { becomeModerator } from "../../controllers/user-controllers/becomeMod.js";
-import { fetchContributors } from "../../controllers/user-controllers/fetchContributors.js";
+import { loginUser } from "../../controllers/shardasocial-controllers/login.js";
+import { registerUser } from "../../controllers/shardasocial-controllers/register.js";
+import { logout } from "../../controllers/shardasocial-controllers/logout.js";
+import { changePassword } from "../../controllers/shardasocial-controllers/changePswd.js";
+import { forgetPassword } from "../../controllers/shardasocial-controllers/forgetPswd.js";
+import { createNewPassword } from "../../controllers/shardasocial-controllers/createNewPswd.js";
+import verifyEmail from "../../controllers/shardasocial-controllers/verifyEmail.js";
+import { getMe } from "../../controllers/shardasocial-controllers/loadAuth.js";
+import { refreshAccessToken } from "../../controllers/shardasocial-controllers/refreshToken.js";
+import { becomeModerator } from "../../controllers/shardasocial-controllers/becomeMod.js";
+import { fetchContributors } from "../../controllers/shardasocial-controllers/fetchContributors.js";
 
 //import zod schemas
 import { loginSchema } from "../../validators/users-zod/login.zod.js";
