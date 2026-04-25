@@ -17,7 +17,7 @@ const app = express();
 
 // ✅ CORS must be first
 app.use(corsConfig);
-app.options("*", corsConfig); // ✅ preflight handler
+app.options("/{*path}", corsConfig); // ✅ preflight handler
 
 // Then everything else
 app.use(express.json());
