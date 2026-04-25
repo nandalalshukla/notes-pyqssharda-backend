@@ -33,7 +33,7 @@ app.use("/api/v1/mod", modRoutes);
 app.use("/api/v1/resources", resourceRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Backend running 🚀");
+  res.send(`<h1>Visit our official website <a href="https://www.sharda.social">sharda.social</a></h1>`);
 });
 
 const PORT = process.env.PORT || 3000;
