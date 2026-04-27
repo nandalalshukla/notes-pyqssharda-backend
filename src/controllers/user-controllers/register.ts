@@ -5,33 +5,41 @@ import { generateEmailVerifyToken } from "../../utils/generateJwtTokens.js";
 import { hashPassword } from "../../utils/hashPassword.js";
 
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
+  const { name, username, email, password } = req.body;
+
+  if (!name || !username || !email || !password) {
     return res.status(400).json({
       success: false,
       message: "All fields are required",
     });
   }
 
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    return res.status(409).json({
-      success: false,
-      message: "User with this email already exists",
-    });
-  }
-
   try {
+    // Single query to check both duplicates at once
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username: username.toLowerCase() }],
+    });
+
+    if (existingUser) {
+      const field = existingUser.email === email ? "email" : "username";
+      return res.status(409).json({
+        success: false,
+        message: `An account with this ${field} already exists`,
+      });
+    }
+
     const hashedPwd = await hashPassword(password);
+
     const newUser = new User({
       name,
+      username: username.toLowerCase(),
       email,
       password: hashedPwd,
     });
+
     await newUser.save();
 
-    // Send OTP email in background (non-blocking for instant response)
+    // Send OTP in background — non-blocking
     sendAndStoreOtp(newUser.email)
       .then(() => console.log(`✅ OTP sent successfully to ${email}`))
       .catch((emailError) => {
@@ -40,6 +48,7 @@ export const registerUser = async (req: Request, res: Response) => {
       });
 
     const verifyToken = generateEmailVerifyToken(newUser._id.toString());
+
     return res.status(201).json({
       success: true,
       verifyToken,
@@ -47,15 +56,24 @@ export const registerUser = async (req: Request, res: Response) => {
         user: {
           id: newUser._id,
           name: newUser.name,
+          username: newUser.username,
           email: newUser.email,
           role: newUser.role,
           isEmailVerified: false,
         },
       },
-
-      message: "User registered successfully please verify your email",
+      message: "Account created successfully, please verify your email",
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Catch mongo duplicate key errors as a safety net
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(409).json({
+        success: false,
+        message: `An account with this ${field} already exists`,
+      });
+    }
+
     console.error("Error registering user:", error);
     return res.status(500).json({
       success: false,

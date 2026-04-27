@@ -1,32 +1,50 @@
 import mongoose, { Schema } from "mongoose";
 
-const likeSchema = new Schema(
+const ObjectId = Schema.Types.ObjectId;
+
+const notificationSchema = new Schema(
   {
-    user: {
-      type: Schema.Types.ObjectId,
+    recipient: {
+      type: ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    actor: {
+      type: ObjectId,
       ref: "User",
       required: true,
     },
 
+    type: {
+      type: String,
+      enum: ["like", "comment", "follow", "share"],
+      required: true,
+    },
+
     post: {
-      type: Schema.Types.ObjectId,
+      type: ObjectId,
       ref: "Post",
       default: null,
     },
 
     comment: {
-      type: Schema.Types.ObjectId,
+      type: ObjectId,
       ref: "Comment",
       default: null,
+    },
+
+    isRead: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   { timestamps: true },
 );
 
-//🔥Prevent duplicate likes
-likeSchema.index({ user: 1, post: 1 }, { unique: true, sparse: true });
-likeSchema.index({ user: 1, comment: 1 }, { unique: true, sparse: true });
+// 🔥 Fast notification feed
+notificationSchema.index({ recipient: 1, createdAt: -1 });
 
-//These create two compound unique indexes in MongoDB. Think of them as a constraint that says "no two documents in this collection can have the same combination of these fields"
-
-export const Like = mongoose.model("Like", likeSchema);
+export const Notification = mongoose.model("Notification", notificationSchema);

@@ -3,7 +3,7 @@ import { Router } from "express";
 //import controllers
 import { loginUser } from "../../controllers/user-controllers/login.js";
 import { registerUser } from "../../controllers/user-controllers/register.js";
-import { logout } from "../../controllers/user-controllers/logout.js";
+import { logout, logoutAll } from "../../controllers/user-controllers/logout.js";
 import { changePassword } from "../../controllers/user-controllers/changePswd.js";
 import { forgetPassword } from "../../controllers/user-controllers/forgetPswd.js";
 import { createNewPassword } from "../../controllers/user-controllers/createNewPswd.js";
@@ -54,7 +54,8 @@ router.post("/verify-email", verifyEmail);
 
 //protected rotues
 //logout
-router.post("/logout", logout);
+router.post("/logout",authMiddleware, logout);
+router.post("/logout-all",authMiddleware, logoutAll);
 
 //change password
 router.post(

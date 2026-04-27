@@ -1,8 +1,12 @@
 import {Request, Response} from 'express';
 import { User } from '../../models/users/user.model.js';
 
-export const deactivateUser = async (req: Request, res: Response) => {
-    const { userId } = req.params;
+export const deactivateAccount = async (req: Request, res: Response) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const userId = req.user.userId;
+    
     try {
         const user = await User.findById(userId);
         if (!user) {

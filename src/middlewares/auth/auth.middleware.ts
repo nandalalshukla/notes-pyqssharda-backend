@@ -4,10 +4,9 @@ import { Request, Response, NextFunction } from "express";
 export const authMiddleware = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const token = req.cookies?.accessToken;
-  const refreshToken = req.cookies?.refreshToken;
 
   if (!token) {
     console.log("❌ Auth failed: No access token found in cookies");
@@ -17,9 +16,9 @@ export const authMiddleware = (
   try {
     const decoded = jwt.verify(
       token,
-      process.env.ACCESS_TOKEN_SECRET as string
-    );
-    (req as any).user = decoded;
+      process.env.ACCESS_TOKEN_SECRET as string,
+    ) as { userId: string; userRole?: string };
+    (req as Request).user = decoded;
     console.log(`✅ Auth success: User ${(decoded as any).userId}`);
     next();
   } catch (error) {

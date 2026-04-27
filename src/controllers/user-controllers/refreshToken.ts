@@ -1,35 +1,58 @@
 import jwt from "jsonwebtoken";
 import { User } from "../../models/users/user.model.js";
-import { generateAccessToken } from "../../utils/generateJwtTokens.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "../../utils/generateJwtTokens.js";
 import { Request, Response } from "express";
-import { accessTokenCookieOptions } from "../../config/cookies.js";
+import {
+  accessTokenCookieOptions,
+  refreshTokenCookieOptions,
+} from "../../config/cookies.js";
+import { Session } from "../../models/users/session.model.js";
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
-
+  const user = await User.findOne({ refreshToken });
 
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token missing" });
   }
 
+  if (!user) {
+    return res.status(401).json({ message: "User not found" });
+  }
+
   try {
     const payload = jwt.verify(
       refreshToken,
-      process.env.REFRESH_TOKEN_SECRET!
+      process.env.REFRESH_TOKEN_SECRET!,
     ) as { userId: string };
 
-    // Must use .select("+refreshToken") because it has select: false in the model
-    const user = await User.findById(payload.userId).select("+refreshToken");
+    // Find the session by userId + refreshToken
+    const session = await Session.findOne({
+      userId: payload.userId,
+      expiresAt: { $gt: new Date() }, // not expired
+    }).select("+refreshToken");
 
-    if (!user || user.refreshToken !== refreshToken) {
+    if (!session || session.refreshToken !== refreshToken) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
-    const newAccessToken = generateAccessToken(user._id.toString(), user.role);
+    // Rotate — replace old refresh token with a new one
+    const newAccessToken = generateAccessToken(payload.userId, user.role);
+    const newRefreshToken = generateRefreshToken(payload.userId);
+
+    session.refreshToken = newRefreshToken;
+    session.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await session.save();
+
     res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
-    return res.json({ accessToken: newAccessToken });
+    res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
+    return res.json({ message: "Token refreshed" });
   } catch (err) {
-    console.log("Refresh token error:", err);
-    return res.status(403).json({ message: "Refresh token expired" });
+    return res
+      .status(403)
+      .json({ message: "Refresh token expired or invalid" });
   }
 };

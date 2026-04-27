@@ -22,7 +22,7 @@ const postSchema = new Schema(
       {
         type: {
           type: String,
-          enum: ["image", "video"],
+          enum: ["image", "video", "raw"],
         },
         url: {
           type: String,
