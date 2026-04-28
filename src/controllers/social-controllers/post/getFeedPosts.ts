@@ -49,10 +49,14 @@ export const getFeed = async (req: Request, res: Response) => {
           post: post._id,
         });
 
-        const userLiked = userId
+        // Ensure userId is ObjectId for proper comparison
+        const userObjectId = userId
+          ? new mongoose.Types.ObjectId(userId)
+          : null;
+        const userLiked = userObjectId
           ? await Like.exists({
               post: post._id,
-              user: userId,
+              user: userObjectId,
             })
           : null;
 

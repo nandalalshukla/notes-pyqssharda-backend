@@ -25,11 +25,11 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ email }).select("+password +isActive");
 
-    //Use a generic message for both cases — don't reveal which field is wrong
+    // Use consistent message for security - don't reveal if email exists
     if (!user || !(await comparePassword(password, user.password!))) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
 

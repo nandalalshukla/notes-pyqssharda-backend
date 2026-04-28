@@ -1,5 +1,6 @@
 // controllers/comment/getComments.ts
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
 
@@ -30,10 +31,14 @@ export const getComments = async (req: Request, res: Response) => {
           comment: comment._id,
         });
 
-        const userLiked = userId
+        // Ensure userId is ObjectId for proper comparison
+        const userObjectId = userId
+          ? new mongoose.Types.ObjectId(userId)
+          : null;
+        const userLiked = userObjectId
           ? await Like.exists({
               comment: comment._id,
-              user: userId,
+              user: userObjectId,
             })
           : null;
 
