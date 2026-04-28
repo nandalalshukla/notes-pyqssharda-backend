@@ -19,7 +19,10 @@ import { fetchContributors } from "../../controllers/user-controllers/fetchContr
 import { deleteAccount } from "../../controllers/user-controllers/deleteAccount.js";
 import { resendOtp } from "../../controllers/user-controllers/resendOtp.js";
 import { deactivateAccount } from "../../controllers/user-controllers/deactivateAccount.js";
-import { updateProfile } from "../../controllers/user-controllers/editProfile.js";
+import {
+  updateProfile,
+  removeProfilePic,
+} from "../../controllers/user-controllers/editProfile.js";
 
 // Validators
 import {
@@ -118,6 +121,7 @@ router.post(
 // Account Management
 router.post("/deactivate", authMiddleware, deactivateAccount);
 router.delete("/account", authMiddleware, deleteAccount);
+router.delete("/profile-pic", authMiddleware, removeProfilePic);
 
 // Moderator Request
 router.post(
