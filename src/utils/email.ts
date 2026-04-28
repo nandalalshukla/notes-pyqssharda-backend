@@ -84,9 +84,10 @@ async function sendEmail(to: string, subject: string, html: string) {
     console.log(`✅ Email sent successfully to: ${to}`);
     console.log(`📬 Message ID: ${(info as any).messageId}`);
     return info;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`❌ Failed to send email to: ${to}`);
-    console.error(`❌ Error details:`, error.message);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`❌ Error details:`, message);
     throw error;
   }
 }

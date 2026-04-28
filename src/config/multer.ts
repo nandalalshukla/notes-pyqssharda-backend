@@ -2,6 +2,15 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "./cloudinary.js";
 import path from "path";
+import { Request } from "express";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { userId: string; userRole?: string };
+    }
+  }
+}
 
 function getResourceType(mimetype: string): "image" | "video" | "raw" {
   const imageMimeTypes = [
@@ -81,7 +90,7 @@ const profilePicStorage = new CloudinaryStorage({
       folder: "profile_pics",
       resource_type: "image",
       // Use userId as public_id so each user always has one file — overwrites on update
-      public_id: `user_${(req as any).user.userId}`,
+      public_id: `user_${req.user?.userId}`,
       transformation: [
         { width: 400, height: 400, crop: "fill", gravity: "face" },
       ],

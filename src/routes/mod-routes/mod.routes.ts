@@ -1,5 +1,7 @@
 //all moderator routes
 import { Router } from "express";
+
+// Controllers
 import {
   fetchPendingNotes,
   approveNote,
@@ -15,26 +17,64 @@ import {
   approveSyllabus,
   rejectSyllabus,
 } from "../../controllers/mod-controllers/syllabusManagement.js";
+
+// Validators
+import { rejectNoteSchema } from "../../validators/mods-zod/notesManagement.zod.js";
+import { rejectPYQSchema } from "../../validators/mods-zod/pyqsManagement.zod.js";
+import { rejectSyllabusSchema } from "../../validators/mods-zod/syllabusManagement.zod.js";
+
+// Middlewares
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
+import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 
 const router = Router();
 
-//apply auth and mod role middleware to all routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MODERATOR MIDDLEWARE PROTECTION
+ * Routes require moderator or admin role
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.use(authMiddleware, roleMiddleware("mod", "admin"));
-//notes management routes
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * NOTES MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/notes/pending", fetchPendingNotes);
 router.patch("/notes/:noteId/approve", approveNote);
-router.patch("/notes/:noteId/reject", rejectNote);
+router.patch(
+  "/notes/:noteId/reject",
+  validateMiddleware(rejectNoteSchema),
+  rejectNote,
+);
 
-//pyq management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PYQs MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/pyqs/pending", fetchPendingPyqs);
 router.patch("/pyqs/:pyqId/approve", approvePyq);
-router.patch("/pyqs/:pyqId/reject", rejectPyq);
+router.patch(
+  "/pyqs/:pyqId/reject",
+  validateMiddleware(rejectPYQSchema),
+  rejectPyq,
+);
 
-//syllabus management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYLLABUS MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/syllabus/pending", fetchPendingSyllabus);
 router.patch("/syllabus/:syllabusId/approve", approveSyllabus);
-router.patch("/syllabus/:syllabusId/reject", rejectSyllabus);
+router.patch(
+  "/syllabus/:syllabusId/reject",
+  validateMiddleware(rejectSyllabusSchema),
+  rejectSyllabus,
+);
 
 export default router;

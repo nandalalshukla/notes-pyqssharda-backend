@@ -11,7 +11,7 @@ export const deleteComment = async (req: Request, res: Response) => {
   }
 
   const userId = req.user.userId;
-  const userRole = req.user.userRole;
+  const userRole = req.user?.userRole;
 
   try {
     const comment = await Comment.findById(commentId);

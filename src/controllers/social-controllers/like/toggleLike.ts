@@ -10,12 +10,10 @@ export const toggleLike = async (req: Request, res: Response) => {
   const userId = req.user!.userId;
 
   if (!targetId || !targetType) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "targetId and targetType are required",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "targetId and targetType are required",
+    });
   }
 
   if (!["post", "comment"].includes(targetType)) {
@@ -69,9 +67,9 @@ export const toggleLike = async (req: Request, res: Response) => {
     return res
       .status(200)
       .json({ success: true, message: "Liked", data: { liked: true } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Duplicate like (race condition)
-    if (err.code === 11000) {
+    if (err instanceof Error && "code" in err && err.code === 11000) {
       return res.status(409).json({ success: false, message: "Already liked" });
     }
     console.error("toggleLike error:", err);

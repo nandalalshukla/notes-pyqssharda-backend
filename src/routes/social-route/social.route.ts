@@ -1,43 +1,201 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+
+// Controllers - Posts
+import { createPost } from "../../controllers/social-controllers/post/createPost.js";
+import { editPost } from "../../controllers/social-controllers/post/editPost.js";
+import { deletePost } from "../../controllers/social-controllers/post/deletePost.js";
+import { getFeed } from "../../controllers/social-controllers/post/getFeedPosts.js";
+
+// Controllers - Comments
 import { createComment } from "../../controllers/social-controllers/comment/createComment.js";
 import { editComment } from "../../controllers/social-controllers/comment/editComment.js";
 import { deleteComment } from "../../controllers/social-controllers/comment/deleteComment.js";
 import { getComments } from "../../controllers/social-controllers/comment/getComments.js";
+
+// Controllers - Likes
 import { toggleLike } from "../../controllers/social-controllers/like/toggleLike.js";
+
+// Controllers - Follow
 import { toggleFollow } from "../../controllers/social-controllers/follow/toggleFollow.js";
 import { getFollowers } from "../../controllers/social-controllers/follow/getFollowers.js";
 import { getFollowing } from "../../controllers/social-controllers/follow/getFollowing.js";
+
+// Controllers - Notifications
 import { getNotifications } from "../../controllers/social-controllers/notification/getNotifications.js";
-import { markAllAsRead, markOneAsRead } from "../../controllers/social-controllers/notification/markAsRead.js";
-import { getFeed } from "../../controllers/social-controllers/post/getFeedPosts.js";
+import {
+  markAllAsRead,
+  markOneAsRead,
+} from "../../controllers/social-controllers/notification/markAsRead.js";
+
+// Validators
+import {
+  createPostSchema,
+  editPostSchema,
+  postParamsSchema,
+} from "../../validators/social-zod/post.zod.js";
+import {
+  createCommentSchema,
+  editCommentSchema,
+  commentParamsSchema,
+} from "../../validators/social-zod/comment.zod.js";
+import {
+  likeActionSchema,
+  likeParamsSchema,
+} from "../../validators/social-zod/like.zod.js";
+import {
+  followActionSchema,
+  followListSchema,
+} from "../../validators/social-zod/follow.zod.js";
+import {
+  notificationParamsSchema,
+  getNotificationsSchema,
+} from "../../validators/social-zod/notification.zod.js";
+
+// Middlewares & Multer
+import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import { uploadPostFilesMulter } from "../../config/multer.js";
+
 const router = Router();
 
-// Comments
-router.post("/posts/:postId/comments", authMiddleware, createComment);
-router.patch("/posts/:postId/comments/:commentId", authMiddleware, editComment);
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PUBLIC ROUTES (No Auth Required)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+// Get feed (paginated) - Public route so anyone can browse posts
+router.get("/feed", getFeed);
+
+// Get all comments for a post - Public route
+router.get("/posts/:postId/comments", getComments);
+
+// Get user's followers (paginated) - Public route
+router.get(
+  "/users/:userId/followers",
+  validateMiddleware(followListSchema),
+  getFollowers,
+);
+
+// Get user's following (paginated) - Public route
+router.get(
+  "/users/:userId/following",
+  validateMiddleware(followListSchema),
+  getFollowing,
+);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PROTECTED ROUTES (Auth Required)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * POSTS MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
+
+// Create new post with file uploads
+router.post(
+  "/posts",
+  authMiddleware,
+  uploadPostFilesMulter.array("files"),
+  validateMiddleware(createPostSchema),
+  createPost,
+);
+
+// Update post
+router.patch(
+  "/posts/:postId",
+  authMiddleware,
+  uploadPostFilesMulter.array("files"),
+  validateMiddleware(editPostSchema),
+  editPost,
+);
+
+// Delete post
+router.delete("/posts/:postId", authMiddleware, deletePost);
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * COMMENTS MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
+
+// Create comment
+router.post(
+  "/posts/:postId/comments",
+  authMiddleware,
+  validateMiddleware(createCommentSchema),
+  createComment,
+);
+
+// Edit comment
+router.patch(
+  "/posts/:postId/comments/:commentId",
+  authMiddleware,
+  validateMiddleware(editCommentSchema),
+  editComment,
+);
+
+// Delete comment
 router.delete(
   "/posts/:postId/comments/:commentId",
   authMiddleware,
   deleteComment,
 );
-router.get("/posts/:postId/comments", authMiddleware, getComments);
 
-// Likes
-router.post("/likes/toggle", authMiddleware, toggleLike);
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * LIKES MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
 
-// Follow
-router.post("/users/:userId/follow", authMiddleware, toggleFollow);
-router.get("/users/:userId/followers", authMiddleware, getFollowers);
-router.get("/users/:userId/following", authMiddleware, getFollowing);
+// Toggle like on post/comment
+router.post(
+  "/likes/toggle",
+  authMiddleware,
+  validateMiddleware(likeActionSchema),
+  toggleLike,
+);
 
-// Notifications
-router.get("/notifications", authMiddleware, getNotifications);
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * FOLLOW MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
+
+// Toggle follow user
+router.post(
+  "/users/:userId/follow",
+  authMiddleware,
+  validateMiddleware(followActionSchema),
+  toggleFollow,
+);
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * NOTIFICATIONS MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
+
+// Get notifications (paginated)
+router.get(
+  "/notifications",
+  authMiddleware,
+  validateMiddleware(getNotificationsSchema),
+  getNotifications,
+);
+
+// Mark all notifications as read
 router.patch("/notifications/read-all", authMiddleware, markAllAsRead);
-router.patch("/notifications/:id/read", authMiddleware, markOneAsRead);
 
-// Feed
-router.get("/feed", authMiddleware, getFeed);
-
+// Mark single notification as read
+router.patch(
+  "/notifications/:notificationId/read",
+  authMiddleware,
+  markOneAsRead,
+);
 
 export default router;

@@ -1,18 +1,14 @@
 import { z } from "zod";
-export const loginSchema = z.object({
-  email: z
-    .email({ message: "Invalid email" })
-    .trim()
-    .toLowerCase()
-    .refine(
-      (email) => {
-        const domain = email.split("@")[1];
-        return domain === "ug.sharda.ac.in";
-      },
-      {
-        message: "Only Sharda University student emails are allowed",
-      }
-    ),
+import { shardaEmailSchema, passwordSchema } from "./register.zod";
 
-  password: z.string().trim(),
+/**
+ * Schema for user login
+ * Used in: loginUser controller
+ */
+export const loginSchema = z.object({
+  email: shardaEmailSchema,
+
+  password: z.string().min(1, { message: "Password is required" }),
 });
+
+export type LoginInput = z.infer<typeof loginSchema>;

@@ -33,13 +33,11 @@ export const toggleFollow = async (req: Request, res: Response) => {
       await User.findByIdAndUpdate(userId, { $inc: { followingCount: -1 } });
       await User.findByIdAndUpdate(targetId, { $inc: { followersCount: -1 } });
 
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Unfollowed",
-          data: { following: false },
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Unfollowed",
+        data: { following: false },
+      });
     }
 
     // Follow
@@ -56,8 +54,8 @@ export const toggleFollow = async (req: Request, res: Response) => {
     return res
       .status(200)
       .json({ success: true, message: "Followed", data: { following: true } });
-  } catch (err: any) {
-    if (err.code === 11000) {
+  } catch (err: unknown) {
+    if (err instanceof Error && "code" in err && err.code === 11000) {
       return res
         .status(409)
         .json({ success: false, message: "Already following" });

@@ -1,4 +1,12 @@
-export function mapFilesToMedia(files: Express.Multer.File[]) {
+interface CloudinaryFile extends Omit<
+  Express.Multer.File,
+  "filename" | "path"
+> {
+  path?: string; // Cloudinary secure_url
+  filename?: string; // Cloudinary public_id
+}
+
+export function mapFilesToMedia(files: CloudinaryFile[]) {
   return files.map((file) => {
     const { mimetype } = file;
     let type: "image" | "video" | "raw";
@@ -8,8 +16,8 @@ export function mapFilesToMedia(files: Express.Multer.File[]) {
 
     return {
       type,
-      url: (file as any).path, // Cloudinary secure_url (set by multer-storage-cloudinary)
-      publicId: (file as any).filename, // Cloudinary public_id
+      url: file.path || "", // Cloudinary secure_url (set by multer-storage-cloudinary)
+      publicId: file.filename || "", // Cloudinary public_id
     };
   });
 }

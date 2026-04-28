@@ -14,14 +14,14 @@ export const searchNotes = async (req: Request, res: Response) => {
     }
 
     // Build filter conditions
-    const filterConditions: any = {
+    const filterConditions: Record<string, any> = {
       status: "approved", // Only search approved notes
     };
 
     // Add text search if query is provided
     if (query && typeof query === "string") {
       const regex = new RegExp(query, "i");
-      const searchConditions: any[] = [
+      const searchConditions: Record<string, any>[] = [
         { title: regex },
         { program: regex },
         { courseCode: regex },

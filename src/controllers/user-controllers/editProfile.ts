@@ -2,8 +2,16 @@ import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
 import cloudinary from "../../config/cloudinary.js";
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { userId: string; userRole?: string };
+    }
+  }
+}
+
 export const updateProfile = async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
+  const userId = req.user?.userId;
   const { bio, course, contactNo, name } = req.body;
 
   try {
@@ -66,7 +74,7 @@ export const updateProfile = async (req: Request, res: Response) => {
 };
 
 export const removeProfilePic = async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
+  const userId = req.user?.userId;
 
   try {
     const user = await User.findById(userId);
@@ -89,7 +97,7 @@ export const removeProfilePic = async (req: Request, res: Response) => {
       resource_type: "image",
     });
 
-    // Clear from DB    
+    // Clear from DB
     user.profilePic = { url: "", publicId: "" };
     await user.save();
 

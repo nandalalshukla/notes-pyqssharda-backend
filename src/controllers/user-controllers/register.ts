@@ -64,10 +64,10 @@ export const registerUser = async (req: Request, res: Response) => {
       },
       message: "Account created successfully, please verify your email",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Catch mongo duplicate key errors as a safety net
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
+    if (error instanceof Error && "code" in error && error.code === 11000) {
+      const field = Object.keys((error as any).keyPattern)[0];
       return res.status(409).json({
         success: false,
         message: `An account with this ${field} already exists`,

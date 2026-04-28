@@ -49,7 +49,7 @@ async function isOtpExpired(expiryTime: Date) {
 }
 
 async function verifyOtp(otp: string, hashedOtp: string): Promise<boolean> {
-  const expiryTime = await otpExpiryTime(100000);
+  const expiryTime = await otpExpiryTime(1000000);
   const hashedInputOtp = await hashOtp(otp);
   console.log("Hashed Input OTP:", hashedInputOtp);
   console.log("Stored Hashed OTP:", hashedOtp);
