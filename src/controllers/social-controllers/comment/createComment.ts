@@ -2,20 +2,24 @@
 import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
+import { Like } from "../../../models/social/like.model.js";
 import { Notification } from "../../../models/social/notification.model.js";
 
 export const createComment = async (req: Request, res: Response) => {
   const { postId } = req.params;
-  const { content, parentComment } = req.body;
+  const { text, content, parentComment } = req.body;
   const userId = req.user!.userId;
 
-  if (!content?.trim()) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Comment content is required" });
-  }
+  // Support both 'text' and 'content' fields for flexibility
+  const commentContent = (text || content)?.trim();
 
   try {
+    if (!commentContent) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot be empty",
+      });
+    }
     const post = await Post.findById(postId);
     if (!post || post.isDeleted) {
       return res
@@ -36,7 +40,7 @@ export const createComment = async (req: Request, res: Response) => {
     const comment = await Comment.create({
       post: postId,
       author: userId,
-      content,
+      content: commentContent.trim(),
       parentComment: parentComment || null,
     });
 
@@ -56,13 +60,33 @@ export const createComment = async (req: Request, res: Response) => {
 
     const populated = await comment.populate(
       "author",
-      "name username profilePic",
+      "_id username avatar email",
     );
+
+    // Format response to match frontend expectations
+    const likeCount = 0; // New comment has no likes
+    const userLiked = false;
+    const author = populated.author as any;
 
     return res.status(201).json({
       success: true,
       message: "Comment created",
-      data: { comment: populated },
+      data: {
+        comment: {
+          _id: populated._id,
+          text: populated.content,
+          author: {
+            _id: author._id,
+            username: author.username || "Anonymous",
+            avatar: author.avatar,
+          },
+          post: populated.post,
+          likes: likeCount,
+          likedByCurrentUser: userLiked,
+          createdAt: populated.createdAt,
+          updatedAt: populated.updatedAt,
+        },
+      },
     });
   } catch (err) {
     console.error("createComment error:", err);

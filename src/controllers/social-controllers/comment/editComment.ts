@@ -1,19 +1,24 @@
 // controllers/comment/editComment.ts
 import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
+import { Like } from "../../../models/social/like.model.js";
 
 export const editComment = async (req: Request, res: Response) => {
   const { commentId } = req.params;
-  const { content } = req.body;
+  const { text, content } = req.body;
   const userId = req.user!.userId;
 
-  if (!content?.trim()) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Content is required" });
-  }
+  // Support both 'text' and 'content' fields for flexibility
+  const commentContent = (text || content)?.trim();
 
   try {
+    if (!commentContent) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot be empty",
+      });
+    }
+
     const comment = await Comment.findById(commentId);
 
     if (!comment || comment.isDeleted) {
@@ -23,18 +28,51 @@ export const editComment = async (req: Request, res: Response) => {
     }
 
     if (comment.author.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Not authorized" });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to edit this comment",
+      });
     }
 
-    comment.content = content;
+    comment.content = commentContent.trim();
     await comment.save();
+
+    // Populate and get like data
+    const populated = await comment.populate(
+      "author",
+      "_id username avatar email",
+    );
+
+    const likeCount = await Like.countDocuments({
+      comment: comment._id,
+    });
+
+    const userLiked = await Like.exists({
+      comment: comment._id,
+      user: userId,
+    });
+
+    const author = populated.author as any;
 
     return res.status(200).json({
       success: true,
       message: "Comment updated",
-      data: { comment },
+      data: {
+        comment: {
+          _id: populated._id,
+          text: populated.content,
+          author: {
+            _id: author._id,
+            username: author.username || "Anonymous",
+            avatar: author.avatar,
+          },
+          post: populated.post,
+          likes: likeCount,
+          likedByCurrentUser: !!userLiked,
+          createdAt: populated.createdAt,
+          updatedAt: populated.updatedAt,
+        },
+      },
     });
   } catch (err) {
     console.error("editComment error:", err);
