@@ -1,7 +1,8 @@
 import cors from "cors";
 
 const allowedOrigins: (string | RegExp)[] = [
-  process.env.VERCEL_FRONTEND_URL, // Production frontend
+  process.env.VERCEL_FRONTEND_URL,
+  process.env.FRONTEND_URL,// Production frontend
   "http://localhost:3000", // Local development (default Next.js port)
   "http://localhost:3100", // Local development (custom port)
   "https://www.sharda.social",
