@@ -1,10 +1,15 @@
 import nodemailer from "nodemailer";
 
-// Create email transporter using Gmail SMTP
+const emailHost = process.env.EMAIL_HOST || "smtp.gmail.com";
+const emailPort = Number(process.env.EMAIL_PORT || "587");
+const emailSecure =
+  process.env.EMAIL_SECURE === "true" ? true : emailPort === 465;
+
+// Create email transporter using SMTP settings from env
 export const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use SSL
+  host: emailHost,
+  port: emailPort,
+  secure: emailSecure,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -12,6 +17,9 @@ export const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false, // Allow self-signed certificates
   },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 20000,
   from: {
     name: "Sharda Online Library",
     address: process.env.EMAIL_USER || "shardaonlinelibrary@gmail.com",

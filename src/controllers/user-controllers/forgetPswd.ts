@@ -29,7 +29,7 @@ export const forgetPassword = async (req: Request, res: Response) => {
     console.error("Error in forget password:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "We are experiencing high traffic. Please try again later.",
     });
   }
 };
