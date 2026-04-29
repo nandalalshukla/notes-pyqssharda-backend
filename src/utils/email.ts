@@ -1,8 +1,10 @@
-import { transporter } from "../config/email.js";
+import { resend, EMAIL_CONFIG } from "../config/email.js";
 
-const EMAIL_FROM =
-  process.env.EMAIL_FROM || "Sharda Online Library <shuklanandalal@gmail.com>";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shuklanandalal@gmail.com";
+interface SendEmailResponse {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
 
 // Clean, professional email wrapper aligned with Sharda Online Library branding
 const emailWrapper = (content: string) => `
@@ -58,36 +60,47 @@ const emailWrapper = (content: string) => `
 </html>
 `;
 
-// Helper function to send email with Nodemailer
-async function sendEmail(to: string, subject: string, html: string) {
+/**
+ * Send email using Resend
+ *
+ * IMPORTANT:
+ * - Always await this function.
+ * - Always check the returned `success` property.
+ * - Ensure `from` is a verified domain in Resend if not using the onboarding one.
+ */
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<SendEmailResponse> {
   try {
     console.log(`📧 Attempting to send email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
 
-    const mailData = {
-      from: EMAIL_FROM,
-      to,
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: [to],
       subject,
       html: emailWrapper(html),
-    };
-
-    const info = await new Promise((resolve, reject) => {
-      transporter.sendMail(mailData, (err, info) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(info);
-        }
-      });
     });
 
+    if (error) {
+      console.error(`❌ Resend API Error when sending email to ${to}:`, error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data?.id) {
+      console.error(`❌ Failed to get a message ID from Resend for ${to}`);
+      return { success: false, error: "No message ID returned from Resend." };
+    }
+
     console.log(`✅ Email sent successfully to: ${to}`);
-    console.log(`📬 Message ID: ${(info as any).messageId}`);
-    return info;
+    console.log(`📬 Message ID: ${data.id}`);
+    return { success: true, messageId: data.id };
   } catch (error: any) {
-    console.error(`❌ Failed to send email to: ${to}`);
+    console.error(`❌ Unexpected error sending email to: ${to}`);
     console.error(`❌ Error details:`, error.message);
-    throw error;
+    return { success: false, error: error.message };
   }
 }
 
@@ -170,7 +183,7 @@ export async function requestForModeratorMail(email: string, name: string) {
   `;
 
   return sendEmail(
-    process.env.ADMIN_EMAIL!,
+    EMAIL_CONFIG.adminEmail,
     "New Moderator Application",
     content,
   );

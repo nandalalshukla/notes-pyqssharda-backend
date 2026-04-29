@@ -24,9 +24,9 @@
     "mongoose": "^9.0.1",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
-    "nodemailer": "^7.0.11",
     "pdfjs-dist": "^5.4.530",
     "pg": "^8.16.3",
+    "resend": "^6.12.2",
     "tsx": "^4.21.0",
     "zod": "^4.1.13"
   },
@@ -38,7 +38,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.0.1",
-    "@types/nodemailer": "^7.0.4",
     "@types/pg": "^8.16.0",
     "nodemon": "^3.1.11",
     "typescript": "^5.9.3"

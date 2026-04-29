@@ -23,15 +23,18 @@ async function sendAndStoreOtp(email: string): Promise<void> {
   const otp = await generateOtp();
   console.log(`Sending OTP ${otp} to email: ${email}`);
 
-  try {
-    await sendOTPMail(email, otp);
-    console.log(`✓ OTP email sent successfully to: ${email}`);
-  } catch (error) {
-    console.error(`✗ Failed to send OTP email to ${email}:`, error);
+  // It's important to await the email send operation here!
+  const sendResult = await sendOTPMail(email, otp);
+
+  if (!sendResult.success) {
+    console.error(`✗ Failed to send OTP email to ${email}:`, sendResult.error);
+    // Throw an error so the controller can catch it and show an appropriate message
     throw new Error(
-      "Failed to send OTP email. Please check your email configuration.",
+      "Failed to send OTP email. We are experiencing high traffic, please try again later.",
     );
   }
+
+  console.log(`✓ OTP email sent successfully to: ${email}`);
 
   const hashedOtp = await hashOtp(otp);
   const otpExpiry = await otpExpiryTime(3);

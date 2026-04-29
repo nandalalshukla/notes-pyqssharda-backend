@@ -1,36 +1,22 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const emailHost = process.env.EMAIL_HOST || "smtp.gmail.com";
-const emailPort = Number(process.env.EMAIL_PORT || "587");
-const emailSecure =
-  process.env.EMAIL_SECURE === "true" ? true : emailPort === 465;
+// Ensure RESEND_API_KEY environment variable is configured
+const resendApiKey = process.env.RESEND_API_KEY;
 
-// Create email transporter using SMTP settings from env
-export const transporter = nodemailer.createTransport({
-  host: emailHost,
-  port: emailPort,
-  secure: emailSecure,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false, // Allow self-signed certificates
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 20000,
-  from: {
-    name: "Sharda Online Library",
-    address: process.env.EMAIL_USER || "shardaonlinelibrary@gmail.com",
-  },
-});
+if (!resendApiKey) {
+  console.warn("⚠️ RESEND_API_KEY is missing from environment variables.");
+}
 
-// Verify transporter configuration on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Email transporter configuration error:", error);
-  } else {
-    console.log("✅ Email server is ready to send messages");
-  }
-});
+// Create Resend instance
+export const resend = new Resend(resendApiKey);
+
+// Global sender email configuration
+export const EMAIL_CONFIG = {
+  from: "Sharda Social <noreply@sharda.social>",
+  adminEmail: process.env.ADMIN_EMAIL || "shuklanandalal@gmail.com",
+};
+
+// Validate initialization
+if (resendApiKey) {
+  console.log("✅ Resend email service initialized successfully.");
+}

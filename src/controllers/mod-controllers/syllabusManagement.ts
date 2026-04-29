@@ -58,14 +58,14 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentRejectionMail(
-      user.email,
-      user.name,
-      "syllabus",
-      rejectionReason,
-    ).catch((err) => {
-      console.error("Failed to send rejection email:", err);
-    });
+    contentRejectionMail(user.email, user.name, "syllabus", rejectionReason)
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send rejection email:", result.error);
+      })
+      .catch((err) => {
+        console.error("Failed to execute send rejection email task:", err);
+      });
 
     return res
       .status(200)
@@ -106,9 +106,14 @@ export const approveSyllabus = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentApprovalMail(user.email, user.name, "syllabus").catch((err) => {
-      console.error("Failed to send approval email:", err);
-    });
+    contentApprovalMail(user.email, user.name, "syllabus")
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send approval mail:", result.error);
+      })
+      .catch((err) => {
+        console.error("Failed to send approval mail task:", err);
+      });
 
     return res
       .status(200)
