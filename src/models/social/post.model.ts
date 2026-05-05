@@ -14,7 +14,7 @@ const postSchema = new Schema(
     content: {
       type: String,
       trim: true,
-      maxlength: [500, "Post content too long"],
+      maxlength: [2000, "Post content too long"],
       default: "",
     },
 

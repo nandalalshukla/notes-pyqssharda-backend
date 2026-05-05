@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 
 // Controllers - Posts
 import { createPost } from "../../controllers/social-controllers/post/createPost.js";
@@ -52,11 +52,30 @@ import {
 } from "../../validators/social-zod/notification.zod.js";
 
 // Middlewares & Multer
-import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import {
+  authMiddleware,
+  optionalAuthMiddleware,
+} from "../../middlewares/auth/auth.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 import { uploadPostFilesMulter } from "../../config/multer.js";
 
 const router = Router();
+
+const uploadPostFiles = (req: Request, res: Response, next: NextFunction) => {
+  uploadPostFilesMulter.array("files")(req, res, (error: unknown) => {
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload post files.",
+      });
+    }
+
+    next();
+  });
+};
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -65,10 +84,10 @@ const router = Router();
  */
 
 // Get feed (paginated) - Public route so anyone can browse posts
-router.get("/feed", getFeed);
+router.get("/feed", optionalAuthMiddleware, getFeed);
 
 // Get all comments for a post - Public route
-router.get("/posts/:postId/comments", getComments);
+router.get("/posts/:postId/comments", optionalAuthMiddleware, getComments);
 
 // Get user's followers (paginated) - Public route
 router.get(
@@ -100,7 +119,7 @@ router.get(
 router.post(
   "/posts",
   authMiddleware,
-  uploadPostFilesMulter.array("files"),
+  uploadPostFiles,
   validateMiddleware(createPostSchema),
   createPost,
 );
@@ -109,7 +128,7 @@ router.post(
 router.patch(
   "/posts/:postId",
   authMiddleware,
-  uploadPostFilesMulter.array("files"),
+  uploadPostFiles,
   validateMiddleware(editPostSchema),
   editPost,
 );

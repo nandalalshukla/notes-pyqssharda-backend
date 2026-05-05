@@ -8,6 +8,7 @@ import { z } from "zod";
 export const createPostSchema = z.object({
   content: z
     .string()
+    .max(2000, "Post content cannot exceed 2000 characters")
     .optional()
     .refine(
       (value) => {
@@ -26,6 +27,7 @@ export const editPostSchema = z.object({
   content: z
     .string()
     .trim()
+    .max(2000, "Post content cannot exceed 2000 characters")
     .optional()
     .refine((value) => value === undefined || value.length > 0, {
       message: "Content cannot be empty",

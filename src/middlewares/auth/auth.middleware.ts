@@ -27,3 +27,27 @@ export const authMiddleware = (
   }
 };
 export default authMiddleware;
+
+export const optionalAuthMiddleware = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const token = req.cookies?.accessToken;
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.ACCESS_TOKEN_SECRET as string,
+    ) as { userId: string; userRole?: string };
+    req.user = decoded;
+  } catch {
+    req.user = undefined;
+  }
+
+  next();
+};

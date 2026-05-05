@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Post } from "../../../models/social/post.model.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
 
@@ -15,6 +16,13 @@ export const createPost = async (req: Request, res: Response) => {
     }
 
     const media = mapFilesToMedia(files);
+    const invalidFile = media.find((item) => !item.url || !item.publicId);
+    if (invalidFile) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more files failed to upload. Please try again.",
+      });
+    }
 
     const post = await Post.create({
       author: req.user!.userId,
@@ -36,6 +44,7 @@ export const createPost = async (req: Request, res: Response) => {
       author: {
         _id: author._id,
         username: author.username || "Anonymous",
+        avatar: author.profilePic?.url || "",
         profilePic: author.profilePic,
       },
       files: mediaFiles,
@@ -52,8 +61,14 @@ export const createPost = async (req: Request, res: Response) => {
       message: "Post created successfully.",
       data: { post: responsePost },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("createPost error:", err);
+    if (err instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({
+        success: false,
+        message: Object.values(err.errors)[0]?.message || "Invalid post data.",
+      });
+    }
     return res.status(500).json({ success: false, message: "Server error." });
   }
 };

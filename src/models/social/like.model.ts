@@ -11,22 +11,48 @@ const likeSchema = new Schema(
     post: {
       type: Schema.Types.ObjectId,
       ref: "Post",
-      default: null,
     },
 
     comment: {
       type: Schema.Types.ObjectId,
       ref: "Comment",
-      default: null,
     },
   },
   { timestamps: true },
 );
 
-//🔥Prevent duplicate likes
-likeSchema.index({ user: 1, post: 1 }, { unique: true, sparse: true });
-likeSchema.index({ user: 1, comment: 1 }, { unique: true, sparse: true });
+likeSchema.index(
+  { user: 1, post: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { post: { $type: "objectId" } },
+  },
+);
 
-//These create two compound unique indexes in MongoDB. Think of them as a constraint that says "no two documents in this collection can have the same combination of these fields"
+likeSchema.index(
+  { user: 1, comment: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { comment: { $type: "objectId" } },
+  },
+);
 
 export const Like = mongoose.model("Like", likeSchema);
+
+export const ensureLikeIndexes = async () => {
+  const indexes = await Like.collection.indexes();
+
+  for (const index of indexes) {
+    const name = index.name;
+    if (
+      name &&
+      name !== "_id_" &&
+      (name === "user_1_post_1" || name === "user_1_comment_1") &&
+      !index.partialFilterExpression
+    ) {
+      await Like.collection.dropIndex(name);
+    }
+  }
+
+  await Like.syncIndexes();
+};

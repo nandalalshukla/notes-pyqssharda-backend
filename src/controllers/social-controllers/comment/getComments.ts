@@ -25,21 +25,31 @@ export const getComments = async (req: Request, res: Response) => {
       .lean();
 
     // Enrich comments with like data
+    const commentIds = comments.map((comment: any) => comment._id);
+    const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+
+    const likeCounts = await Like.aggregate([
+      { $match: { comment: { $in: commentIds } } },
+      { $group: { _id: "$comment", count: { $sum: 1 } } },
+    ]);
+    const likeCountByCommentId = new Map(
+      likeCounts.map((item: any) => [item._id.toString(), item.count]),
+    );
+
+    const likedCommentIds = userObjectId
+      ? await Like.find({ user: userObjectId, comment: { $in: commentIds } })
+          .select("comment")
+          .lean()
+      : [];
+    const likedCommentIdSet = new Set(
+      likedCommentIds.map((like: any) => like.comment.toString()),
+    );
+
     const commentsWithLikes = await Promise.all(
       comments.map(async (comment: any) => {
-        // Use stored likesCount field for performance
-        const likeCount = comment.likesCount || 0;
-
-        // Ensure userId is ObjectId for proper comparison
-        const userObjectId = userId
-          ? new mongoose.Types.ObjectId(userId)
-          : null;
-        const userLiked = userObjectId
-          ? await Like.exists({
-              comment: comment._id,
-              user: userObjectId,
-            })
-          : null;
+        const commentId = comment._id.toString();
+        const likeCount = likeCountByCommentId.get(commentId) ?? 0;
+        const userLiked = likedCommentIdSet.has(commentId);
 
         return {
           _id: comment._id,
@@ -47,6 +57,7 @@ export const getComments = async (req: Request, res: Response) => {
           author: {
             _id: comment.author._id,
             username: comment.author.username || "Anonymous",
+            avatar: comment.author.profilePic?.url || "",
             profilePic: comment.author.profilePic,
           },
           post: comment.post,

@@ -63,6 +63,7 @@ export const editComment = async (req: Request, res: Response) => {
           author: {
             _id: author._id,
             username: author.username || "Anonymous",
+            avatar: author.profilePic?.url || "",
             profilePic: author.profilePic,
           },
           post: populated.post,
