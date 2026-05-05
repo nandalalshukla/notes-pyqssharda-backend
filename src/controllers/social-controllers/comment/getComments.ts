@@ -21,15 +21,14 @@ export const getComments = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("author", "_id username avatar email")
+      .populate("author", "_id username profilePic email")
       .lean();
 
     // Enrich comments with like data
     const commentsWithLikes = await Promise.all(
       comments.map(async (comment: any) => {
-        const likeCount = await Like.countDocuments({
-          comment: comment._id,
-        });
+        // Use stored likesCount field for performance
+        const likeCount = comment.likesCount || 0;
 
         // Ensure userId is ObjectId for proper comparison
         const userObjectId = userId
@@ -48,7 +47,7 @@ export const getComments = async (req: Request, res: Response) => {
           author: {
             _id: comment.author._id,
             username: comment.author.username || "Anonymous",
-            avatar: comment.author.avatar,
+            profilePic: comment.author.profilePic,
           },
           post: comment.post,
           likes: likeCount,

@@ -60,7 +60,7 @@ export const createComment = async (req: Request, res: Response) => {
 
     const populated = await comment.populate(
       "author",
-      "_id username avatar email",
+      "_id username profilePic email",
     );
 
     // Format response to match frontend expectations
@@ -78,7 +78,7 @@ export const createComment = async (req: Request, res: Response) => {
           author: {
             _id: author._id,
             username: author.username || "Anonymous",
-            avatar: author.avatar,
+            profilePic: author.profilePic,
           },
           post: populated.post,
           likes: likeCount,

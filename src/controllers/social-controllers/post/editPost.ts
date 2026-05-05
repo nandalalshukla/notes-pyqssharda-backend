@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Post } from "../../../models/social/post.model.js";
+import { Like } from "../../../models/social/like.model.js";
 import { destroyCloudinaryAssets } from "../../../utils/destroyCloudinaryAssets.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
 
@@ -79,10 +80,40 @@ export const editPost = async (req: Request, res: Response) => {
 
     await post.save();
 
+    const populated = await post.populate(
+      "author",
+      "_id username profilePic email",
+    );
+
+    const files = populated.media?.map((m: any) => m.url) || [];
+    const publicIds = populated.media?.map((m: any) => m.publicId) || [];
+    const author = populated.author as any;
+    const userLiked = await Like.exists({
+      post: populated._id,
+      user: req.user!.userId,
+    });
+
+    const responsePost = {
+      _id: populated._id,
+      content: populated.content,
+      author: {
+        _id: author._id,
+        username: author.username || "Anonymous",
+        profilePic: author.profilePic,
+      },
+      files,
+      publicIds,
+      likes: populated.likesCount || 0,
+      likedByCurrentUser: !!userLiked,
+      commentCount: populated.commentsCount || 0,
+      createdAt: populated.createdAt,
+      updatedAt: populated.updatedAt,
+    };
+
     return res.status(200).json({
       success: true,
       message: "Post updated successfully.",
-      data: { post },
+      data: { post: responsePost },
     });
   } catch (err) {
     console.error("editPost error:", err);

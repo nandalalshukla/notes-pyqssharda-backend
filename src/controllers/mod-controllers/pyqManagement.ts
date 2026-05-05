@@ -54,11 +54,14 @@ export const rejectPyq = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentRejectionMail(user.email, user.name, "pyq", rejectionReason).catch(
-      (err) => {
+    contentRejectionMail(user.email, user.name, "pyq", rejectionReason)
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send rejection email:", result.error);
+      })
+      .catch((err) => {
         console.error("Failed to send rejection email:", err);
-      },
-    );
+      });
 
     return res
       .status(200)
@@ -94,9 +97,14 @@ export const approvePyq = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentApprovalMail(user.email, user.name, "pyq").catch((err) => {
-      console.error("Failed to send approval email:", err);
-    });
+    contentApprovalMail(user.email, user.name, "pyq")
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send approval email:", result.error);
+      })
+      .catch((err) => {
+        console.error("Failed to send approval email task execution:", err);
+      });
 
     return res
       .status(200)

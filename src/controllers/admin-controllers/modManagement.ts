@@ -11,7 +11,7 @@ export const fetchModRequests = async (req: Request, res: Response) => {
   try {
     const mods = await User.find(
       { modRequest: "pending", role: "user" },
-      "-password -__v"
+      "-password -__v",
     ).lean();
     res.status(200).json({ success: true, mods });
   } catch (error) {
@@ -37,16 +37,29 @@ export const reviewModRequest = async (req: Request, res: Response) => {
       user.modRequest = "approved";
       await user.save();
       //send approval email
-      await moderatorApprovalMail(user.email, user.name);
+      const approveResult = await moderatorApprovalMail(user.email, user.name);
+      if (!approveResult.success) {
+        console.warn(
+          `Failed to send approval email to ${user.email}`,
+          approveResult.error,
+        );
+      }
       return res.status(200).json({
         success: true,
         message: "Moderator request approved successfully",
       });
     } else if (action === "reject") {
+      user.role = "user";
       user.modRequest = "rejected";
       await user.save();
       //send rejection email
-      await moderatorRejectionMail(user.email, user.name);
+      const rejectResult = await moderatorRejectionMail(user.email, user.name);
+      if (!rejectResult.success) {
+        console.warn(
+          `Failed to send rejection email to ${user.email}`,
+          rejectResult.error,
+        );
+      }
       return res.status(200).json({
         success: true,
         message: "Moderator request rejected successfully",
@@ -83,7 +96,7 @@ export const removeModRole = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne(
       { _id: userId, role: "mod" },
-      "-password -__v"
+      "-password -__v",
     );
     if (!user) {
       return res

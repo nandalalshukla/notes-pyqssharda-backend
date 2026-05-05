@@ -54,11 +54,14 @@ export const rejectNote = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentRejectionMail(user.email, user.name, "note", rejectionReason).catch(
-      (err) => {
+    contentRejectionMail(user.email, user.name, "note", rejectionReason)
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send rejection email:", result.error);
+      })
+      .catch((err) => {
         console.error("Failed to send rejection email:", err);
-      },
-    );
+      });
 
     return res
       .status(200)
@@ -97,9 +100,14 @@ export const approveNote = async (req: Request, res: Response) => {
     });
 
     // Send email asynchronously (non-blocking) - don't await
-    contentApprovalMail(user.email, user.name, "note").catch((err) => {
-      console.error("Failed to send approval email:", err);
-    });
+    contentApprovalMail(user.email, user.name, "note")
+      .then((result) => {
+        if (!result.success)
+          console.error("Failed to send approval mail:", result.error);
+      })
+      .catch((err) => {
+        console.error("Failed to send approval mail task:", err);
+      });
 
     return res
       .status(200)

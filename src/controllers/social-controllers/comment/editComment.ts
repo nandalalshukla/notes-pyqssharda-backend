@@ -40,12 +40,11 @@ export const editComment = async (req: Request, res: Response) => {
     // Populate and get like data
     const populated = await comment.populate(
       "author",
-      "_id username avatar email",
+      "_id username profilePic email",
     );
 
-    const likeCount = await Like.countDocuments({
-      comment: comment._id,
-    });
+    // Use stored likesCount field for performance
+    const likeCount = comment.likesCount || 0;
 
     const userLiked = await Like.exists({
       comment: comment._id,
@@ -64,7 +63,7 @@ export const editComment = async (req: Request, res: Response) => {
           author: {
             _id: author._id,
             username: author.username || "Anonymous",
-            avatar: author.avatar,
+            profilePic: author.profilePic,
           },
           post: populated.post,
           likes: likeCount,

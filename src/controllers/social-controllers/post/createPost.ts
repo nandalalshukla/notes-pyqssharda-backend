@@ -22,10 +22,35 @@ export const createPost = async (req: Request, res: Response) => {
       media,
     });
 
+    const populated = await post.populate(
+      "author",
+      "_id username profilePic email",
+    );
+
+    const mediaFiles = populated.media?.map((m: any) => m.url) || [];
+    const publicIds = populated.media?.map((m: any) => m.publicId) || [];
+    const author = populated.author as any;
+    const responsePost = {
+      _id: populated._id,
+      content: populated.content,
+      author: {
+        _id: author._id,
+        username: author.username || "Anonymous",
+        profilePic: author.profilePic,
+      },
+      files: mediaFiles,
+      publicIds,
+      likes: populated.likesCount || 0,
+      likedByCurrentUser: false,
+      commentCount: populated.commentsCount || 0,
+      createdAt: populated.createdAt,
+      updatedAt: populated.updatedAt,
+    };
+
     return res.status(201).json({
       success: true,
       message: "Post created successfully.",
-      data: { post },
+      data: { post: responsePost },
     });
   } catch (err) {
     console.error("createPost error:", err);

@@ -25,8 +25,7 @@ export const getFeed = async (req: Request, res: Response) => {
       // If not authenticated, show all public posts (from all authors)
       const allUsers = await mongoose.connection
         .collection("users")
-        .find({})
-        .project({ _id: 1 })
+        .find({}, { projection: { _id: 1 } })
         .toArray();
       feedAuthorIds = allUsers.map((u: any) => u._id);
     }
@@ -39,15 +38,14 @@ export const getFeed = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("author", "_id username avatar email role")
+      .populate("author", "_id username profilePic email role")
       .lean();
 
     // Get likes count for each post and check if current user liked it
     const postsWithEngagement = await Promise.all(
       posts.map(async (post: any) => {
-        const likesCount = await Like.countDocuments({
-          post: post._id,
-        });
+        // Use stored likesCount field for performance
+        const likesCount = post.likesCount || 0;
 
         // Ensure userId is ObjectId for proper comparison
         const userObjectId = userId
@@ -72,7 +70,7 @@ export const getFeed = async (req: Request, res: Response) => {
           author: {
             _id: post.author._id,
             username: post.author.username || "Anonymous",
-            avatar: post.author.avatar,
+            profilePic: post.author.profilePic,
           },
           files,
           publicIds,
