@@ -28,10 +28,7 @@ export const editPostSchema = z.object({
     .string()
     .trim()
     .max(2000, "Post content cannot exceed 2000 characters")
-    .optional()
-    .refine((value) => value === undefined || value.length > 0, {
-      message: "Content cannot be empty",
-    }),
+    .optional(),
   removePublicIds: z
     .string()
     .optional()

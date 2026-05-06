@@ -30,7 +30,7 @@ export const createComment = async (req: Request, res: Response) => {
     // If reply, verify parent comment exists and belongs to this post
     if (parentComment) {
       const parent = await Comment.findById(parentComment);
-      if (!parent || parent.post.toString() !== postId) {
+      if (!parent || parent.isDeleted || parent.post.toString() !== postId) {
         return res
           .status(404)
           .json({ success: false, message: "Parent comment not found" });
@@ -82,6 +82,7 @@ export const createComment = async (req: Request, res: Response) => {
             profilePic: author.profilePic,
           },
           post: populated.post,
+          parentComment: populated.parentComment,
           likes: likeCount,
           likedByCurrentUser: userLiked,
           createdAt: populated.createdAt,

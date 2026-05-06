@@ -5,12 +5,14 @@ import { createPost } from "../../controllers/social-controllers/post/createPost
 import { editPost } from "../../controllers/social-controllers/post/editPost.js";
 import { deletePost } from "../../controllers/social-controllers/post/deletePost.js";
 import { getFeed } from "../../controllers/social-controllers/post/getFeedPosts.js";
+import { getUserPosts } from "../../controllers/social-controllers/post/getUserPosts.js";
 
 // Controllers - Comments
 import { createComment } from "../../controllers/social-controllers/comment/createComment.js";
 import { editComment } from "../../controllers/social-controllers/comment/editComment.js";
 import { deleteComment } from "../../controllers/social-controllers/comment/deleteComment.js";
 import { getComments } from "../../controllers/social-controllers/comment/getComments.js";
+import { getReplies } from "../../controllers/social-controllers/comment/getReplies.js";
 
 // Controllers - Likes
 import { toggleLike } from "../../controllers/social-controllers/like/toggleLike.js";
@@ -19,6 +21,7 @@ import { toggleLike } from "../../controllers/social-controllers/like/toggleLike
 import { toggleFollow } from "../../controllers/social-controllers/follow/toggleFollow.js";
 import { getFollowers } from "../../controllers/social-controllers/follow/getFollowers.js";
 import { getFollowing } from "../../controllers/social-controllers/follow/getFollowing.js";
+import { getProfile } from "../../controllers/social-controllers/getProfile.js";
 
 // Controllers - Notifications
 import { getNotifications } from "../../controllers/social-controllers/notification/getNotifications.js";
@@ -88,6 +91,19 @@ router.get("/feed", optionalAuthMiddleware, getFeed);
 
 // Get all comments for a post - Public route
 router.get("/posts/:postId/comments", optionalAuthMiddleware, getComments);
+
+// Get replies for a comment - Public route
+router.get(
+  "/posts/:postId/comments/:commentId/replies",
+  optionalAuthMiddleware,
+  getReplies,
+);
+
+// Get user profile - Public route
+router.get("/users/:userId", optionalAuthMiddleware, getProfile);
+
+// Get user's posts (for profile page) - Public route
+router.get("/users/:userId/posts", optionalAuthMiddleware, getUserPosts);
 
 // Get user's followers (paginated) - Public route
 router.get(

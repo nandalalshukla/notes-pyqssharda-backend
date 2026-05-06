@@ -1,10 +1,11 @@
 // controllers/comment/editComment.ts
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
 
 export const editComment = async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const { postId, commentId } = req.params;
   const { text, content } = req.body;
   const userId = req.user!.userId;
 
@@ -12,6 +13,16 @@ export const editComment = async (req: Request, res: Response) => {
   const commentContent = (text || content)?.trim();
 
   try {
+    if (
+      !mongoose.isValidObjectId(postId) ||
+      !mongoose.isValidObjectId(commentId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid post or comment ID",
+      });
+    }
+
     if (!commentContent) {
       return res.status(400).json({
         success: false,
@@ -25,6 +36,12 @@ export const editComment = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ success: false, message: "Comment not found" });
+    }
+
+    if (comment.post.toString() !== postId) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Comment not found on this post" });
     }
 
     if (comment.author.toString() !== userId) {
