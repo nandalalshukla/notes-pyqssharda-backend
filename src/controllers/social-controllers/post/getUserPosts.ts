@@ -42,49 +42,57 @@ export const getUserPosts = async (req: Request, res: Response) => {
 
     const likeCounts = await Like.aggregate([
       { $match: { post: { $in: postIds } } },
-      {
-        $group: {
-          _id: "$post",
-          count: { $sum: 1 },
-          likedByUser: {
-            $sum: userObjectId
-              ? { $cond: [{ $eq: ["$liker", userObjectId] }, 1, 0] }
-              : 0,
-          },
-        },
-      },
+      { $group: { _id: "$post", count: { $sum: 1 } } },
     ]);
-
-    const likeMap = new Map(
-      likeCounts.map((like) => [
-        like._id.toString(),
-        {
-          count: like.count,
-          likedByCurrentUser: userObjectId ? like.likedByUser > 0 : false,
-        },
-      ]),
+    const likeCountByPostId = new Map(
+      likeCounts.map((item: any) => [item._id.toString(), item.count]),
     );
 
-    const enrichedPosts = posts.map((post: any) => {
-      const likeData = likeMap.get(post._id.toString());
+    const likedPostIds = userObjectId
+      ? await Like.find({ user: userObjectId, post: { $in: postIds } })
+          .select("post")
+          .lean()
+      : [];
+    const likedPostIdSet = new Set(
+      likedPostIds.map((like: any) => like.post.toString()),
+    );
+
+    const postsWithEngagement = posts.map((post: any) => {
+      const postId = post._id.toString();
+      const likesCount = likeCountByPostId.get(postId) ?? 0;
+      const userLiked = likedPostIdSet.has(postId);
+
+      const files = post.media?.map((m: any) => m.url) || [];
+      const publicIds = post.media?.map((m: any) => m.publicId) || [];
+
       return {
-        ...post,
-        likes: likeData?.count || 0,
-        likedByCurrentUser: likeData?.likedByCurrentUser || false,
+        _id: post._id,
+        content: post.content,
+        author: {
+          _id: post.author._id,
+          username: post.author.username || "Anonymous",
+          avatar: post.author.profilePic?.url || "",
+          profilePic: post.author.profilePic,
+        },
+        files,
+        publicIds,
+        likes: likesCount,
+        likedByCurrentUser: !!userLiked,
+        commentCount: post.commentsCount || 0,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
       };
     });
+
+    const totalPages = Math.ceil(total / limit);
 
     return res.status(200).json({
       success: true,
       data: {
-        posts: enrichedPosts,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-          hasMore: page * limit < total,
-        },
+        data: postsWithEngagement,
+        totalPages,
+        currentPage: page,
+        total,
       },
     });
   } catch (err: unknown) {
