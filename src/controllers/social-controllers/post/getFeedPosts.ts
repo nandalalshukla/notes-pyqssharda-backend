@@ -1,6 +1,5 @@
 // controllers/feed/getFeed.ts
 import { Request, Response } from "express";
-import { Follow } from "../../../models/social/follow.model.js";
 import { Post } from "../../../models/social/post.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import mongoose from "mongoose";
@@ -12,28 +11,8 @@ export const getFeed = async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
-    let feedAuthorIds: any[] = [];
-
-    // If user is authenticated, get their following list
-    if (userId) {
-      const following = await Follow.find({ follower: userId }).select(
-        "following",
-      );
-      const followingIds = following.map((f) => f.following);
-      feedAuthorIds = [...followingIds, userId];
-    } else {
-      // If not authenticated, show all public posts (from all authors)
-      const allUsers = await mongoose.connection
-        .collection("users")
-        .find({})
-        .project({ _id: 1 })
-        .toArray();
-      feedAuthorIds = allUsers.map((u: any) => u._id);
-    }
-
-    // Fetch posts with proper population
+    // Fetch ALL posts (from all users) ordered by latest, regardless of follows
     const posts = await Post.find({
-      author: { $in: feedAuthorIds },
       isDeleted: false,
     })
       .sort({ createdAt: -1 })
@@ -96,7 +75,6 @@ export const getFeed = async (req: Request, res: Response) => {
     );
 
     const total = await Post.countDocuments({
-      author: { $in: feedAuthorIds },
       isDeleted: false,
     });
 

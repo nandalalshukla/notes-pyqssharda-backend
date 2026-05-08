@@ -5,55 +5,80 @@ import { User } from "../../../models/users/user.model.js";
 import { Notification } from "../../../models/social/notification.model.js";
 
 export const toggleFollow = async (req: Request, res: Response) => {
-  const { userId: targetId } = req.params;
-  const userId = req.user!.userId;
+  const { userId: targetUserId } = req.params;
+  const currentUserId = req.user!.userId;
 
-  if (userId === targetId) {
+  if (currentUserId === targetUserId) {
     return res
       .status(400)
       .json({ success: false, message: "You can't follow yourself" });
   }
 
   try {
-    const target = await User.findById(targetId);
-    if (!target || !target.isActive) {
+    const target = await User.findById(targetUserId).select("+isActive");
+    if (!target) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
 
+    if (!target.isActive) {
+      return res
+        .status(403)
+        .json({ success: false, message: "User is not active" });
+    }
+
     const existing = await Follow.findOne({
-      follower: userId,
-      following: targetId,
+      follower: currentUserId,
+      following: targetUserId,
     });
+
+    let isFollowing = false;
 
     if (existing) {
       // Unfollow
       await existing.deleteOne();
-      await User.findByIdAndUpdate(userId, { $inc: { followingCount: -1 } });
-      await User.findByIdAndUpdate(targetId, { $inc: { followersCount: -1 } });
+      await User.findByIdAndUpdate(targetUserId, {
+        $inc: { followersCount: -1 },
+      });
+      await User.findByIdAndUpdate(currentUserId, {
+        $inc: { followingCount: -1 },
+      });
+      isFollowing = false;
+    } else {
+      // Follow
+      await Follow.create({ follower: currentUserId, following: targetUserId });
+      await User.findByIdAndUpdate(targetUserId, {
+        $inc: { followersCount: 1 },
+      });
+      await User.findByIdAndUpdate(currentUserId, {
+        $inc: { followingCount: 1 },
+      });
+      isFollowing = true;
 
-      return res.status(200).json({
-        success: true,
-        message: "Unfollowed",
-        data: { following: false },
+      // Create notification
+      await Notification.create({
+        recipient: targetUserId,
+        actor: currentUserId,
+        type: "follow",
       });
     }
 
-    // Follow
-    await Follow.create({ follower: userId, following: targetId });
-    await User.findByIdAndUpdate(userId, { $inc: { followingCount: 1 } });
-    await User.findByIdAndUpdate(targetId, { $inc: { followersCount: 1 } });
+    // Fetch updated user to get latest counts
+    const updatedTarget = await User.findById(targetUserId);
 
-    await Notification.create({
-      recipient: targetId,
-      actor: userId,
-      type: "follow",
+    return res.status(200).json({
+      success: true,
+      message: isFollowing ? "Followed" : "Unfollowed",
+      data: {
+        following: isFollowing,
+        followStats: {
+          followerCount: updatedTarget?.followersCount || 0,
+          followingCount: updatedTarget?.followingCount || 0,
+          isFollowedByCurrentUser: isFollowing,
+        },
+      },
     });
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Followed", data: { following: true } });
   } catch (err: unknown) {
     if (err instanceof Error && "code" in err && err.code === 11000) {
       return res

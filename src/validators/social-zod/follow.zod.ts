@@ -2,10 +2,11 @@ import { z } from "zod";
 
 /**
  * Schema for following/unfollowing users
- * Used in: follow.ts controller
+ * Used in: toggleFollow.ts controller
+ * Validates URL parameter userId
  */
 export const followActionSchema = z.object({
-  targetUserId: z.string().refine((id) => /^[0-9a-fA-F]{24}$/.test(id), {
+  userId: z.string().refine((id) => /^[0-9a-fA-F]{24}$/.test(id), {
     message: "Invalid user ID format",
   }),
 });

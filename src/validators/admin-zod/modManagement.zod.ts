@@ -17,5 +17,21 @@ export const modRequestParamsSchema = z.object({
   }),
 });
 
+/**
+ * Combined schema for review endpoint (validates body + params)
+ */
+export const reviewModRequestCombinedSchema = reviewModRequestSchema.merge(
+  modRequestParamsSchema,
+);
+
+/**
+ * Combined schema for remove endpoint (validates params only)
+ */
+export const removeModRoleCombinedSchema = modRequestParamsSchema;
+
 export type ReviewModRequestInput = z.infer<typeof reviewModRequestSchema>;
 export type ModRequestParams = z.infer<typeof modRequestParamsSchema>;
+export type ReviewModRequestCombined = z.infer<
+  typeof reviewModRequestCombinedSchema
+>;
+export type RemoveModRoleCombined = z.infer<typeof removeModRoleCombinedSchema>;

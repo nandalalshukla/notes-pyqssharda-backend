@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Post } from "../../../models/social/post.model.js";
+import { Comment } from "../../../models/social/comment.model.js";
+import { Like } from "../../../models/social/like.model.js";
 import { destroyCloudinaryAssets } from "../../../utils/destroyCloudinaryAssets.js";
+
 export const deletePost = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -40,6 +43,25 @@ export const deletePost = async (req: Request, res: Response) => {
       await destroyCloudinaryAssets(post.media as any);
     }
 
+    // Get all comment IDs for this post before deleting
+    const commentsToDelete = await Comment.find({
+      post: postId,
+      isDeleted: false,
+    }).select("_id");
+    const commentIds = commentsToDelete.map((c) => c._id);
+
+    // Delete likes for the post
+    await Like.deleteMany({ post: postId });
+
+    // Delete likes for all comments of this post
+    if (commentIds.length > 0) {
+      await Like.deleteMany({ comment: { $in: commentIds } });
+    }
+
+    // Soft delete all comments and replies for this post
+    await Comment.updateMany({ post: postId }, { $set: { isDeleted: true } });
+
+    // Soft delete the post
     post.isDeleted = true;
     await post.save();
 

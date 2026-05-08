@@ -1,7 +1,7 @@
-// controllers/comment/deleteComment.ts
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
+import { Like } from "../../../models/social/like.model.js";
 import { Post } from "../../../models/social/post.model.js";
 
 export const deleteComment = async (req: Request, res: Response) => {
@@ -63,6 +63,10 @@ export const deleteComment = async (req: Request, res: Response) => {
       idsToDelete.push(...parentIds);
     }
 
+    // Delete likes for the comment and all its replies
+    await Like.deleteMany({ comment: { $in: idsToDelete } });
+
+    // Soft delete the comment and all its replies
     await Comment.updateMany(
       { _id: { $in: idsToDelete } },
       { $set: { isDeleted: true } },

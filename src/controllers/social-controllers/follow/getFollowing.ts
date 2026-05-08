@@ -16,12 +16,16 @@ export const getFollowing = async (req: Request, res: Response) => {
       .populate("following", "name username profilePic bio");
 
     const total = await Follow.countDocuments({ follower: userId });
+    const totalPages = Math.ceil(total / limit);
 
     return res.status(200).json({
       success: true,
       data: {
-        following: following.map((f) => f.following),
-        pagination: { page, limit, total, hasMore: page * limit < total },
+        data: following.map((f) => f.following),
+        total,
+        page,
+        limit,
+        totalPages,
       },
     });
   } catch (err) {

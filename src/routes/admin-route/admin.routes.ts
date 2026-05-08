@@ -45,11 +45,14 @@ import { deleteUserParamsSchema } from "../../validators/admin-zod/userManagemen
 import {
   reviewModRequestSchema,
   modRequestParamsSchema,
+  reviewModRequestCombinedSchema,
+  removeModRoleCombinedSchema,
 } from "../../validators/admin-zod/modManagement.zod.js";
 
 // Middlewares
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
+import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 
 const router = Router();
 
@@ -111,7 +114,15 @@ router.get("/mods", fetchAllMods);
 router.get("/mods/requests", fetchModRequests);
 
 // Moderator operations (review/remove)
-router.patch("/mods/:userId/review", reviewModRequest);
-router.patch("/mods/:userId/remove", removeModRole);
+router.patch(
+  "/mods/review/:userId",
+  validateMiddleware(reviewModRequestCombinedSchema),
+  reviewModRequest,
+);
+router.patch(
+  "/mods/remove/:userId",
+  validateMiddleware(removeModRoleCombinedSchema),
+  removeModRole,
+);
 
 export default router;
