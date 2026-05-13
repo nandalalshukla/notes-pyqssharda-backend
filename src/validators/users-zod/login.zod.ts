@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { shardaEmailSchema, passwordSchema } from "./register.zod";
+import { shardaEmailSchema, passwordSchema } from "./register.zod.js";
 
 /**
  * Schema for user login

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { shardaEmailSchema } from "./register.zod";
+import { shardaEmailSchema } from "./register.zod.js";
 
 /**
  * Schema for email verification with OTP

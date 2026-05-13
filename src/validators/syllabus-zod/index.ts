@@ -3,4 +3,4 @@
  * Centralized exports for all syllabus-related Zod schemas
  */
 
-export * from "./syllabus.zod";
+export * from "./syllabus.zod.js";

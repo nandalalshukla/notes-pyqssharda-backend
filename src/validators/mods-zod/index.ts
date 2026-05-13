@@ -3,6 +3,6 @@
  * Centralized exports for all moderator-related Zod schemas
  */
 
-export * from "./notesManagement.zod";
-export * from "./pyqsManagement.zod";
-export * from "./syllabusManagement.zod";
+export * from "./notesManagement.zod.js";
+export * from "./pyqsManagement.zod.js";
+export * from "./syllabusManagement.zod.js";

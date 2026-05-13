@@ -22,18 +22,18 @@
  */
 
 // User & Authentication Validators
-export * from "./users-zod";
+export * from "./users-zod/index.js";
 
 // Admin Management Validators
-export * from "./admin-zod";
+export * from "./admin-zod/index.js";
 
 // Moderator Management Validators
-export * from "./mods-zod";
+export * from "./mods-zod/index.js";
 
 // Resource Validators (Notes, PYQs, Syllabus)
-export * from "./notes-zod";
-export * from "./pyqs-zod";
-export * from "./syllabus-zod";
+export * from "./notes-zod/index.js";
+export * from "./pyqs-zod/index.js";
+export * from "./syllabus-zod/index.js";
 
 // Social & Community Validators
-export * from "./social-zod";
+export * from "./social-zod/index.js";

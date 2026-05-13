@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceMetadataSchema } from "../notes-zod/notes.zod";
+import { resourceMetadataSchema } from "../notes-zod/notes.zod.js";
 
 /**
  * Schema for uploading Syllabus
