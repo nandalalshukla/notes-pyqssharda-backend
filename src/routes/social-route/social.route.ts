@@ -16,6 +16,7 @@ import { getReplies } from "../../controllers/social-controllers/comment/getRepl
 
 // Controllers - Likes
 import { toggleLike } from "../../controllers/social-controllers/like/toggleLike.js";
+import { getLikes } from "../../controllers/social-controllers/like/getLikes.js";
 
 // Controllers - Follow
 import { toggleFollow } from "../../controllers/social-controllers/follow/toggleFollow.js";
@@ -25,6 +26,7 @@ import { getProfile } from "../../controllers/social-controllers/getProfile.js";
 
 // Controllers - Notifications
 import { getNotifications } from "../../controllers/social-controllers/notification/getNotifications.js";
+import { getUnreadCount } from "../../controllers/social-controllers/notification/getUnreadCount.js";
 import {
   markAllAsRead,
   markOneAsRead,
@@ -195,6 +197,9 @@ router.post(
   toggleLike,
 );
 
+// Get likes for a post (paginated)
+router.get("/posts/:postId/likes", optionalAuthMiddleware, getLikes);
+
 /**
  * ───────────────────────────────────────────────────────────────────────────────
  * FOLLOW MANAGEMENT ROUTES
@@ -222,6 +227,9 @@ router.get(
   validateMiddleware(getNotificationsSchema),
   getNotifications,
 );
+
+// Get unread notifications count
+router.get("/notifications/unread-count", authMiddleware, getUnreadCount);
 
 // Mark all notifications as read
 router.patch("/notifications/read-all", authMiddleware, markAllAsRead);

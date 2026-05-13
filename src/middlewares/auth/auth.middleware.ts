@@ -22,8 +22,17 @@ export const authMiddleware = (
     console.log(`✅ Auth success: User ${(decoded as any).userId}`);
     next();
   } catch (error) {
-    console.log("❌ Auth failed: Invalid or expired token");
-    return res.status(401).json({ message: "Invalid token" });
+    const jwtError = error as jwt.JsonWebTokenError;
+
+    // Log specific JWT error types for debugging
+    if (jwtError.name === "TokenExpiredError") {
+      console.log(`⏰ Auth failed: Token has expired`);
+      console.log("ℹ️ Client will attempt automatic token refresh...");
+    } else {
+      console.log(`❌ Auth failed: ${jwtError.message}`);
+    }
+
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 export default authMiddleware;

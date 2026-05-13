@@ -3,12 +3,12 @@ import { Request, Response } from "express";
 import { Notification } from "../../../models/social/notification.model.js";
 
 export const markOneAsRead = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { notificationId } = req.params;
   const userId = req.user!.userId;
 
   try {
     const notification = await Notification.findOneAndUpdate(
-      { _id: id, recipient: userId }, // recipient check prevents reading others' notifications
+      { _id: notificationId, recipient: userId }, // recipient check prevents reading others' notifications
       { isRead: true },
       { new: true },
     );
