@@ -1,19 +1,17 @@
 import { Response, Request } from "express";
 import { User } from "../../models/users/user.model.js";
 
-declare global {
-  namespace Express {
-    interface Request {
-      data?: { user: { id: string } };
-    }
-  }
-}
-
 export const getMe = async (req: Request, res: Response) => {
-  const userId = req.data?.user.id;
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+  const userId = req.user.userId;
 
   const user = await User.findById(userId).select(
-    "_id name email role isEmailVerified"
+    "_id name email role isEmailVerified",
   );
 
   if (!user) {
@@ -25,15 +23,22 @@ export const getMe = async (req: Request, res: Response) => {
 
   return res.status(200).json({
     success: true,
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      isActive: user.isActive,
-      contributions: user.contributions,
-      createdAt: user.createdAt,
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        profilePic: user.profilePic,
+        bio: user.bio,
+        course: user.course,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
+        contributions: user.contributions,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+      },
     },
   });
 };

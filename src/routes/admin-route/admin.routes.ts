@@ -1,17 +1,25 @@
 //all admin routes
 import { Router } from "express";
+
+// Controllers - Notes
 import {
   fetchApprovedNotes,
   deleteNote,
 } from "../../controllers/admin-controllers/notesManagement.js";
+
+// Controllers - PYQs
 import {
   fetchApprovedPyqs,
   deletePyq,
 } from "../../controllers/admin-controllers/pyqManagement.js";
+
+// Controllers - Syllabus
 import {
   fetchApprovedSyllabus,
   deleteSyllabus,
 } from "../../controllers/admin-controllers/syllabusManagement.js";
+
+// Controllers - Users
 import {
   fetchAllUsers,
   deleteUser,
@@ -20,45 +28,101 @@ import {
   fetchActiveUsers,
   fetchInactiveUsers,
 } from "../../controllers/admin-controllers/userManagement.js";
+
+// Controllers - Moderators
 import {
   fetchAllMods,
   fetchModRequests,
   removeModRole,
   reviewModRequest,
 } from "../../controllers/admin-controllers/modManagement.js";
+
+// Validators
+import { deleteNoteParamsSchema } from "../../validators/admin-zod/notesManagement.zod.js";
+import { deletePYQParamsSchema } from "../../validators/admin-zod/pyqsManagement.zod.js";
+import { deleteSyllabusParamsSchema } from "../../validators/admin-zod/syllabusManagement.zod.js";
+import { deleteUserParamsSchema } from "../../validators/admin-zod/userManagement.zod.js";
+import {
+  reviewModRequestSchema,
+  modRequestParamsSchema,
+  reviewModRequestCombinedSchema,
+  removeModRoleCombinedSchema,
+} from "../../validators/admin-zod/modManagement.zod.js";
+
+// Middlewares
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
+import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 
 const router = Router();
 
-//all routes here will be protected and will start with /admin
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ADMIN MIDDLEWARE PROTECTION
+ * All routes below require admin role
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
-//notes management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * NOTES MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/notes", fetchApprovedNotes);
 router.delete("/notes/:noteId", deleteNote);
 
-//pyq management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PYQs MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/pyqs", fetchApprovedPyqs);
 router.delete("/pyqs/:pyqId", deletePyq);
 
-//syllabus management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * SYLLABUS MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 router.get("/syllabus", fetchApprovedSyllabus);
 router.delete("/syllabus/:syllabusId", deleteSyllabus);
 
-//user management routes
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * USER MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+// Fetch endpoints
+router.get("/users", fetchAllUsers);
 router.get("/users/active", fetchActiveUsers);
 router.get("/users/inactive", fetchInactiveUsers);
-router.get("/users", fetchAllUsers);
-router.delete("/users/:userId", deleteUser);
-router.patch("/users/deactivate/:userId", deactivateUser);
-router.patch("/users/activate/:userId", activateUser);
 
-//moderator management routes
-router.get("/mods/requests", fetchModRequests);
+// User operations
+router.delete("/users/:userId", deleteUser);
+router.patch("/users/:userId/deactivate", deactivateUser);
+router.patch("/users/:userId/activate", activateUser);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MODERATOR MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+// Fetch endpoints
 router.get("/mods", fetchAllMods);
-router.patch("/mods/review/:userId", reviewModRequest);
-router.patch("/mods/remove/:userId", removeModRole);
+router.get("/mods/requests", fetchModRequests);
+
+// Moderator operations (review/remove)
+router.patch(
+  "/mods/review/:userId",
+  validateMiddleware(reviewModRequestCombinedSchema),
+  reviewModRequest,
+);
+router.patch(
+  "/mods/remove/:userId",
+  validateMiddleware(removeModRoleCombinedSchema),
+  removeModRole,
+);
 
 export default router;

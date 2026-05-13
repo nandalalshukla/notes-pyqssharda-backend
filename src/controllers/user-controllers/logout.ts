@@ -1,20 +1,18 @@
 import { Request, Response } from "express";
-import { User } from "../../models/users/user.model.js";
+import { Session } from "../../models/users/session.model.js";
 
 export const logout = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
 
-    // Best-effort DB cleanup (optional)
     if (refreshToken) {
-      await User.updateOne({ refreshToken }, { $unset: { refreshToken: "" } });
+      await Session.deleteOne({ refreshToken });
     }
 
-    // Always clear cookies
     res.clearCookie("accessToken", {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // true in production
+      secure: false,
     });
 
     res.clearCookie("refreshToken", {
@@ -30,7 +28,6 @@ export const logout = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error in logout:", error);
 
-    // Still return success (logout is cleanup)
     return res.status(200).json({
       success: true,
       message: "Logged out successfully",
@@ -38,4 +35,35 @@ export const logout = async (req: Request, res: Response) => {
   }
 };
 
-export default logout;
+export const logoutAll = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = req.user.userId;
+    await Session.deleteMany({ userId });
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out from all devices",
+    });
+  } catch (error) {
+    console.error("Error in logoutAll:", error);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out from all devices",
+    });
+  }
+};

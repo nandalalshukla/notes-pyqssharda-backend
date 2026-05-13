@@ -13,7 +13,9 @@ export const createNewPassword = async (req: Request, res: Response) => {
     });
   }
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select(
+      "+emailOtpHash +emailOtpExpiry",
+    );
     if (!user) {
       return res.status(404).json({
         success: false,

@@ -1,9 +1,13 @@
 import { Router } from "express";
+import { uploadProfilePicMulter } from "../../config/multer.js";
 
-//import controllers
+// Controllers
 import { loginUser } from "../../controllers/user-controllers/login.js";
 import { registerUser } from "../../controllers/user-controllers/register.js";
-import { logout } from "../../controllers/user-controllers/logout.js";
+import {
+  logout,
+  logoutAll,
+} from "../../controllers/user-controllers/logout.js";
 import { changePassword } from "../../controllers/user-controllers/changePswd.js";
 import { forgetPassword } from "../../controllers/user-controllers/forgetPswd.js";
 import { createNewPassword } from "../../controllers/user-controllers/createNewPswd.js";
@@ -12,68 +16,119 @@ import { getMe } from "../../controllers/user-controllers/loadAuth.js";
 import { refreshAccessToken } from "../../controllers/user-controllers/refreshToken.js";
 import { becomeModerator } from "../../controllers/user-controllers/becomeMod.js";
 import { fetchContributors } from "../../controllers/user-controllers/fetchContributors.js";
+import { deleteAccount } from "../../controllers/user-controllers/deleteAccount.js";
+import { resendOtp } from "../../controllers/user-controllers/resendOtp.js";
+import { deactivateAccount } from "../../controllers/user-controllers/deactivateAccount.js";
+import {
+  updateProfile,
+  removeProfilePic,
+} from "../../controllers/user-controllers/editProfile.js";
 
-//import zod schemas
+// Validators
+import {
+  registerSchema,
+  passwordSchema,
+  shardaEmailSchema,
+} from "../../validators/users-zod/register.zod.js";
 import { loginSchema } from "../../validators/users-zod/login.zod.js";
-import { registerSchema } from "../../validators/users-zod/register.zod.js";
 import { changePasswordSchema } from "../../validators/users-zod/changePswd.zod.js";
 import {
-  createNewPasswordSchema,
   forgotPasswordSchema,
+  createNewPasswordSchema,
 } from "../../validators/users-zod/forgotPswd.zod.js";
+import {
+  verifyEmailSchema,
+  resendOtpSchema,
+} from "../../validators/users-zod/verifyEmail.zod.js";
+import { editProfileSchema } from "../../validators/users-zod/editProfile.zod.js";
+import { becomeModeratorSchema } from "../../validators/users-zod/becomeMod.zod.js";
 
-//import middlewares
+// Middlewares
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 
 const router = Router();
 
-//pubic routes
-//signup
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PUBLIC ROUTES (No Auth Required)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+// Registration
 router.post("/register", validateMiddleware(registerSchema), registerUser);
 
-//login (rate limited)
+// Login
 router.post("/login", validateMiddleware(loginSchema), loginUser);
 
-//forgot password
+// Password Recovery
 router.post(
   "/forgot-password",
   validateMiddleware(forgotPasswordSchema),
   forgetPassword,
 );
 
-//reset password
 router.post(
   "/reset-password",
   validateMiddleware(createNewPasswordSchema),
   createNewPassword,
 );
 
-// verify email
-router.post("/verify-email", verifyEmail);
+// Email Verification
+router.post(
+  "/verify-email",
+  validateMiddleware(verifyEmailSchema),
+  verifyEmail,
+);
+router.post("/resend-otp", validateMiddleware(resendOtpSchema), resendOtp);
 
-//protected rotues
-//logout
-router.post("/logout", logout);
+// Fetch Contributors (Leaderboard)
+router.get("/contributors", fetchContributors);
 
-//change password
+// Refresh Token
+router.post("/refresh-token", refreshAccessToken);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * PROTECTED ROUTES (Auth Required)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+// Get current user
+router.get("/me", authMiddleware, getMe);
+
+// Logout
+router.post("/logout", authMiddleware, logout);
+router.post("/logout-all", authMiddleware, logoutAll);
+
+// Profile Management
+router.put(
+  "/profile",
+  authMiddleware,
+  uploadProfilePicMulter.single("profilePic"),
+  validateMiddleware(editProfileSchema),
+  updateProfile,
+);
+
+// Password Management
 router.post(
   "/change-password",
-  validateMiddleware(changePasswordSchema),
   authMiddleware,
+  validateMiddleware(changePasswordSchema),
   changePassword,
 );
 
-//get logged in user details on app load
-router.get("/me", authMiddleware, getMe);
+// Account Management
+router.post("/deactivate", authMiddleware, deactivateAccount);
+router.delete("/account", authMiddleware, deleteAccount);
+router.delete("/profile-pic", authMiddleware, removeProfilePic);
 
-//refresh token route
-router.post("/refresh-token", refreshAccessToken);
-
-//mod request route
-router.post("/request-mod", authMiddleware, becomeModerator);
-
-//fetch contributors/leaderboard
-router.get("/contributors", fetchContributors);
+// Moderator Request
+router.post(
+  "/request-mod",
+  authMiddleware,
+  validateMiddleware(becomeModeratorSchema),
+  becomeModerator,
+);
 
 export default router;
