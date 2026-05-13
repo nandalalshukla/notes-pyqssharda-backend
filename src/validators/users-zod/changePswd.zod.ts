@@ -1,20 +1,29 @@
-//change password zod schema
-import { email, z } from "zod";
+import { z } from "zod";
+import { shardaEmailSchema, passwordSchema } from "./register.zod";
 
-export const changePasswordSchema = z.object({
-  email: email(),
-  currentPassword: z
-    .string()
-    .min(6, { message: "Minimum 6 characters" })
-    .regex(/[A-Z]/, { message: "One uppercase letter required" })
-    .regex(/[a-z]/, { message: "One lowercase letter required" })
-    .regex(/[0-9]/, { message: "One number required" })
-    .regex(/[@$!%*?&#]/, { message: "One special character required" }),
-  newPassword: z
-    .string()
-    .min(6, { message: "Minimum 6 characters" })
-    .regex(/[A-Z]/, { message: "One uppercase letter required" })
-    .regex(/[a-z]/, { message: "One lowercase letter required" })
-    .regex(/[0-9]/, { message: "One number required" })
-    .regex(/[@$!%*?&#]/, { message: "One special character required" }),
-});
+/**
+ * Schema for changing password (when user is logged in)
+ * Used in: changePassword controller
+ */
+export const changePasswordSchema = z
+  .object({
+    email: shardaEmailSchema,
+
+    currentPassword: z
+      .string()
+      .min(1, { message: "Current password is required" }),
+
+    newPassword: passwordSchema,
+
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords do not match",
+    path: ["confirmNewPassword"],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: "New password must be different from current password",
+    path: ["newPassword"],
+  });
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

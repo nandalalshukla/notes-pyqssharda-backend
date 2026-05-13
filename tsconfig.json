@@ -5,6 +5,7 @@
     "moduleResolution": "Bundler",
     "rootDir": "src",
     "outDir": "dist",
+    "typeRoots": ["./node_modules/@types", "./types"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,3 +13,4 @@
   },
   "include": ["src"]
 }
+
