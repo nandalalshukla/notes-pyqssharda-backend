@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Post } from "../../../models/social/post.model.js";
 import { User } from "../../../models/users/user.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import { Follow } from "../../../models/social/follow.model.js";
 
 export const getUserPosts = async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -57,6 +58,14 @@ export const getUserPosts = async (req: Request, res: Response) => {
       likedPostIds.map((like: any) => like.post.toString()),
     );
 
+    const isFollowedByCurrentUser =
+      userObjectId && currentUserId !== userId
+        ? !!(await Follow.exists({
+            follower: userObjectId,
+            following: userId,
+          }))
+        : false;
+
     const postsWithEngagement = posts.map((post: any) => {
       const postId = post._id.toString();
       const likesCount = likeCountByPostId.get(postId) ?? 0;
@@ -73,6 +82,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
           username: post.author.username || "Anonymous",
           avatar: post.author.profilePic?.url || "",
           profilePic: post.author.profilePic,
+          isFollowedByCurrentUser,
         },
         files,
         publicIds,

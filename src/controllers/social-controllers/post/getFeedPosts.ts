@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { Post } from "../../../models/social/post.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import { Follow } from "../../../models/social/follow.model.js";
 import mongoose from "mongoose";
 
 export const getFeed = async (req: Request, res: Response) => {
@@ -42,6 +43,22 @@ export const getFeed = async (req: Request, res: Response) => {
       likedPostIds.map((like: any) => like.post.toString()),
     );
 
+    const authorIds = [
+      ...new Set(posts.map((post: any) => post.author._id.toString())),
+    ].map((authorId) => new mongoose.Types.ObjectId(authorId));
+
+    const followedAuthors = userObjectId
+      ? await Follow.find({
+          follower: userObjectId,
+          following: { $in: authorIds },
+        })
+          .select("following")
+          .lean()
+      : [];
+    const followedAuthorIdSet = new Set(
+      followedAuthors.map((follow: any) => follow.following.toString()),
+    );
+
     const postsWithEngagement = await Promise.all(
       posts.map(async (post: any) => {
         const postId = post._id.toString();
@@ -62,6 +79,9 @@ export const getFeed = async (req: Request, res: Response) => {
             username: post.author.username || "Anonymous",
             avatar: post.author.profilePic?.url || "",
             profilePic: post.author.profilePic,
+            isFollowedByCurrentUser: followedAuthorIdSet.has(
+              post.author._id.toString(),
+            ),
           },
           files,
           publicIds,
