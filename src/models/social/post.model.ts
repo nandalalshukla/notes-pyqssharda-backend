@@ -11,6 +11,14 @@ const postSchema = new Schema(
       index: true,
     },
 
+    type: {
+      type: String,
+      enum: ["random", "event", "announcement"],
+      default: "random",
+      required: true,
+      index: true,
+    },
+
     content: {
       type: String,
       trim: true,
