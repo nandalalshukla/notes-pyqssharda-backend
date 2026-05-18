@@ -1,47 +1,42 @@
 // controllers/notification/getNotifications.ts
 import { Request, Response } from "express";
 import { Notification } from "../../../models/social/notification.model.js";
-import mongoose from "mongoose";
 
 export const getNotifications = async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const skip = (page - 1) * limit;
+  const readParam = req.query.read as string | undefined;
+  const readFilter =
+    readParam === "true" ? true : readParam === "false" ? false : undefined;
+  const baseQuery = {
+    recipient: userId,
+    ...(readFilter !== undefined ? { isRead: readFilter } : {}),
+  };
 
   try {
-    const notifications = await Notification.find({ recipient: userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "actor",
-        select: "username email profilePic avatar _id",
-      })
-      .populate({
-        path: "post",
-        select: "content files author _id createdAt",
-        populate: {
-          path: "author",
-          select: "username _id",
-        },
-      })
-      .populate({
-        path: "comment",
-        select: "content post author _id createdAt",
-        populate: {
-          path: "author",
-          select: "username _id",
-        },
-      })
-      .lean();
-
-    const unreadCount = await Notification.countDocuments({
-      recipient: userId,
-      isRead: false,
-    });
-
-    const total = await Notification.countDocuments({ recipient: userId });
+    const [notifications, unreadCount, total] = await Promise.all([
+      Notification.find(baseQuery)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "actor",
+          select: "username profilePic _id",
+        })
+        .populate({
+          path: "post",
+          select: "_id",
+        })
+        .populate({
+          path: "comment",
+          select: "_id post",
+        })
+        .lean(),
+      Notification.countDocuments({ recipient: userId, isRead: false }),
+      Notification.countDocuments(baseQuery),
+    ]);
 
     // Format notifications with readable messages
     const formattedNotifications = notifications.map((notif: any) => ({

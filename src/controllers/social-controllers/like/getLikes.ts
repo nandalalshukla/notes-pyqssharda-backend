@@ -19,7 +19,9 @@ export const getLikes = async (req: Request, res: Response) => {
 
     // Verify post exists
     const postObjectId = new mongoose.Types.ObjectId(postId);
-    const post = await Post.findOne({ _id: postObjectId, isDeleted: false });
+    const post = await Post.findOne({ _id: postObjectId, isDeleted: false })
+      .select("_id")
+      .lean();
 
     if (!post) {
       return res.status(404).json({
@@ -35,7 +37,7 @@ export const getLikes = async (req: Request, res: Response) => {
     const likes = await Like.find({ post: postObjectId })
       .populate({
         path: "user",
-        select: "username email profilePic avatar _id",
+        select: "username email profilePic _id",
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -48,12 +50,13 @@ export const getLikes = async (req: Request, res: Response) => {
       : null;
 
     // Get follow relationships for current user
-    const followRelationships = currentUserObjectId
-      ? await Follow.find({
-          follower: currentUserObjectId,
-          following: { $in: userObjectIds },
-        }).lean()
-      : [];
+    const followRelationships =
+      currentUserObjectId && userObjectIds.length > 0
+        ? await Follow.find({
+            follower: currentUserObjectId,
+            following: { $in: userObjectIds },
+          }).lean()
+        : [];
 
     const followingSet = new Set(
       followRelationships.map((f: any) => f.following.toString()),
@@ -64,7 +67,6 @@ export const getLikes = async (req: Request, res: Response) => {
       username: like.user.username,
       email: like.user.email,
       profilePic: like.user.profilePic,
-      avatar: like.user.avatar,
       isFollowedByCurrentUser: followingSet.has(like.user._id.toString()),
     }));
 

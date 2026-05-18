@@ -10,9 +10,11 @@ export const getMe = async (req: Request, res: Response) => {
   }
   const userId = req.user.userId;
 
-  const user = await User.findById(userId).select(
-    "_id name email role isEmailVerified",
-  );
+  const user = await User.findById(userId)
+    .select(
+      "_id name username email role profilePic bio course followersCount followingCount contributions isEmailVerified createdAt",
+    )
+    .lean();
 
   if (!user) {
     return res.status(401).json({

@@ -46,5 +46,6 @@ const notificationSchema = new Schema(
 
 // 🔥 Fast notification feed
 notificationSchema.index({ recipient: 1, createdAt: -1 });
+notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 
 export const Notification = mongoose.model("Notification", notificationSchema);

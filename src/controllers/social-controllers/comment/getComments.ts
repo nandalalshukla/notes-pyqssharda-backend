@@ -12,67 +12,57 @@ export const getComments = async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
-    // Only fetch top-level comments — replies are fetched separately
-    const comments = await Comment.find({
-      post: postId,
-      parentComment: null,
-      isDeleted: false,
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("author", "_id username profilePic email")
-      .lean();
+    const [comments, total] = await Promise.all([
+      Comment.find({
+        post: postId,
+        parentComment: null,
+        isDeleted: false,
+      })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select("content author post likesCount createdAt updatedAt")
+        .populate("author", "_id username profilePic")
+        .lean(),
+      Comment.countDocuments({
+        post: postId,
+        parentComment: null,
+        isDeleted: false,
+      }),
+    ]);
 
-    // Enrich comments with like data
     const commentIds = comments.map((comment: any) => comment._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-    const likeCounts = await Like.aggregate([
-      { $match: { comment: { $in: commentIds } } },
-      { $group: { _id: "$comment", count: { $sum: 1 } } },
-    ]);
-    const likeCountByCommentId = new Map(
-      likeCounts.map((item: any) => [item._id.toString(), item.count]),
-    );
-
-    const likedCommentIds = userObjectId
-      ? await Like.find({ user: userObjectId, comment: { $in: commentIds } })
-          .select("comment")
-          .lean()
-      : [];
+    const likedCommentIds =
+      userObjectId && commentIds.length > 0
+        ? await Like.find({ user: userObjectId, comment: { $in: commentIds } })
+            .select("comment")
+            .lean()
+        : [];
     const likedCommentIdSet = new Set(
       likedCommentIds.map((like: any) => like.comment.toString()),
     );
 
-    const commentsWithLikes = await Promise.all(
-      comments.map(async (comment: any) => {
-        const commentId = comment._id.toString();
-        const likeCount = likeCountByCommentId.get(commentId) ?? 0;
-        const userLiked = likedCommentIdSet.has(commentId);
+    const commentsWithLikes = comments.map((comment: any) => {
+      const commentId = comment._id.toString();
+      const userLiked = likedCommentIdSet.has(commentId);
 
-        return {
-          _id: comment._id,
-          text: comment.content,
-          author: {
-            _id: comment.author._id,
-            username: comment.author.username || "Anonymous",
-            avatar: comment.author.profilePic?.url || "",
-            profilePic: comment.author.profilePic,
-          },
-          post: comment.post,
-          likes: likeCount,
-          likedByCurrentUser: !!userLiked,
-          createdAt: comment.createdAt,
-          updatedAt: comment.updatedAt,
-        };
-      }),
-    );
-
-    const total = await Comment.countDocuments({
-      post: postId,
-      parentComment: null,
-      isDeleted: false,
+      return {
+        _id: comment._id,
+        text: comment.content,
+        author: {
+          _id: comment.author._id,
+          username: comment.author.username || "Anonymous",
+          avatar: comment.author.profilePic?.url || "",
+          profilePic: comment.author.profilePic,
+        },
+        post: comment.post,
+        likes: comment.likesCount || 0,
+        likedByCurrentUser: !!userLiked,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+      };
     });
 
     return res.status(200).json({

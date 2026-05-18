@@ -11,40 +11,42 @@ export const getReplies = async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
-    const replies = await Comment.find({
-      post: postId,
-      parentComment: commentId,
-      isDeleted: false,
-    })
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("author", "_id username profilePic email")
-      .lean();
+    const [replies, total] = await Promise.all([
+      Comment.find({
+        post: postId,
+        parentComment: commentId,
+        isDeleted: false,
+      })
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          "content author post parentComment likesCount createdAt updatedAt",
+        )
+        .populate("author", "_id username profilePic")
+        .lean(),
+      Comment.countDocuments({
+        post: postId,
+        parentComment: commentId,
+        isDeleted: false,
+      }),
+    ]);
 
     const replyIds = replies.map((reply: any) => reply._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-    const likeCounts = await Like.aggregate([
-      { $match: { comment: { $in: replyIds } } },
-      { $group: { _id: "$comment", count: { $sum: 1 } } },
-    ]);
-    const likeCountByReplyId = new Map(
-      likeCounts.map((item: any) => [item._id.toString(), item.count]),
-    );
-
-    const likedReplyIds = userObjectId
-      ? await Like.find({ user: userObjectId, comment: { $in: replyIds } })
-          .select("comment")
-          .lean()
-      : [];
+    const likedReplyIds =
+      userObjectId && replyIds.length > 0
+        ? await Like.find({ user: userObjectId, comment: { $in: replyIds } })
+            .select("comment")
+            .lean()
+        : [];
     const likedReplyIdSet = new Set(
       likedReplyIds.map((like: any) => like.comment.toString()),
     );
 
     const repliesWithLikes = replies.map((reply: any) => {
       const replyId = reply._id.toString();
-      const likeCount = likeCountByReplyId.get(replyId) ?? 0;
       const userLiked = likedReplyIdSet.has(replyId);
 
       return {
@@ -58,17 +60,11 @@ export const getReplies = async (req: Request, res: Response) => {
         },
         post: reply.post,
         parentComment: reply.parentComment,
-        likes: likeCount,
+        likes: reply.likesCount || 0,
         likedByCurrentUser: !!userLiked,
         createdAt: reply.createdAt,
         updatedAt: reply.updatedAt,
       };
-    });
-
-    const total = await Comment.countDocuments({
-      post: postId,
-      parentComment: commentId,
-      isDeleted: false,
     });
 
     return res.status(200).json({

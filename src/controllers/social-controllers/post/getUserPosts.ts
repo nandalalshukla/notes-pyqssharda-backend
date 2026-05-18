@@ -21,39 +21,30 @@ export const getUserPosts = async (req: Request, res: Response) => {
       });
     }
 
-    const posts = await Post.find({
-      author: userId,
-      isDeleted: false,
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("author", "_id username profilePic email role bio")
-      .lean();
-
-    const total = await Post.countDocuments({
-      author: userId,
-      isDeleted: false,
-    });
+    const [posts, total] = await Promise.all([
+      Post.find({ author: userId, isDeleted: false })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          "content author media likesCount commentsCount createdAt updatedAt",
+        )
+        .populate("author", "_id username profilePic")
+        .lean(),
+      Post.countDocuments({ author: userId, isDeleted: false }),
+    ]);
 
     const postIds = posts.map((post: any) => post._id);
     const userObjectId = currentUserId
       ? new mongoose.Types.ObjectId(currentUserId)
       : null;
 
-    const likeCounts = await Like.aggregate([
-      { $match: { post: { $in: postIds } } },
-      { $group: { _id: "$post", count: { $sum: 1 } } },
-    ]);
-    const likeCountByPostId = new Map(
-      likeCounts.map((item: any) => [item._id.toString(), item.count]),
-    );
-
-    const likedPostIds = userObjectId
-      ? await Like.find({ user: userObjectId, post: { $in: postIds } })
-          .select("post")
-          .lean()
-      : [];
+    const likedPostIds =
+      userObjectId && postIds.length > 0
+        ? await Like.find({ user: userObjectId, post: { $in: postIds } })
+            .select("post")
+            .lean()
+        : [];
     const likedPostIdSet = new Set(
       likedPostIds.map((like: any) => like.post.toString()),
     );
@@ -68,7 +59,6 @@ export const getUserPosts = async (req: Request, res: Response) => {
 
     const postsWithEngagement = posts.map((post: any) => {
       const postId = post._id.toString();
-      const likesCount = likeCountByPostId.get(postId) ?? 0;
       const userLiked = likedPostIdSet.has(postId);
 
       const files = post.media?.map((m: any) => m.url) || [];
@@ -86,7 +76,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         },
         files,
         publicIds,
-        likes: likesCount,
+        likes: post.likesCount || 0,
         likedByCurrentUser: !!userLiked,
         commentCount: post.commentsCount || 0,
         createdAt: post.createdAt,

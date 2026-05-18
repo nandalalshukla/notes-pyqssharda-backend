@@ -37,6 +37,16 @@ likeSchema.index(
   },
 );
 
+likeSchema.index(
+  { post: 1 },
+  { partialFilterExpression: { post: { $type: "objectId" } } },
+);
+
+likeSchema.index(
+  { comment: 1 },
+  { partialFilterExpression: { comment: { $type: "objectId" } } },
+);
+
 export const Like = mongoose.model("Like", likeSchema);
 
 export const ensureLikeIndexes = async () => {

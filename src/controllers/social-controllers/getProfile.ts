@@ -8,9 +8,11 @@ export const getProfile = async (req: Request, res: Response) => {
   const currentUserId = req.user?.userId;
 
   try {
-    const user = await User.findById(userId).select(
-      "_id name username email bio profilePic course contactNo followersCount followingCount contributions role +isActive",
-    );
+    const user = await User.findById(userId)
+      .select(
+        "_id name username email bio profilePic course contactNo followersCount followingCount contributions role +isActive",
+      )
+      .lean();
 
     if (!user || !user.isActive) {
       return res.status(404).json({
@@ -19,19 +21,15 @@ export const getProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const postsCount = await Post.countDocuments({
-      author: userId,
-      isDeleted: false,
-    });
-
-    let isFollowedByCurrentUser = false;
-    if (currentUserId && currentUserId !== userId) {
-      const followRelation = await Follow.findOne({
-        follower: currentUserId,
-        following: userId,
-      }).select("_id");
-      isFollowedByCurrentUser = !!followRelation;
-    }
+    const [postsCount, followRelation] = await Promise.all([
+      Post.countDocuments({ author: userId, isDeleted: false }),
+      currentUserId && currentUserId !== userId
+        ? Follow.findOne({ follower: currentUserId, following: userId }).select(
+            "_id",
+          )
+        : Promise.resolve(null),
+    ]);
+    const isFollowedByCurrentUser = !!followRelation;
 
     return res.status(200).json({
       success: true,

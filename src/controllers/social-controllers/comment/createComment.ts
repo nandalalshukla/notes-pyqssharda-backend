@@ -2,7 +2,6 @@
 import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
-import { Like } from "../../../models/social/like.model.js";
 import { Notification } from "../../../models/social/notification.model.js";
 
 export const createComment = async (req: Request, res: Response) => {
@@ -60,7 +59,7 @@ export const createComment = async (req: Request, res: Response) => {
 
     const populated = await comment.populate(
       "author",
-      "_id username profilePic email",
+      "_id username profilePic",
     );
 
     // Format response to match frontend expectations

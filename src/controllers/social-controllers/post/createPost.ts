@@ -30,10 +30,7 @@ export const createPost = async (req: Request, res: Response) => {
       media,
     });
 
-    const populated = await post.populate(
-      "author",
-      "_id username profilePic email",
-    );
+    const populated = await post.populate("author", "_id username profilePic");
 
     const mediaFiles = populated.media?.map((m: any) => m.url) || [];
     const publicIds = populated.media?.map((m: any) => m.publicId) || [];

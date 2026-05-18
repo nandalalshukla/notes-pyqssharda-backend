@@ -12,90 +12,72 @@ export const getFeed = async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
-    // Fetch ALL posts (from all users) ordered by latest, regardless of follows
-    const posts = await Post.find({
-      isDeleted: false,
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("author", "_id username profilePic email role")
-      .lean();
+    const [posts, total] = await Promise.all([
+      Post.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          "content author media likesCount commentsCount createdAt updatedAt",
+        )
+        .populate("author", "_id username profilePic")
+        .lean(),
+      Post.countDocuments({ isDeleted: false }),
+    ]);
 
-    // Get likes count for each post and check if current user liked it
     const postIds = posts.map((post: any) => post._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-    const likeCounts = await Like.aggregate([
-      { $match: { post: { $in: postIds } } },
-      { $group: { _id: "$post", count: { $sum: 1 } } },
+    const [likedPostIds, followedAuthors] = await Promise.all([
+      userObjectId && postIds.length > 0
+        ? Like.find({ user: userObjectId, post: { $in: postIds } })
+            .select("post")
+            .lean()
+        : Promise.resolve([]),
+      userObjectId && postIds.length > 0
+        ? Follow.find({
+            follower: userObjectId,
+            following: { $in: posts.map((post: any) => post.author._id) },
+          })
+            .select("following")
+            .lean()
+        : Promise.resolve([]),
     ]);
-    const likeCountByPostId = new Map(
-      likeCounts.map((item: any) => [item._id.toString(), item.count]),
-    );
 
-    const likedPostIds = userObjectId
-      ? await Like.find({ user: userObjectId, post: { $in: postIds } })
-          .select("post")
-          .lean()
-      : [];
     const likedPostIdSet = new Set(
       likedPostIds.map((like: any) => like.post.toString()),
     );
-
-    const authorIds = [
-      ...new Set(posts.map((post: any) => post.author._id.toString())),
-    ].map((authorId) => new mongoose.Types.ObjectId(authorId));
-
-    const followedAuthors = userObjectId
-      ? await Follow.find({
-          follower: userObjectId,
-          following: { $in: authorIds },
-        })
-          .select("following")
-          .lean()
-      : [];
     const followedAuthorIdSet = new Set(
       followedAuthors.map((follow: any) => follow.following.toString()),
     );
 
-    const postsWithEngagement = await Promise.all(
-      posts.map(async (post: any) => {
-        const postId = post._id.toString();
-        const likesCount = likeCountByPostId.get(postId) ?? 0;
-        const userLiked = likedPostIdSet.has(postId);
+    const postsWithEngagement = posts.map((post: any) => {
+      const postId = post._id.toString();
 
-        const commentsCount = post.commentsCount || 0;
+      // Transform media to match frontend expectations
+      const files = post.media?.map((m: any) => m.url) || [];
+      const publicIds = post.media?.map((m: any) => m.publicId) || [];
 
-        // Transform media to match frontend expectations
-        const files = post.media?.map((m: any) => m.url) || [];
-        const publicIds = post.media?.map((m: any) => m.publicId) || [];
-
-        return {
-          _id: post._id,
-          content: post.content,
-          author: {
-            _id: post.author._id,
-            username: post.author.username || "Anonymous",
-            avatar: post.author.profilePic?.url || "",
-            profilePic: post.author.profilePic,
-            isFollowedByCurrentUser: followedAuthorIdSet.has(
-              post.author._id.toString(),
-            ),
-          },
-          files,
-          publicIds,
-          likes: likesCount,
-          likedByCurrentUser: !!userLiked,
-          commentCount: commentsCount,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
-        };
-      }),
-    );
-
-    const total = await Post.countDocuments({
-      isDeleted: false,
+      return {
+        _id: post._id,
+        content: post.content,
+        author: {
+          _id: post.author._id,
+          username: post.author.username || "Anonymous",
+          avatar: post.author.profilePic?.url || "",
+          profilePic: post.author.profilePic,
+          isFollowedByCurrentUser: followedAuthorIdSet.has(
+            post.author._id.toString(),
+          ),
+        },
+        files,
+        publicIds,
+        likes: post.likesCount || 0,
+        likedByCurrentUser: likedPostIdSet.has(postId),
+        commentCount: post.commentsCount || 0,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+      };
     });
 
     const totalPages = Math.ceil(total / limit);

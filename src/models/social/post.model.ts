@@ -13,8 +13,8 @@ const postSchema = new Schema(
 
     type: {
       type: String,
-      enum: ["random", "event", "announcement"],
-      default: "random",
+      enum: ["general", "event", "announcement"],
+      default: "general",
       required: true,
       index: true,
     },
@@ -56,7 +56,6 @@ const postSchema = new Schema(
       type: Number,
       default: 0,
     },
-
     isDeleted: {
       type: Boolean,
       default: false,
@@ -67,5 +66,8 @@ const postSchema = new Schema(
     timestamps: true,
   },
 );
+
+postSchema.index({ isDeleted: 1, createdAt: -1 });
+postSchema.index({ author: 1, isDeleted: 1, createdAt: -1 });
 
 export const Post = mongoose.model("Post", postSchema);

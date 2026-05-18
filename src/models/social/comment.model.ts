@@ -45,5 +45,6 @@ const commentSchema = new Schema(
 
 // 🔥 For fetching comments efficiently
 commentSchema.index({ post: 1, createdAt: -1 });
+commentSchema.index({ post: 1, parentComment: 1, createdAt: -1 });
 
 export const Comment = mongoose.model("Comment", commentSchema);
