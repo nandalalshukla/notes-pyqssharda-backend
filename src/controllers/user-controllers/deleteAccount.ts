@@ -8,13 +8,12 @@ export const deleteAccount = async (req: Request, res: Response) => {
   const userId = req.user.userId;
 
   try {
-    const user = await User.findById(userId);
-    if (!user) {
+    const result = await User.deleteOne({ _id: userId });
+    if (result.deletedCount === 0) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    await User.findByIdAndDelete(userId);
     return res
       .status(200)
       .json({ success: true, message: "User account deleted successfully" });

@@ -7,7 +7,7 @@ import { shardaEmailSchema, passwordSchema } from "./register.zod.js";
  */
 export const changePasswordSchema = z
   .object({
-    email: shardaEmailSchema,
+    email: shardaEmailSchema.optional(),
 
     currentPassword: z
       .string()
@@ -15,12 +15,17 @@ export const changePasswordSchema = z
 
     newPassword: passwordSchema,
 
-    confirmNewPassword: z.string(),
+    confirmNewPassword: z.string().optional(),
   })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "Passwords do not match",
-    path: ["confirmNewPassword"],
-  })
+  .refine(
+    (data) =>
+      data.confirmNewPassword === undefined ||
+      data.newPassword === data.confirmNewPassword,
+    {
+      message: "Passwords do not match",
+      path: ["confirmNewPassword"],
+    },
+  )
   .refine((data) => data.currentPassword !== data.newPassword, {
     message: "New password must be different from current password",
     path: ["newPassword"],

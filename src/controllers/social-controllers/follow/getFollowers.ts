@@ -9,13 +9,16 @@ export const getFollowers = async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
-    const followers = await Follow.find({ following: userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("follower", "name username profilePic bio");
-
-    const total = await Follow.countDocuments({ following: userId });
+    const [followers, total] = await Promise.all([
+      Follow.find({ following: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select("follower")
+        .populate("follower", "name username profilePic bio")
+        .lean(),
+      Follow.countDocuments({ following: userId }),
+    ]);
     const totalPages = Math.ceil(total / limit);
 
     return res.status(200).json({

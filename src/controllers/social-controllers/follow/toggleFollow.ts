@@ -15,7 +15,7 @@ export const toggleFollow = async (req: Request, res: Response) => {
   }
 
   try {
-    const target = await User.findById(targetUserId).select("+isActive");
+    const target = await User.findById(targetUserId).select("+isActive").lean();
     if (!target) {
       return res
         .status(404)
@@ -31,41 +31,48 @@ export const toggleFollow = async (req: Request, res: Response) => {
     const existing = await Follow.findOne({
       follower: currentUserId,
       following: targetUserId,
-    });
+    })
+      .select("_id")
+      .lean();
 
     let isFollowing = false;
+    let updatedTarget;
 
     if (existing) {
       // Unfollow
-      await existing.deleteOne();
-      await User.findByIdAndUpdate(targetUserId, {
-        $inc: { followersCount: -1 },
-      });
-      await User.findByIdAndUpdate(currentUserId, {
-        $inc: { followingCount: -1 },
-      });
+      await Follow.deleteOne({ _id: existing._id });
+      const [nextTarget] = await Promise.all([
+        User.findByIdAndUpdate(
+          targetUserId,
+          { $inc: { followersCount: -1 } },
+          { new: true, select: "followersCount followingCount" },
+        ).lean(),
+        User.updateOne(
+          { _id: currentUserId },
+          { $inc: { followingCount: -1 } },
+        ),
+      ]);
+      updatedTarget = nextTarget;
       isFollowing = false;
     } else {
       // Follow
       await Follow.create({ follower: currentUserId, following: targetUserId });
-      await User.findByIdAndUpdate(targetUserId, {
-        $inc: { followersCount: 1 },
-      });
-      await User.findByIdAndUpdate(currentUserId, {
-        $inc: { followingCount: 1 },
-      });
+      const [nextTarget] = await Promise.all([
+        User.findByIdAndUpdate(
+          targetUserId,
+          { $inc: { followersCount: 1 } },
+          { new: true, select: "followersCount followingCount" },
+        ).lean(),
+        User.updateOne({ _id: currentUserId }, { $inc: { followingCount: 1 } }),
+        Notification.create({
+          recipient: targetUserId,
+          actor: currentUserId,
+          type: "follow",
+        }),
+      ]);
+      updatedTarget = nextTarget;
       isFollowing = true;
-
-      // Create notification
-      await Notification.create({
-        recipient: targetUserId,
-        actor: currentUserId,
-        type: "follow",
-      });
     }
-
-    // Fetch updated user to get latest counts
-    const updatedTarget = await User.findById(targetUserId);
 
     return res.status(200).json({
       success: true,

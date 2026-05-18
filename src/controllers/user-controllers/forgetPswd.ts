@@ -12,7 +12,7 @@ export const forgetPassword = async (req: Request, res: Response) => {
     });
   }
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("email").lean();
     if (!user) {
       return res.status(404).json({
         success: false,
