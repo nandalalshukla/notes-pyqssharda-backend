@@ -15,7 +15,7 @@ export const getFollowers = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select("follower")
-        .populate("follower", "name username profilePic bio")
+        .populate("follower", "name username profilePic bio role")
         .lean(),
       Follow.countDocuments({ following: userId }),
     ]);

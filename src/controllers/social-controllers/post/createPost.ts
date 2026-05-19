@@ -30,7 +30,10 @@ export const createPost = async (req: Request, res: Response) => {
       media,
     });
 
-    const populated = await post.populate("author", "_id username profilePic");
+    const populated = await post.populate(
+      "author",
+      "_id username profilePic role",
+    );
 
     const mediaFiles = populated.media?.map((m: any) => m.url) || [];
     const publicIds = populated.media?.map((m: any) => m.publicId) || [];
@@ -43,6 +46,7 @@ export const createPost = async (req: Request, res: Response) => {
         username: author.username || "Anonymous",
         avatar: author.profilePic?.url || "",
         profilePic: author.profilePic,
+        role: author.role,
       },
       files: mediaFiles,
       publicIds,

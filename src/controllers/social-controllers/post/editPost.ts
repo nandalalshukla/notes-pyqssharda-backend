@@ -80,7 +80,10 @@ export const editPost = async (req: Request, res: Response) => {
 
     await post.save();
 
-    const populated = await post.populate("author", "_id username profilePic");
+    const populated = await post.populate(
+      "author",
+      "_id username profilePic role",
+    );
 
     const files = populated.media?.map((m: any) => m.url) || [];
     const publicIds = populated.media?.map((m: any) => m.publicId) || [];
@@ -98,6 +101,7 @@ export const editPost = async (req: Request, res: Response) => {
         username: author.username || "Anonymous",
         avatar: author.profilePic?.url || "",
         profilePic: author.profilePic,
+        role: author.role,
       },
       files,
       publicIds,

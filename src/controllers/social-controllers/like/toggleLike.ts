@@ -16,11 +16,14 @@ export const toggleLike = async (req: Request, res: Response) => {
     const userObjectId = new mongoose.Types.ObjectId(userId);
     const targetObjectId = new mongoose.Types.ObjectId(targetId);
 
-    const targetModel = targetType === "post" ? Post : Comment;
-    const target = await targetModel
-      .findOne({ _id: targetObjectId, isDeleted: false })
-      .select("_id author likesCount")
-      .lean();
+    const target =
+      targetType === "post"
+        ? await Post.findOne({ _id: targetObjectId, isDeleted: false })
+            .select("_id author likesCount")
+            .lean()
+        : await Comment.findOne({ _id: targetObjectId, isDeleted: false })
+            .select("_id author likesCount")
+            .lean();
 
     if (!target) {
       return res.status(404).json({
@@ -61,10 +64,17 @@ export const toggleLike = async (req: Request, res: Response) => {
     }
 
     if (likeDelta !== 0) {
-      await targetModel.updateOne(
-        { _id: targetObjectId },
-        { $inc: { likesCount: likeDelta } },
-      );
+      if (targetType === "post") {
+        await Post.updateOne(
+          { _id: targetObjectId },
+          { $inc: { likesCount: likeDelta } },
+        );
+      } else {
+        await Comment.updateOne(
+          { _id: targetObjectId },
+          { $inc: { likesCount: likeDelta } },
+        );
+      }
     }
 
     const likeCount = Math.max(0, (target.likesCount || 0) + likeDelta);

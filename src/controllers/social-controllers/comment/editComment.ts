@@ -57,7 +57,7 @@ export const editComment = async (req: Request, res: Response) => {
     // Populate and get like data
     const populated = await comment.populate(
       "author",
-      "_id username profilePic",
+      "_id username profilePic role",
     );
 
     // Use stored likesCount field for performance
@@ -82,6 +82,7 @@ export const editComment = async (req: Request, res: Response) => {
             username: author.username || "Anonymous",
             avatar: author.profilePic?.url || "",
             profilePic: author.profilePic,
+            role: author.role,
           },
           post: populated.post,
           likes: likeCount,

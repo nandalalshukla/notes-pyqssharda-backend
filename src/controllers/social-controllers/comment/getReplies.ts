@@ -23,7 +23,7 @@ export const getReplies = async (req: Request, res: Response) => {
         .select(
           "content author post parentComment likesCount createdAt updatedAt",
         )
-        .populate("author", "_id username profilePic")
+        .populate("author", "_id username profilePic role")
         .lean(),
       Comment.countDocuments({
         post: postId,
@@ -57,6 +57,7 @@ export const getReplies = async (req: Request, res: Response) => {
           username: reply.author.username || "Anonymous",
           avatar: reply.author.profilePic?.url || "",
           profilePic: reply.author.profilePic,
+          role: reply.author.role,
         },
         post: reply.post,
         parentComment: reply.parentComment,

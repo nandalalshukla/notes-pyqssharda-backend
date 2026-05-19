@@ -29,7 +29,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         .select(
           "content author media likesCount commentsCount createdAt updatedAt",
         )
-        .populate("author", "_id username profilePic")
+        .populate("author", "_id username profilePic role")
         .lean(),
       Post.countDocuments({ author: userId, isDeleted: false }),
     ]);
@@ -72,6 +72,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
           username: post.author.username || "Anonymous",
           avatar: post.author.profilePic?.url || "",
           profilePic: post.author.profilePic,
+          role: post.author.role,
           isFollowedByCurrentUser,
         },
         files,

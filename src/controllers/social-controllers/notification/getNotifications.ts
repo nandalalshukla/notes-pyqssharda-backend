@@ -23,7 +23,7 @@ export const getNotifications = async (req: Request, res: Response) => {
         .limit(limit)
         .populate({
           path: "actor",
-          select: "username profilePic _id",
+          select: "username profilePic role _id",
         })
         .populate({
           path: "post",

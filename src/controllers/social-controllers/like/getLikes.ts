@@ -37,7 +37,7 @@ export const getLikes = async (req: Request, res: Response) => {
     const likes = await Like.find({ post: postObjectId })
       .populate({
         path: "user",
-        select: "username email profilePic _id",
+        select: "username email profilePic role _id",
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -67,6 +67,7 @@ export const getLikes = async (req: Request, res: Response) => {
       username: like.user.username,
       email: like.user.email,
       profilePic: like.user.profilePic,
+      role: like.user.role,
       isFollowedByCurrentUser: followingSet.has(like.user._id.toString()),
     }));
 

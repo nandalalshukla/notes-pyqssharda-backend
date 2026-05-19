@@ -31,6 +31,7 @@ export const optionalAuthMiddleware = (
   _res: Response,
   next: NextFunction,
 ) => {
+  console.log("COOKIES:", req.cookies); // ← add this
   const token = req.cookies?.accessToken;
 
   if (!token) {
