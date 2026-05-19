@@ -32,6 +32,9 @@ import {
   markOneAsRead,
 } from "../../controllers/social-controllers/notification/markAsRead.js";
 
+// Controllers - Reports
+import { createReportController } from "../../controllers/social-controllers/report/createReport.js";
+
 // Validators
 import {
   createPostSchema,
@@ -55,6 +58,7 @@ import {
   notificationParamsSchema,
   getNotificationsSchema,
 } from "../../validators/social-zod/notification.zod.js";
+import { createReportSchema } from "../../validators/social-zod/report.zod.js";
 
 // Middlewares & Multer
 import {
@@ -195,6 +199,19 @@ router.post(
   authMiddleware,
   validateMiddleware(likeActionSchema),
   toggleLike,
+);
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────────
+ * REPORTS MANAGEMENT ROUTES
+ * ───────────────────────────────────────────────────────────────────────────────
+ */
+
+router.post(
+  "/reports",
+  authMiddleware,
+  validateMiddleware(createReportSchema),
+  createReportController,
 );
 
 // Get likes for a post (paginated)

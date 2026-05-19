@@ -17,11 +17,28 @@ import {
   approveSyllabus,
   rejectSyllabus,
 } from "../../controllers/mod-controllers/syllabusManagement.js";
+import {
+  fetchReportById,
+  fetchReports,
+} from "../../controllers/mod-controllers/reportManagement.js";
+import {
+  resolveReport,
+  rejectReport,
+  deleteReportedPost,
+  deleteReportedComment,
+  suspendReportedUser,
+  warnReportedUser,
+} from "../../controllers/mod-controllers/reportActions.js";
 
 // Validators
 import { rejectNoteSchema } from "../../validators/mods-zod/notesManagement.zod.js";
 import { rejectPYQSchema } from "../../validators/mods-zod/pyqsManagement.zod.js";
 import { rejectSyllabusSchema } from "../../validators/mods-zod/syllabusManagement.zod.js";
+import {
+  reportParamsSchema,
+  reportQuerySchema,
+} from "../../validators/mods-zod/reportManagement.zod.js";
+import { reportActionParamsSchema } from "../../validators/mods-zod/reportActions.zod.js";
 
 // Middlewares
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
@@ -75,6 +92,48 @@ router.patch(
   "/syllabus/:syllabusId/reject",
   validateMiddleware(rejectSyllabusSchema),
   rejectSyllabus,
+);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * REPORTS MANAGEMENT ROUTES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+router.get("/reports", validateMiddleware(reportQuerySchema), fetchReports);
+router.get(
+  "/reports/:reportId",
+  validateMiddleware(reportParamsSchema),
+  fetchReportById,
+);
+router.patch(
+  "/reports/:reportId/resolve",
+  validateMiddleware(reportActionParamsSchema),
+  resolveReport,
+);
+router.patch(
+  "/reports/:reportId/reject",
+  validateMiddleware(reportActionParamsSchema),
+  rejectReport,
+);
+router.patch(
+  "/reports/:reportId/delete-post",
+  validateMiddleware(reportActionParamsSchema),
+  deleteReportedPost,
+);
+router.patch(
+  "/reports/:reportId/delete-comment",
+  validateMiddleware(reportActionParamsSchema),
+  deleteReportedComment,
+);
+router.patch(
+  "/reports/:reportId/suspend-user",
+  validateMiddleware(reportActionParamsSchema),
+  suspendReportedUser,
+);
+router.patch(
+  "/reports/:reportId/warn-user",
+  validateMiddleware(reportActionParamsSchema),
+  warnReportedUser,
 );
 
 export default router;

@@ -8,3 +8,4 @@ export * from "./comment.zod.js";
 export * from "./like.zod.js";
 export * from "./follow.zod.js";
 export * from "./notification.zod.js";
+export * from "./report.zod.js";

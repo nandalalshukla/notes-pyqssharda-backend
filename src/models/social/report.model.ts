@@ -11,18 +11,23 @@ const reportSchema = new Schema(
       index: true,
     },
 
-    post: {
-      type: ObjectId,
-      ref: "Post",
+    targetType: {
+      type: String,
+      enum: ["post", "comment", "user"],
       required: true,
       index: true,
     },
 
-    postOwner: {
+    targetId: {
+      type: ObjectId,
+      required: true,
+      index: true,
+    },
+
+    targetOwner: {
       type: ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     reason: {
@@ -70,6 +75,7 @@ const reportSchema = new Schema(
       enum: [
         "none",
         "post_deleted",
+        "comment_deleted",
         "warning_sent",
         "user_suspended",
         "ignored",
@@ -82,6 +88,10 @@ const reportSchema = new Schema(
   },
 );
 
-reportSchema.index({ reporter: 1, post: 1 }, { unique: true });
+reportSchema.index(
+  { reporter: 1, targetType: 1, targetId: 1 },
+  { unique: true },
+);
+reportSchema.index({ createdAt: -1 });
 
 export const Report = mongoose.model("Report", reportSchema);
