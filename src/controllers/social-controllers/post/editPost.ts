@@ -71,6 +71,10 @@ export const editPost = async (req: Request, res: Response) => {
       post.content = req.body.content.trim();
     }
 
+    if (req.body.type !== undefined) {
+      post.type = req.body.type;
+    }
+
     if (!post.content && (post.media as any[]).length === 0) {
       return res.status(400).json({
         success: false,
@@ -95,6 +99,7 @@ export const editPost = async (req: Request, res: Response) => {
 
     const responsePost = {
       _id: populated._id,
+      type: populated.type,
       content: populated.content,
       author: {
         _id: author._id,

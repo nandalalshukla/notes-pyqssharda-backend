@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+export const postTypeSchema = z.enum(["general", "event", "announcement"]);
+
 /**
  * Schema for creating a post
  * Used in: createPost controller
  * Note: Files are handled separately by multer, only content is validated here
  */
 export const createPostSchema = z.object({
+  type: postTypeSchema.default("general"),
   content: z
     .string()
     .max(2000, "Post content cannot exceed 2000 characters")
@@ -24,6 +27,7 @@ export const createPostSchema = z.object({
  * Used in: editPost controller
  */
 export const editPostSchema = z.object({
+  type: postTypeSchema.optional(),
   content: z
     .string()
     .trim()

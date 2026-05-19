@@ -27,7 +27,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "content author media likesCount commentsCount createdAt updatedAt",
+          "type content author media likesCount commentsCount createdAt updatedAt",
         )
         .populate("author", "_id username profilePic role")
         .lean(),
@@ -66,6 +66,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
 
       return {
         _id: post._id,
+        type: post.type || "general",
         content: post.content,
         author: {
           _id: post.author._id,

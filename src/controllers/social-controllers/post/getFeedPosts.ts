@@ -9,20 +9,27 @@ export const getFeed = async (req: Request, res: Response) => {
   const userId = req.user?.userId; // Optional - handle both authenticated and non-authenticated users
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
+  const type = req.query.type as string | undefined;
   const skip = (page - 1) * limit;
+  const requestedType =
+    type === "event" || type === "announcement" ? type : undefined;
+  const postFilter = {
+    isDeleted: false,
+    ...(requestedType ? { type: requestedType } : {}),
+  };
 
   try {
     const [posts, total] = await Promise.all([
-      Post.find({ isDeleted: false })
+      Post.find(postFilter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .select(
-          "content author media likesCount commentsCount createdAt updatedAt",
+          "type content author media likesCount commentsCount createdAt updatedAt",
         )
         .populate("author", "_id username profilePic role")
         .lean(),
-      Post.countDocuments({ isDeleted: false }),
+      Post.countDocuments(postFilter),
     ]);
 
     const postIds = posts.map((post: any) => post._id);
@@ -60,6 +67,7 @@ export const getFeed = async (req: Request, res: Response) => {
 
       return {
         _id: post._id,
+        type: post.type || "general",
         content: post.content,
         author: {
           _id: post.author._id,

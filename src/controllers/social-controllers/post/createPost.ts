@@ -5,7 +5,7 @@ import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
 
 export const createPost = async (req: Request, res: Response) => {
   try {
-    const { content } = req.body;
+    const { content, type = "general" } = req.body;
     const files = (req.files as Express.Multer.File[]) ?? [];
 
     if (!content?.trim() && files.length === 0) {
@@ -26,6 +26,7 @@ export const createPost = async (req: Request, res: Response) => {
 
     const post = await Post.create({
       author: req.user!.userId,
+      type,
       content: content?.trim() ?? "",
       media,
     });
@@ -40,6 +41,7 @@ export const createPost = async (req: Request, res: Response) => {
     const author = populated.author as any;
     const responsePost = {
       _id: populated._id,
+      type: populated.type,
       content: populated.content,
       author: {
         _id: author._id,
