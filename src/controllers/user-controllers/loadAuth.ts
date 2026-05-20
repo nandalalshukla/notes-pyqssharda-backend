@@ -12,7 +12,7 @@ export const getMe = async (req: Request, res: Response) => {
 
   const user = await User.findById(userId)
     .select(
-      "_id name username email role profilePic bio course followersCount followingCount contributions isEmailVerified createdAt",
+      "_id name username email role profilePic bio course contactNo privacySettings followersCount followingCount contributions isEmailVerified createdAt",
     )
     .lean();
 
@@ -35,6 +35,8 @@ export const getMe = async (req: Request, res: Response) => {
         profilePic: user.profilePic,
         bio: user.bio,
         course: user.course,
+        contactNo: user.contactNo,
+        privacySettings: user.privacySettings,
         followersCount: user.followersCount,
         followingCount: user.followingCount,
         contributions: user.contributions,
