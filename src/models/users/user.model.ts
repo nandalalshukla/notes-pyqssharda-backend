@@ -83,6 +83,18 @@ const userSchema = new Schema(
       default: null,
     },
 
+    // 🔹 Privacy Settings
+    privacySettings: {
+      showEmail: {
+        type: Boolean,
+        default: true,
+      },
+      showContactNo: {
+        type: Boolean,
+        default: true,
+      },
+    },
+
     // 🔹 Social Metrics (IMPORTANT: counts only, no arrays)
     followersCount: {
       type: Number,

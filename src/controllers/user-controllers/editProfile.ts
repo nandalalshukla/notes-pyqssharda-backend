@@ -12,7 +12,7 @@ declare global {
 
 export const updateProfile = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
-  const { bio, course, contactNo, name } = req.body;
+  const { bio, course, contactNo, name, showEmail, showContactNo } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -29,6 +29,20 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (bio !== undefined) user.bio = bio.trim();
     if (course !== undefined) user.course = course.trim();
     if (contactNo !== undefined) user.contactNo = contactNo.trim();
+
+    // ── Privacy settings — update if provided ────────────────────────────────
+    if (showEmail !== undefined) {
+      if (!user.privacySettings) {
+        user.privacySettings = { showEmail: true, showContactNo: true };
+      }
+      user.privacySettings.showEmail = showEmail;
+    }
+    if (showContactNo !== undefined) {
+      if (!user.privacySettings) {
+        user.privacySettings = { showEmail: true, showContactNo: true };
+      }
+      user.privacySettings.showContactNo = showContactNo;
+    }
 
     // ── Profile pic — only runs if a file was uploaded ───────────────────────
     if (req.file) {
@@ -57,6 +71,7 @@ export const updateProfile = async (req: Request, res: Response) => {
           course: user.course,
           contactNo: user.contactNo,
           profilePic: user.profilePic,
+          privacySettings: user.privacySettings,
           followersCount: user.followersCount,
           followingCount: user.followingCount,
           contributions: user.contributions,
