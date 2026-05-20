@@ -35,6 +35,10 @@ export const editProfileSchema = z.object({
       message: "Contact number must be exactly 10 digits",
     })
     .optional(),
+
+  showEmail: z.boolean().optional(),
+
+  showContactNo: z.boolean().optional(),
 });
 
 export type EditProfileInput = z.infer<typeof editProfileSchema>;
