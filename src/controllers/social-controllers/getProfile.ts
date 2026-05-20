@@ -10,7 +10,7 @@ export const getProfile = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(userId)
       .select(
-        "_id name username email bio profilePic course contactNo followersCount followingCount contributions role +isActive",
+        "_id name username email bio profilePic course contactNo privacySettings followersCount followingCount contributions role +isActive",
       )
       .lean();
 
@@ -31,6 +31,29 @@ export const getProfile = async (req: Request, res: Response) => {
     ]);
     const isFollowedByCurrentUser = !!followRelation;
 
+    // Apply privacy settings - mask email and phone if user doesn't want to show them
+    const isOwnProfile = currentUserId === userId;
+    let displayEmail = user.email;
+    let displayContactNo = user.contactNo;
+
+    if (!isOwnProfile) {
+      // Mask email if privacy setting is false
+      if (!user.privacySettings?.showEmail && user.email) {
+        const [localPart, domain] = user.email.split("@");
+        const maskedLocal =
+          localPart.length > 2
+            ? localPart.slice(0, 2) + "*".repeat(localPart.length - 2)
+            : "**";
+        displayEmail = `${maskedLocal}@${domain}`;
+      }
+
+      // Mask contact number if privacy setting is false
+      if (!user.privacySettings?.showContactNo && user.contactNo) {
+        const lastTwo = user.contactNo.slice(-2);
+        displayContactNo = "*".repeat(8) + lastTwo;
+      }
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -38,11 +61,11 @@ export const getProfile = async (req: Request, res: Response) => {
           _id: user._id,
           name: user.name,
           username: user.username,
-          email: user.email,
+          email: displayEmail,
           bio: user.bio,
           profilePic: user.profilePic,
           course: user.course,
-          contactNo: user.contactNo,
+          contactNo: displayContactNo,
           role: user.role,
           stats: {
             postsCount,
@@ -51,7 +74,7 @@ export const getProfile = async (req: Request, res: Response) => {
             contributions: user.contributions,
           },
           isFollowedByCurrentUser,
-          isOwnProfile: currentUserId === userId,
+          isOwnProfile,
         },
       },
     });
