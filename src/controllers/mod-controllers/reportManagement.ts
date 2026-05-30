@@ -2,12 +2,25 @@ import { Request, Response } from "express";
 import {
   getReportById,
   getReports,
+  type ReportTargetType,
 } from "../../services/social/report.service.js";
 
 const parseNumber = (value: unknown, fallback: number) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
+
+const parseEnum = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T | undefined =>
+  typeof value === "string" && allowed.includes(value as T)
+    ? (value as T)
+    : undefined;
+
+const allowedTargetTypes = ["post", "comment", "user"] as const;
+const allowedSortBy = ["createdAt"] as const;
+const allowedSortOrder = ["asc", "desc"] as const;
 
 export const fetchReports = async (req: Request, res: Response) => {
   try {
@@ -16,14 +29,11 @@ export const fetchReports = async (req: Request, res: Response) => {
 
     const status =
       typeof req.query.status === "string" ? req.query.status : undefined;
-    const targetType =
-      typeof req.query.targetType === "string"
-        ? req.query.targetType
-        : undefined;
-    const sortBy =
-      typeof req.query.sortBy === "string" ? req.query.sortBy : undefined;
-    const sortOrder =
-      typeof req.query.sortOrder === "string" ? req.query.sortOrder : undefined;
+    const targetType = parseEnum(req.query.targetType, allowedTargetTypes) as
+      | ReportTargetType
+      | undefined;
+    const sortBy = parseEnum(req.query.sortBy, allowedSortBy);
+    const sortOrder = parseEnum(req.query.sortOrder, allowedSortOrder);
     const search =
       typeof req.query.search === "string" ? req.query.search : undefined;
 

@@ -59,6 +59,14 @@ import {
   getNotificationsSchema,
 } from "../../validators/social-zod/notification.zod.js";
 import { createReportSchema } from "../../validators/social-zod/report.zod.js";
+import {
+  interactionLimiter,
+  postCreationLimiter,
+  uploadLimiter,
+  cooldown,
+  reportLimiter,
+} from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 // Middlewares & Multer
 import {
@@ -93,28 +101,55 @@ const uploadPostFiles = (req: Request, res: Response, next: NextFunction) => {
  */
 
 // Get feed (paginated) - Public route so anyone can browse posts
-router.get("/feed", optionalAuthMiddleware, getFeed);
+router.get(
+  "/feed",
+  optionalAuthMiddleware,
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  getFeed,
+);
 
 // Get all comments for a post - Public route
-router.get("/posts/:postId/comments", optionalAuthMiddleware, getComments);
+router.get(
+  "/posts/:postId/comments",
+  optionalAuthMiddleware,
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  getComments,
+);
 
 // Get replies for a comment - Public route
 router.get(
   "/posts/:postId/comments/:commentId/replies",
   optionalAuthMiddleware,
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   getReplies,
 );
 
 // Get user profile - Public route
-router.get("/users/:userId", optionalAuthMiddleware, getProfile);
+router.get(
+  "/users/:userId",
+  optionalAuthMiddleware,
+  interactionLimiter,
+  getProfile,
+);
 
 // Get user's posts (for profile page) - Public route
-router.get("/users/:userId/posts", optionalAuthMiddleware, getUserPosts);
+router.get(
+  "/users/:userId/posts",
+  optionalAuthMiddleware,
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  getUserPosts,
+);
 
 // Get user's followers (paginated) - Public route
 router.get(
   "/users/:userId/followers",
   validateMiddleware(followListSchema),
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   getFollowers,
 );
 
@@ -122,6 +157,8 @@ router.get(
 router.get(
   "/users/:userId/following",
   validateMiddleware(followListSchema),
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   getFollowing,
 );
 
@@ -141,6 +178,9 @@ router.get(
 router.post(
   "/posts",
   authMiddleware,
+  postCreationLimiter,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before posting again." }),
   uploadPostFiles,
   validateMiddleware(createPostSchema),
   createPost,
@@ -150,13 +190,20 @@ router.post(
 router.patch(
   "/posts/:postId",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
   uploadPostFiles,
   validateMiddleware(editPostSchema),
   editPost,
 );
 
 // Delete post
-router.delete("/posts/:postId", authMiddleware, deletePost);
+router.delete(
+  "/posts/:postId",
+  authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deletePost,
+);
 
 /**
  * ───────────────────────────────────────────────────────────────────────────────
@@ -168,6 +215,8 @@ router.delete("/posts/:postId", authMiddleware, deletePost);
 router.post(
   "/posts/:postId/comments",
   authMiddleware,
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before commenting again." }),
   validateMiddleware(createCommentSchema),
   createComment,
 );
@@ -176,6 +225,7 @@ router.post(
 router.patch(
   "/posts/:postId/comments/:commentId",
   authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before updating again." }),
   validateMiddleware(editCommentSchema),
   editComment,
 );
@@ -184,6 +234,7 @@ router.patch(
 router.delete(
   "/posts/:postId/comments/:commentId",
   authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
   deleteComment,
 );
 
@@ -197,6 +248,8 @@ router.delete(
 router.post(
   "/likes/toggle",
   authMiddleware,
+  interactionLimiter,
+  cooldown({ windowMs: 1000, message: "Please wait before liking again." }),
   validateMiddleware(likeActionSchema),
   toggleLike,
 );
@@ -210,12 +263,19 @@ router.post(
 router.post(
   "/reports",
   authMiddleware,
+  reportLimiter({ windowMs: 60000, maxReportsPerWindow: 3 }),
   validateMiddleware(createReportSchema),
   createReportController,
 );
 
 // Get likes for a post (paginated)
-router.get("/posts/:postId/likes", optionalAuthMiddleware, getLikes);
+router.get(
+  "/posts/:postId/likes",
+  optionalAuthMiddleware,
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  getLikes,
+);
 
 /**
  * ───────────────────────────────────────────────────────────────────────────────
@@ -227,6 +287,8 @@ router.get("/posts/:postId/likes", optionalAuthMiddleware, getLikes);
 router.post(
   "/users/:userId/follow",
   authMiddleware,
+  interactionLimiter,
+  cooldown({ windowMs: 1000, message: "Please wait before following again." }),
   validateMiddleware(followActionSchema),
   toggleFollow,
 );
@@ -242,19 +304,32 @@ router.get(
   "/notifications",
   authMiddleware,
   validateMiddleware(getNotificationsSchema),
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   getNotifications,
 );
 
 // Get unread notifications count
-router.get("/notifications/unread-count", authMiddleware, getUnreadCount);
+router.get(
+  "/notifications/unread-count",
+  authMiddleware,
+  interactionLimiter,
+  getUnreadCount,
+);
 
 // Mark all notifications as read
-router.patch("/notifications/read-all", authMiddleware, markAllAsRead);
+router.patch(
+  "/notifications/read-all",
+  authMiddleware,
+  interactionLimiter,
+  markAllAsRead,
+);
 
 // Mark single notification as read
 router.patch(
   "/notifications/:notificationId/read",
   authMiddleware,
+  interactionLimiter,
   markOneAsRead,
 );
 

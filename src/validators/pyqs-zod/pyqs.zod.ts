@@ -3,23 +3,30 @@ import { resourceMetadataSchema } from "../notes-zod/notes.zod.js";
 
 /**
  * Schema for uploading PYQs (Previous Year Questions)
- * Used in: uploadPYQ controller (file handled by multer)
+ * fileUrl is optional here because it's set by the controller after file upload
+ * year is a string like "2024-25" (academic year format)
  */
-export const pyqsSchema = z.object({
+export const pyqsUploadSchema = z.object({
   title: z
     .string()
     .trim()
     .min(3, { message: "Title must be at least 3 characters" })
     .max(100, { message: "Title must not exceed 100 characters" }),
-  fileUrl: z.string().url({ message: "Invalid file URL format" }),
-  year: z.coerce
-    .number()
-    .int({ message: "Year must be a whole number" })
-    .min(2000, { message: "Year must be 2000 or later" })
-    .max(new Date().getFullYear(), {
-      message: `Year cannot exceed ${new Date().getFullYear()}`,
+  year: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}$/, {
+      message: "Year must be in format YYYY-YY (e.g., 2024-25)",
     }),
   ...resourceMetadataSchema.shape,
+});
+
+/**
+ * Schema for validating uploaded PYQs with fileUrl
+ * Used in controller after file is uploaded
+ */
+export const pyqsSchema = pyqsUploadSchema.extend({
+  fileUrl: z.string().url({ message: "Invalid file URL format" }),
 });
 
 /**

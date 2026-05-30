@@ -40,16 +40,31 @@ function getFilenameWithoutExtension(filename: string): string {
   return path.parse(filename).name;
 }
 
+/**
+ * Sanitizes filename for Cloudinary public_id
+ * Cloudinary only allows: alphanumeric, hyphens, underscores, dots, slashes
+ * Removes/replaces: spaces, parentheses, ampersands, special chars
+ */
+function sanitizePublicId(filename: string): string {
+  return filename
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/[()&\[\]{}|\\:;"'<>?,]/g, "") // Remove special characters
+    .replace(/[^\w\-\.]/g, "") // Keep only word chars, hyphens, dots
+    .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
+    .substring(0, 100); // Limit to 100 chars (Cloudinary limit)
+}
+
 // ─── existing storages unchanged ─────────────────────────────────────────────
 
 const notesStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
     const filenameWithoutExt = getFilenameWithoutExtension(file.originalname);
+    const sanitizedFilename = sanitizePublicId(filenameWithoutExt);
     return {
       folder: "notes_uploads",
       resource_type: getResourceType(file.mimetype),
-      public_id: `${Date.now()}-${filenameWithoutExt}`,
+      public_id: `${Date.now()}-${sanitizedFilename}`,
       format: path.extname(file.originalname).substring(1),
     };
   },
@@ -59,10 +74,11 @@ const pyqStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
     const filenameWithoutExt = getFilenameWithoutExtension(file.originalname);
+    const sanitizedFilename = sanitizePublicId(filenameWithoutExt);
     return {
       folder: "pyq_uploads",
       resource_type: getResourceType(file.mimetype),
-      public_id: `${Date.now()}-${filenameWithoutExt}`,
+      public_id: `${Date.now()}-${sanitizedFilename}`,
       format: path.extname(file.originalname).substring(1),
     };
   },
@@ -72,10 +88,11 @@ const syllabusStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
     const filenameWithoutExt = getFilenameWithoutExtension(file.originalname);
+    const sanitizedFilename = sanitizePublicId(filenameWithoutExt);
     return {
       folder: "syllabus_uploads",
       resource_type: getResourceType(file.mimetype),
-      public_id: `${Date.now()}-${filenameWithoutExt}`,
+      public_id: `${Date.now()}-${sanitizedFilename}`,
       format: path.extname(file.originalname).substring(1),
     };
   },
@@ -104,11 +121,12 @@ const postFileStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
     const filenameWithoutExt = getFilenameWithoutExtension(file.originalname);
+    const sanitizedFilename = sanitizePublicId(filenameWithoutExt);
     const resourceType = getResourceType(file.mimetype);
     return {
       folder: "post_uploads",
       resource_type: resourceType,
-      public_id: `${Date.now()}-${filenameWithoutExt}`,
+      public_id: `${Date.now()}-${sanitizedFilename}`,
       // Only set format for non-video — videos should keep their original container
       ...(resourceType !== "video" && {
         format: path.extname(file.originalname).substring(1),

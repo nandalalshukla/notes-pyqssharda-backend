@@ -14,7 +14,7 @@ export const resourceMetadataSchema = z.object({
     .trim()
     .min(2, { message: "Course code must be at least 2 characters" })
     .max(20, { message: "Course code must not exceed 20 characters" })
-    .regex(/^[A-Z0-9]+$/, { message: "Course code must be alphanumeric" }),
+    .regex(/^[A-Z0-9 ]+$/, { message: "Course code must be alphanumeric (spaces allowed)" }),
   courseName: z
     .string()
     .trim()
@@ -28,17 +28,24 @@ export const resourceMetadataSchema = z.object({
 });
 
 /**
- * Schema for uploading notes
- * Used in: uploadNotes controller (file handled by multer)
+ * Schema for uploading notes (file handled by multer)
+ * fileUrl is optional here because it's set by the controller after file upload
  */
-export const notesSchema = z.object({
+export const notesUploadSchema = z.object({
   title: z
     .string()
     .trim()
     .min(3, { message: "Title must be at least 3 characters" })
     .max(100, { message: "Title must not exceed 100 characters" }),
-  fileUrl: z.string().url({ message: "Invalid file URL format" }),
   ...resourceMetadataSchema.shape,
+});
+
+/**
+ * Schema for validating uploaded notes with fileUrl
+ * Used in controller after file is uploaded
+ */
+export const notesSchema = notesUploadSchema.extend({
+  fileUrl: z.string().url({ message: "Invalid file URL format" }),
 });
 
 /**

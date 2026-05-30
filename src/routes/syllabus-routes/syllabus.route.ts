@@ -10,6 +10,7 @@ import { fetchAllSyllabus } from "../../controllers/syllabus-controllers/fetchAl
 
 // Validators
 import {
+  syllabusUploadSchema,
   syllabusSchema,
   updateSyllabusSchema,
   syllabusQuerySchema,
@@ -19,6 +20,12 @@ import {
 import { uploadSyllabusMulter } from "../../config/multer.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import {
+  interactionLimiter,
+  uploadLimiter,
+  cooldown,
+} from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 const router = Router();
 
@@ -31,12 +38,14 @@ const router = Router();
 // Search Syllabus
 router.get(
   "/search-syllabus",
+  interactionLimiter,
   validateMiddleware(syllabusQuerySchema),
+  clampPagination({ maxLimit: 50 }),
   searchSyllabus,
 );
 
 // Fetch all approved Syllabus
-router.get("/all-syllabus", fetchAllSyllabus);
+router.get("/all-syllabus", interactionLimiter, fetchAllSyllabus);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -48,8 +57,10 @@ router.get("/all-syllabus", fetchAllSyllabus);
 router.post(
   "/upload-syllabus",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before uploading again." }),
   uploadSyllabusMulter.single("file"),
-  validateMiddleware(syllabusSchema),
+  validateMiddleware(syllabusUploadSchema),
   uploadSyllabus,
 );
 
@@ -57,14 +68,26 @@ router.post(
 router.put(
   "/edit-syllabus/:id",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
   validateMiddleware(updateSyllabusSchema),
   editSyllabus,
 );
 
 // Delete Syllabus
-router.delete("/delete-syllabus/:id", authMiddleware, deleteSyllabus);
+router.delete(
+  "/delete-syllabus/:id",
+  authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deleteSyllabus,
+);
 
 // Fetch current user's Syllabus
-router.get("/my-syllabus", authMiddleware, fetchSpecificUserSyllabus);
+router.get(
+  "/my-syllabus",
+  authMiddleware,
+  interactionLimiter,
+  fetchSpecificUserSyllabus,
+);
 
 export default router;

@@ -9,7 +9,7 @@ export const authMiddleware = (
   const token = req.cookies?.accessToken;
 
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
   try {
@@ -21,7 +21,9 @@ export const authMiddleware = (
     next();
   } catch (error) {
     const jwtError = error as jwt.JsonWebTokenError;
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid or expired token" });
   }
 };
 export default authMiddleware;

@@ -15,10 +15,13 @@ import socialRouter from "./routes/social-route/social.route.js";
 // Config Imports
 import corsConfig from "./config/cors.js";
 import cookieParser from "cookie-parser";
+import { globalLimiter } from "./middlewares/rateLimit/index.js";
 
 connectDB();
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -31,9 +34,12 @@ app.use(corsConfig);
 app.options("/{*path}", corsConfig);
 
 // Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "200kb" }));
+app.use(express.urlencoded({ extended: true, limit: "200kb" }));
 app.use(cookieParser());
+
+// Global rate limiter
+app.use(globalLimiter);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +74,31 @@ app.get("/", (req, res) => {
   res.send(
     `<h1>Visit our official website <a href="https://www.sharda.social">sharda.social</a></h1>`,
   );
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ERROR HANDLING MIDDLEWARE - Must be last
+ * Catches all errors and prevents ECONNRESET from unhandled exceptions
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[ERROR HANDLER]", err);
+
+  // Prevent sending headers if already sent
+  if (res.headersSent) {
+    console.error("Headers already sent, delegating to Express error handler");
+    return next(err);
+  }
+
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal server error";
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(process.env.NODE_ENV === "development" && { error: err.stack }),
+  });
 });
 
 const PORT = process.env.PORT || 3000;

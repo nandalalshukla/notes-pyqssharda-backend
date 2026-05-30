@@ -3,16 +3,23 @@ import { resourceMetadataSchema } from "../notes-zod/notes.zod.js";
 
 /**
  * Schema for uploading Syllabus
- * Used in: uploadSyllabus controller (file handled by multer)
+ * fileUrl is optional here because it's set by the controller after file upload
  */
-export const syllabusSchema = z.object({
+export const syllabusUploadSchema = z.object({
   title: z
     .string()
     .trim()
     .min(3, { message: "Title must be at least 3 characters" })
     .max(100, { message: "Title must not exceed 100 characters" }),
-  fileUrl: z.string().url({ message: "Invalid file URL format" }),
   ...resourceMetadataSchema.shape,
+});
+
+/**
+ * Schema for validating uploaded Syllabus with fileUrl
+ * Used in controller after file is uploaded
+ */
+export const syllabusSchema = syllabusUploadSchema.extend({
+  fileUrl: z.string().url({ message: "Invalid file URL format" }),
 });
 
 /**

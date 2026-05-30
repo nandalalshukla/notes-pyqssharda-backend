@@ -81,7 +81,11 @@ export const reviewModRequest = async (req: Request, res: Response) => {
 
 export const fetchAllMods = async (req: Request, res: Response) => {
   try {
-    const mods = await User.find({ role: "mod" }, "-password -__v").lean();
+    const mods = await User.find({ role: "mod" })
+      .select(
+        "name email username role contributions isEmailVerified isActive createdAt",
+      )
+      .lean();
     res.status(200).json({ success: true, mods });
   } catch (error) {
     res

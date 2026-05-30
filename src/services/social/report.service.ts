@@ -110,6 +110,14 @@ export const createReport = async ({
   reason,
   message,
 }: CreateReportParams) => {
+  if (!mongoose.isValidObjectId(targetId)) {
+    throw createServiceError(400, "Invalid target ID format", "INVALID_ID");
+  }
+
+  if (!mongoose.isValidObjectId(reporterId)) {
+    throw createServiceError(400, "Invalid reporter ID", "INVALID_ID");
+  }
+
   const target = await getTargetInfo(targetType, targetId);
   if (!target) {
     throw createServiceError(404, "Target not found", "TARGET_NOT_FOUND");

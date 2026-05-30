@@ -46,6 +46,11 @@ import { becomeModeratorSchema } from "../../validators/users-zod/becomeMod.zod.
 // Middlewares
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
+import {
+  authLimiter,
+  uploadLimiter,
+  interactionLimiter,
+} from "../../middlewares/rateLimit/index.js";
 
 const router = Router();
 
@@ -56,20 +61,27 @@ const router = Router();
  */
 
 // Registration
-router.post("/register", validateMiddleware(registerSchema), registerUser);
+router.post(
+  "/register",
+  authLimiter,
+  validateMiddleware(registerSchema),
+  registerUser,
+);
 
 // Login
-router.post("/login", validateMiddleware(loginSchema), loginUser);
+router.post("/login", authLimiter, validateMiddleware(loginSchema), loginUser);
 
 // Password Recovery
 router.post(
   "/forgot-password",
+  authLimiter,
   validateMiddleware(forgotPasswordSchema),
   forgetPassword,
 );
 
 router.post(
   "/reset-password",
+  authLimiter,
   validateMiddleware(createNewPasswordSchema),
   createNewPassword,
 );
@@ -77,16 +89,22 @@ router.post(
 // Email Verification
 router.post(
   "/verify-email",
+  authLimiter,
   validateMiddleware(verifyEmailSchema),
   verifyEmail,
 );
-router.post("/resend-otp", validateMiddleware(resendOtpSchema), resendOtp);
+router.post(
+  "/resend-otp",
+  authLimiter,
+  validateMiddleware(resendOtpSchema),
+  resendOtp,
+);
 
 // Fetch Contributors (Leaderboard)
 router.get("/contributors", fetchContributors);
 
 // Refresh Token
-router.post("/refresh-token", refreshAccessToken);
+router.post("/refresh-token", authLimiter, refreshAccessToken);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -105,6 +123,7 @@ router.post("/logout-all", authMiddleware, logoutAll);
 router.put(
   "/profile",
   authMiddleware,
+  uploadLimiter,
   uploadProfilePicMulter.single("profilePic"),
   validateMiddleware(editProfileSchema),
   updateProfile,
@@ -114,19 +133,21 @@ router.put(
 router.post(
   "/change-password",
   authMiddleware,
+  authLimiter,
   validateMiddleware(changePasswordSchema),
   changePassword,
 );
 
 // Account Management
-router.post("/deactivate", authMiddleware, deactivateAccount);
-router.delete("/account", authMiddleware, deleteAccount);
-router.delete("/profile-pic", authMiddleware, removeProfilePic);
+router.post("/deactivate", authMiddleware, authLimiter, deactivateAccount);
+router.delete("/account", authMiddleware, authLimiter, deleteAccount);
+router.delete("/profile-pic", authMiddleware, authLimiter, removeProfilePic);
 
 // Moderator Request
 router.post(
   "/request-mod",
   authMiddleware,
+  interactionLimiter,
   validateMiddleware(becomeModeratorSchema),
   becomeModerator,
 );

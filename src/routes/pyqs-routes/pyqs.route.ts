@@ -10,6 +10,7 @@ import { fetchAllPyqs } from "../../controllers/pyqs-controllers/fetchAllPyqs.js
 
 // Validators
 import {
+  pyqsUploadSchema,
   pyqsSchema,
   updatePYQsSchema,
   pyqsQuerySchema,
@@ -19,6 +20,12 @@ import {
 import { uploadPyqsMulter } from "../../config/multer.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import {
+  interactionLimiter,
+  uploadLimiter,
+  cooldown,
+} from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 const router = Router();
 
@@ -29,10 +36,16 @@ const router = Router();
  */
 
 // Search PYQs
-router.get("/search-pyqs", validateMiddleware(pyqsQuerySchema), searchPyqs);
+router.get(
+  "/search-pyqs",
+  interactionLimiter,
+  validateMiddleware(pyqsQuerySchema),
+  clampPagination({ maxLimit: 50 }),
+  searchPyqs,
+);
 
 // Fetch all approved PYQs
-router.get("/all-pyqs", fetchAllPyqs);
+router.get("/all-pyqs", interactionLimiter, fetchAllPyqs);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -44,8 +57,10 @@ router.get("/all-pyqs", fetchAllPyqs);
 router.post(
   "/upload-pyqs",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before uploading again." }),
   uploadPyqsMulter.single("file"),
-  validateMiddleware(pyqsSchema),
+  validateMiddleware(pyqsUploadSchema),
   uploadPyqs,
 );
 
@@ -53,14 +68,26 @@ router.post(
 router.put(
   "/edit-pyqs/:id",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
   validateMiddleware(updatePYQsSchema),
   editPyqs,
 );
 
 // Delete PYQs
-router.delete("/delete-pyqs/:id", authMiddleware, deletePyqs);
+router.delete(
+  "/delete-pyqs/:id",
+  authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deletePyqs,
+);
 
 // Fetch current user's PYQs
-router.get("/my-pyqs", authMiddleware, fetchSpecificUserPyqs);
+router.get(
+  "/my-pyqs",
+  authMiddleware,
+  interactionLimiter,
+  fetchSpecificUserPyqs,
+);
 
 export default router;

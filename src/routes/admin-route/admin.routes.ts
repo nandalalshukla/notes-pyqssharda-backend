@@ -53,6 +53,11 @@ import {
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import {
+  interactionLimiter,
+  cooldown,
+} from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 const router = Router();
 
@@ -70,24 +75,39 @@ router.use(roleMiddleware("admin"));
  * NOTES MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/notes", fetchApprovedNotes);
-router.delete("/notes/:noteId", deleteNote);
+router.get("/notes", interactionLimiter, fetchApprovedNotes);
+router.delete(
+  "/notes/:noteId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deleteNote,
+);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * PYQs MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/pyqs", fetchApprovedPyqs);
-router.delete("/pyqs/:pyqId", deletePyq);
+router.get("/pyqs", interactionLimiter, fetchApprovedPyqs);
+router.delete(
+  "/pyqs/:pyqId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deletePyq,
+);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SYLLABUS MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/syllabus", fetchApprovedSyllabus);
-router.delete("/syllabus/:syllabusId", deleteSyllabus);
+router.get("/syllabus", interactionLimiter, fetchApprovedSyllabus);
+router.delete(
+  "/syllabus/:syllabusId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deleteSyllabus,
+);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -95,14 +115,29 @@ router.delete("/syllabus/:syllabusId", deleteSyllabus);
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 // Fetch endpoints
-router.get("/users", fetchAllUsers);
-router.get("/users/active", fetchActiveUsers);
-router.get("/users/inactive", fetchInactiveUsers);
+router.get("/users", interactionLimiter, fetchAllUsers);
+router.get("/users/active", interactionLimiter, fetchActiveUsers);
+router.get("/users/inactive", interactionLimiter, fetchInactiveUsers);
 
 // User operations
-router.delete("/users/:userId", deleteUser);
-router.patch("/users/:userId/deactivate", deactivateUser);
-router.patch("/users/:userId/activate", activateUser);
+router.delete(
+  "/users/:userId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deleteUser,
+);
+router.patch(
+  "/users/:userId/deactivate",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before changing again." }),
+  deactivateUser,
+);
+router.patch(
+  "/users/:userId/activate",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before changing again." }),
+  activateUser,
+);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -110,17 +145,26 @@ router.patch("/users/:userId/activate", activateUser);
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 // Fetch endpoints
-router.get("/mods", fetchAllMods);
-router.get("/mods/requests", fetchModRequests);
+router.get("/mods", interactionLimiter, fetchAllMods);
+router.get(
+  "/mods/requests",
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  fetchModRequests,
+);
 
 // Moderator operations (review/remove)
 router.patch(
   "/mods/review/:userId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before reviewing again." }),
   validateMiddleware(reviewModRequestCombinedSchema),
   reviewModRequest,
 );
 router.patch(
   "/mods/remove/:userId",
+  interactionLimiter,
+  cooldown({ windowMs: 3000, message: "Please wait before removing again." }),
   validateMiddleware(removeModRoleCombinedSchema),
   removeModRole,
 );

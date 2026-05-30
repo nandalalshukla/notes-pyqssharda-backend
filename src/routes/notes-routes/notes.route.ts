@@ -10,6 +10,7 @@ import { fetchAllNotes } from "../../controllers/notes-controllers/fetchNotes.js
 
 // Validators
 import {
+  notesUploadSchema,
   notesSchema,
   updateNotesSchema,
   notesQuerySchema,
@@ -19,6 +20,12 @@ import {
 import { uploadNotesMulter } from "../../config/multer.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import {
+  interactionLimiter,
+  uploadLimiter,
+  cooldown,
+} from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 const router = Router();
 
@@ -29,10 +36,16 @@ const router = Router();
  */
 
 // Search notes
-router.get("/search-notes", validateMiddleware(notesQuerySchema), searchNotes);
+router.get(
+  "/search-notes",
+  interactionLimiter,
+  validateMiddleware(notesQuerySchema),
+  clampPagination({ maxLimit: 50 }),
+  searchNotes,
+);
 
 // Fetch all approved notes
-router.get("/all-notes", fetchAllNotes);
+router.get("/all-notes", interactionLimiter, fetchAllNotes);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -44,8 +57,10 @@ router.get("/all-notes", fetchAllNotes);
 router.post(
   "/",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before uploading again." }),
   uploadNotesMulter.single("file"),
-  validateMiddleware(notesSchema),
+  validateMiddleware(notesUploadSchema),
   uploadNotes,
 );
 
@@ -53,14 +68,26 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
+  uploadLimiter,
+  cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
   validateMiddleware(updateNotesSchema),
   editNotes,
 );
 
 // Delete notes
-router.delete("/:id", authMiddleware, deleteNotes);
+router.delete(
+  "/:id",
+  authMiddleware,
+  cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  deleteNotes,
+);
 
 // Fetch current user's notes
-router.get("/my-notes", authMiddleware, fetchSpecificUserNotes);
+router.get(
+  "/my-notes",
+  authMiddleware,
+  interactionLimiter,
+  fetchSpecificUserNotes,
+);
 
 export default router;

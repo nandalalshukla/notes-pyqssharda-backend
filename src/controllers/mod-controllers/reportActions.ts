@@ -14,8 +14,15 @@ const handleModerationAction = (action: ModerationAction) => {
           .json({ success: false, message: "Unauthorized" });
       }
 
+      const moderatorRole = req.user?.userRole;
+
       const { reportId } = req.params;
-      const report = await applyModerationAction(reportId, moderatorId, action);
+      const report = await applyModerationAction(
+        reportId,
+        moderatorId,
+        moderatorRole,
+        action,
+      );
 
       return res.status(200).json({
         success: true,
@@ -23,11 +30,17 @@ const handleModerationAction = (action: ModerationAction) => {
         data: { report },
       });
     } catch (error: unknown) {
-      const typedError = error as { status?: number; message?: string };
+      const typedError = error as {
+        status?: number;
+        message?: string;
+        report?: unknown;
+      };
       if (typedError?.status && typedError?.message) {
-        return res
-          .status(typedError.status)
-          .json({ success: false, message: typedError.message });
+        return res.status(typedError.status).json({
+          success: false,
+          message: typedError.message,
+          data: typedError.report ? { report: typedError.report } : undefined,
+        });
       }
 
       console.error("report moderation error:", error);

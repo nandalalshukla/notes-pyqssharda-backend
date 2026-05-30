@@ -12,16 +12,22 @@ export type ModerationAction =
   | "suspend_user"
   | "warn_user";
 
-type ModerationError = Error & { status?: number; code?: string };
+type ModerationError = Error & {
+  status?: number;
+  code?: string;
+  report?: unknown;
+};
 
 const createModerationError = (
   status: number,
   message: string,
   code: string,
+  report?: unknown,
 ) => {
   const error = new Error(message) as ModerationError;
   error.status = status;
   error.code = code;
+  if (report) error.report = report;
   return error;
 };
 
@@ -30,7 +36,7 @@ const ensurePendingReport = async (
   session: mongoose.ClientSession,
 ) => {
   const report = await Report.findById(reportId)
-    .select("status targetType targetId")
+    .select("status targetType targetId targetOwner")
     .session(session);
 
   if (!report) {
@@ -38,10 +44,16 @@ const ensurePendingReport = async (
   }
 
   if (report.status !== "pending") {
+    const latestReport = await Report.findById(reportId)
+      .select(
+        "targetType targetId status actionTaken reviewedBy reviewedAt createdAt",
+      )
+      .lean();
     throw createModerationError(
       409,
       "Report has already been reviewed",
       "REPORT_ALREADY_REVIEWED",
+      latestReport || undefined,
     );
   }
 
@@ -67,8 +79,8 @@ const markReport = async (
 ) => {
   const reviewedAt = new Date();
 
-  return Report.findByIdAndUpdate(
-    reportId,
+  const updated = await Report.findOneAndUpdate(
+    { _id: reportId, status: "pending" },
     {
       status,
       actionTaken,
@@ -81,11 +93,22 @@ const markReport = async (
       "targetType targetId status actionTaken reviewedBy reviewedAt createdAt",
     )
     .lean();
+
+  if (!updated) {
+    throw createModerationError(
+      409,
+      "Report has already been reviewed",
+      "REPORT_ALREADY_REVIEWED",
+    );
+  }
+
+  return updated;
 };
 
 export const applyModerationAction = async (
   reportId: string,
   moderatorId: string,
+  moderatorRole: string | undefined,
   action: ModerationAction,
 ) => {
   const session = await mongoose.startSession();
@@ -94,6 +117,17 @@ export const applyModerationAction = async (
   try {
     await session.withTransaction(async () => {
       const report = await ensurePendingReport(reportId, session);
+
+      if (
+        report.targetOwner?.toString() === moderatorId &&
+        moderatorRole !== "admin"
+      ) {
+        throw createModerationError(
+          403,
+          "You cannot moderate your own content",
+          "SELF_MODERATION",
+        );
+      }
 
       switch (action) {
         case "resolve": {

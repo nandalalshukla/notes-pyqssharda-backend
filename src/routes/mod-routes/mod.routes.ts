@@ -44,6 +44,8 @@ import { reportActionParamsSchema } from "../../validators/mods-zod/reportAction
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import { roleMiddleware } from "../../middlewares/auth/role.middleware.js";
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
+import { interactionLimiter } from "../../middlewares/rateLimit/index.js";
+import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
 const router = Router();
 
@@ -60,10 +62,11 @@ router.use(authMiddleware, roleMiddleware("mod", "admin"));
  * NOTES MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/notes/pending", fetchPendingNotes);
-router.patch("/notes/:noteId/approve", approveNote);
+router.get("/notes/pending", interactionLimiter, fetchPendingNotes);
+router.patch("/notes/:noteId/approve", interactionLimiter, approveNote);
 router.patch(
   "/notes/:noteId/reject",
+  interactionLimiter,
   validateMiddleware(rejectNoteSchema),
   rejectNote,
 );
@@ -73,10 +76,11 @@ router.patch(
  * PYQs MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/pyqs/pending", fetchPendingPyqs);
-router.patch("/pyqs/:pyqId/approve", approvePyq);
+router.get("/pyqs/pending", interactionLimiter, fetchPendingPyqs);
+router.patch("/pyqs/:pyqId/approve", interactionLimiter, approvePyq);
 router.patch(
   "/pyqs/:pyqId/reject",
+  interactionLimiter,
   validateMiddleware(rejectPYQSchema),
   rejectPyq,
 );
@@ -86,10 +90,15 @@ router.patch(
  * SYLLABUS MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/syllabus/pending", fetchPendingSyllabus);
-router.patch("/syllabus/:syllabusId/approve", approveSyllabus);
+router.get("/syllabus/pending", interactionLimiter, fetchPendingSyllabus);
+router.patch(
+  "/syllabus/:syllabusId/approve",
+  interactionLimiter,
+  approveSyllabus,
+);
 router.patch(
   "/syllabus/:syllabusId/reject",
+  interactionLimiter,
   validateMiddleware(rejectSyllabusSchema),
   rejectSyllabus,
 );
@@ -99,39 +108,52 @@ router.patch(
  * REPORTS MANAGEMENT ROUTES
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-router.get("/reports", validateMiddleware(reportQuerySchema), fetchReports);
+router.get(
+  "/reports",
+  validateMiddleware(reportQuerySchema),
+  clampPagination({ maxLimit: 50 }),
+  interactionLimiter,
+  fetchReports,
+);
 router.get(
   "/reports/:reportId",
   validateMiddleware(reportParamsSchema),
+  interactionLimiter,
   fetchReportById,
 );
 router.patch(
   "/reports/:reportId/resolve",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   resolveReport,
 );
 router.patch(
   "/reports/:reportId/reject",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   rejectReport,
 );
 router.patch(
   "/reports/:reportId/delete-post",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   deleteReportedPost,
 );
 router.patch(
   "/reports/:reportId/delete-comment",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   deleteReportedComment,
 );
 router.patch(
   "/reports/:reportId/suspend-user",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   suspendReportedUser,
 );
 router.patch(
   "/reports/:reportId/warn-user",
+  interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   warnReportedUser,
 );
