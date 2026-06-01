@@ -68,7 +68,7 @@ const emailWrapper = (content: string) => `
  * - Always check the returned `success` property.
  * - Ensure `from` is a verified domain in Resend if not using the onboarding one.
  */
-async function sendEmail(
+export async function sendEmail(
   to: string,
   subject: string,
   html: string,

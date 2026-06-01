@@ -3,6 +3,10 @@ import { Report } from "../../models/social/report.model.js";
 import { Post } from "../../models/social/post.model.js";
 import { Comment } from "../../models/social/comment.model.js";
 import { User } from "../../models/users/user.model.js";
+import {
+  sendReportResolutionEmail,
+  sendContentOwnerActionNotificationEmail,
+} from "../email/reportEmailService.js";
 
 export type ModerationAction =
   | "resolve"
@@ -10,7 +14,8 @@ export type ModerationAction =
   | "delete_post"
   | "delete_comment"
   | "suspend_user"
-  | "warn_user";
+  | "warn_user"
+  | "delete_user";
 
 type ModerationError = Error & {
   status?: number;
@@ -255,6 +260,29 @@ export const applyModerationAction = async (
           );
           return;
         }
+        case "delete_user": {
+          requireTargetType(report.targetType, "user");
+          const user = await User.findByIdAndDelete(report.targetId)
+            .session(session)
+            .lean();
+
+          if (!user) {
+            throw createModerationError(
+              404,
+              "User not found or already deleted",
+              "TARGET_NOT_FOUND",
+            );
+          }
+
+          updatedReport = await markReport(
+            reportId,
+            moderatorId,
+            "resolved",
+            "user_deleted",
+            session,
+          );
+          return;
+        }
         default:
           throw createModerationError(
             400,
@@ -267,5 +295,79 @@ export const applyModerationAction = async (
     return updatedReport;
   } finally {
     session.endSession();
+  }
+};
+
+/**
+ * Send notification emails after moderation action
+ * Notifies both the reporter about the resolution and the content owner about actions taken
+ * This is intentionally async and non-blocking
+ */
+export const sendModerationActionEmails = async (
+  reportId: string,
+  actionTaken: string,
+): Promise<void> => {
+  try {
+    // Fetch full report details for email context
+    const report = await Report.findById(reportId)
+      .populate("reporter", "email username")
+      .populate("targetOwner", "email username")
+      .lean();
+
+    if (!report) {
+      console.warn(`⚠️ Report not found for email notification: ${reportId}`);
+      return;
+    }
+
+    const reporter = report.reporter as any;
+    const contentOwner = report.targetOwner as any;
+    const moderator = await User.findOne({ role: "admin" })
+      .select("username")
+      .lean();
+
+    if (!reporter?.email || !contentOwner?.email) {
+      console.warn(
+        `⚠️ Missing email addresses for report notification: ${reportId}`,
+      );
+      return;
+    }
+
+    // Send emails concurrently
+    await Promise.all([
+      // Notify reporter of resolution
+      sendReportResolutionEmail({
+        reportId: report._id.toString(),
+        reporterEmail: reporter.email,
+        reporterName: reporter.username || "User",
+        contentOwnerEmail: contentOwner.email,
+        contentOwnerName: contentOwner.username || "User",
+        targetType: report.targetType,
+        reason: report.reason,
+        reportMessage: report.message,
+        createdAt: report.createdAt,
+        actionTaken,
+        moderatorName: moderator?.username || "Moderation Team",
+      }),
+      // Notify content owner if action was taken against them
+      sendContentOwnerActionNotificationEmail({
+        reportId: report._id.toString(),
+        reporterEmail: reporter.email,
+        reporterName: reporter.username || "User",
+        contentOwnerEmail: contentOwner.email,
+        contentOwnerName: contentOwner.username || "User",
+        targetType: report.targetType,
+        reason: report.reason,
+        reportMessage: report.message,
+        createdAt: report.createdAt,
+        actionTaken,
+        moderatorName: moderator?.username || "Moderation Team",
+      }),
+    ]);
+  } catch (error) {
+    // Log but don't throw - moderation action should complete regardless of email failures
+    console.error(
+      `❌ Error sending moderation action emails for report ${reportId}:`,
+      error instanceof Error ? error.message : error,
+    );
   }
 };

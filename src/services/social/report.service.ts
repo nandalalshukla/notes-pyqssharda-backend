@@ -3,6 +3,7 @@ import { Report } from "../../models/social/report.model.js";
 import { Post } from "../../models/social/post.model.js";
 import { Comment } from "../../models/social/comment.model.js";
 import { User } from "../../models/users/user.model.js";
+import { sendReportNotificationEmails } from "../email/reportEmailService.js";
 
 export type ReportTargetType = "post" | "comment" | "user";
 
@@ -149,7 +150,7 @@ export const createReport = async ({
 
   const sanitizedMessage = typeof message === "string" ? message.trim() : "";
 
-  return Report.create({
+  const report = await Report.create({
     reporter: reporterId,
     targetType,
     targetId,
@@ -157,6 +158,39 @@ export const createReport = async ({
     reason,
     message: sanitizedMessage,
   });
+
+  // Fetch user details for email notifications (async, non-blocking)
+  // This happens in the background without delaying the API response
+  setImmediate(async () => {
+    try {
+      const [reporter, contentOwner] = await Promise.all([
+        User.findById(reporterId).select("email username").lean(),
+        User.findById(target.ownerId).select("email username").lean(),
+      ]);
+
+      if (reporter?.email && contentOwner?.email) {
+        await sendReportNotificationEmails({
+          reportId: report._id.toString(),
+          reporterEmail: reporter.email,
+          reporterName: reporter.username || "User",
+          contentOwnerEmail: contentOwner.email,
+          contentOwnerName: contentOwner.username || "User",
+          targetType,
+          reason,
+          reportMessage: sanitizedMessage,
+          createdAt: report.createdAt,
+        });
+      }
+    } catch (emailError) {
+      // Email errors are logged but don't affect the report creation
+      console.error(
+        "Error sending report notification emails:",
+        emailError instanceof Error ? emailError.message : emailError,
+      );
+    }
+  });
+
+  return report;
 };
 
 export const getReports = async ({

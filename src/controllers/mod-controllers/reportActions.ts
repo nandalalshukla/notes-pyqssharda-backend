@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   applyModerationAction,
   ModerationAction,
+  sendModerationActionEmails,
 } from "../../services/moderation/reportModeration.service.js";
 
 const handleModerationAction = (action: ModerationAction) => {
@@ -23,6 +24,19 @@ const handleModerationAction = (action: ModerationAction) => {
         moderatorRole,
         action,
       );
+
+      // Send notification emails to reporter and content owner (async, non-blocking)
+      // This allows the API to respond quickly while emails are sent in the background
+      setImmediate(() => {
+        sendModerationActionEmails(reportId, report.actionTaken).catch(
+          (error) => {
+            console.error(
+              "Failed to send moderation action emails:",
+              error instanceof Error ? error.message : error,
+            );
+          },
+        );
+      });
 
       return res.status(200).json({
         success: true,
@@ -57,3 +71,4 @@ export const deleteReportedPost = handleModerationAction("delete_post");
 export const deleteReportedComment = handleModerationAction("delete_comment");
 export const suspendReportedUser = handleModerationAction("suspend_user");
 export const warnReportedUser = handleModerationAction("warn_user");
+export const deleteReportedUser = handleModerationAction("delete_user");

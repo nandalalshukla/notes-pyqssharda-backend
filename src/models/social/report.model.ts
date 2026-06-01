@@ -78,6 +78,7 @@ const reportSchema = new Schema(
         "comment_deleted",
         "warning_sent",
         "user_suspended",
+        "user_deleted",
         "ignored",
       ],
       default: "none",

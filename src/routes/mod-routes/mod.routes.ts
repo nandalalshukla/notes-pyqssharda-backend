@@ -28,6 +28,7 @@ import {
   deleteReportedComment,
   suspendReportedUser,
   warnReportedUser,
+  deleteReportedUser,
 } from "../../controllers/mod-controllers/reportActions.js";
 
 // Validators
@@ -156,6 +157,12 @@ router.patch(
   interactionLimiter,
   validateMiddleware(reportActionParamsSchema),
   warnReportedUser,
+);
+router.patch(
+  "/reports/:reportId/delete-user",
+  interactionLimiter,
+  validateMiddleware(reportActionParamsSchema),
+  deleteReportedUser,
 );
 
 export default router;
