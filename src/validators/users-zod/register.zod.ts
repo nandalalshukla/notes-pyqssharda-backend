@@ -2,21 +2,11 @@ import { z } from "zod";
 
 /**
  * Base password schema - reusable across password-related endpoints
- * Enforces: min 6 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+ * Enforces: minimum length only
  */
 export const passwordSchema = z
   .string()
-  .min(6, { message: "Password must be at least 6 characters" })
-  .regex(/[A-Z]/, {
-    message: "Password must contain at least one uppercase letter",
-  })
-  .regex(/[a-z]/, {
-    message: "Password must contain at least one lowercase letter",
-  })
-  .regex(/[0-9]/, { message: "Password must contain at least one number" })
-  .regex(/[@$!%*?&#]/, {
-    message: "Password must contain at least one special character (@$!%*?&#)",
-  });
+  .min(6, { message: "Password must be at least 6 characters" });
 
 /**
  * Base email schema - reusable across all email-related endpoints

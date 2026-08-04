@@ -28,7 +28,7 @@ const handleModerationAction = (action: ModerationAction) => {
       // Send notification emails to reporter and content owner (async, non-blocking)
       // This allows the API to respond quickly while emails are sent in the background
       setImmediate(() => {
-        sendModerationActionEmails(reportId, report.actionTaken).catch(
+        sendModerationActionEmails(reportId, report.actionTaken, moderatorId).catch(
           (error) => {
             console.error(
               "Failed to send moderation action emails:",

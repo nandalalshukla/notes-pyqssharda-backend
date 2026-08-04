@@ -75,6 +75,32 @@ const requireTargetType = (targetType: string, expected: string) => {
   }
 };
 
+const backfillNotificationSnapshot = async (reportId: string) => {
+  const report = await Report.findById(reportId)
+    .select(
+      "reporter targetOwner reporterEmail reporterName targetOwnerEmail targetOwnerName",
+    )
+    .populate("reporter", "email username")
+    .populate("targetOwner", "email username")
+    .lean();
+
+  if (!report) return;
+
+  const reporter = report.reporter as any;
+  const contentOwner = report.targetOwner as any;
+  const snapshot = {
+    reporterEmail: report.reporterEmail || reporter?.email,
+    reporterName: report.reporterName || reporter?.username || "User",
+    targetOwnerEmail: report.targetOwnerEmail || contentOwner?.email,
+    targetOwnerName:
+      report.targetOwnerName || contentOwner?.username || "User",
+  };
+
+  if (snapshot.reporterEmail && snapshot.targetOwnerEmail) {
+    await Report.updateOne({ _id: reportId }, { $set: snapshot });
+  }
+};
+
 const markReport = async (
   reportId: string,
   moderatorId: string,
@@ -116,6 +142,8 @@ export const applyModerationAction = async (
   moderatorRole: string | undefined,
   action: ModerationAction,
 ) => {
+  await backfillNotificationSnapshot(reportId);
+
   const session = await mongoose.startSession();
   let updatedReport: any;
 
@@ -306,6 +334,7 @@ export const applyModerationAction = async (
 export const sendModerationActionEmails = async (
   reportId: string,
   actionTaken: string,
+  moderatorId: string,
 ): Promise<void> => {
   try {
     // Fetch full report details for email context
@@ -321,11 +350,17 @@ export const sendModerationActionEmails = async (
 
     const reporter = report.reporter as any;
     const contentOwner = report.targetOwner as any;
-    const moderator = await User.findOne({ role: "admin" })
+    const moderator = await User.findById(moderatorId)
       .select("username")
       .lean();
 
-    if (!reporter?.email || !contentOwner?.email) {
+    const reporterEmail = reporter?.email || report.reporterEmail;
+    const reporterName = reporter?.username || report.reporterName || "User";
+    const contentOwnerEmail = contentOwner?.email || report.targetOwnerEmail;
+    const contentOwnerName =
+      contentOwner?.username || report.targetOwnerName || "User";
+
+    if (!reporterEmail || !contentOwnerEmail) {
       console.warn(
         `⚠️ Missing email addresses for report notification: ${reportId}`,
       );
@@ -337,10 +372,10 @@ export const sendModerationActionEmails = async (
       // Notify reporter of resolution
       sendReportResolutionEmail({
         reportId: report._id.toString(),
-        reporterEmail: reporter.email,
-        reporterName: reporter.username || "User",
-        contentOwnerEmail: contentOwner.email,
-        contentOwnerName: contentOwner.username || "User",
+        reporterEmail,
+        reporterName,
+        contentOwnerEmail,
+        contentOwnerName,
         targetType: report.targetType,
         reason: report.reason,
         reportMessage: report.message,
@@ -351,10 +386,10 @@ export const sendModerationActionEmails = async (
       // Notify content owner if action was taken against them
       sendContentOwnerActionNotificationEmail({
         reportId: report._id.toString(),
-        reporterEmail: reporter.email,
-        reporterName: reporter.username || "User",
-        contentOwnerEmail: contentOwner.email,
-        contentOwnerName: contentOwner.username || "User",
+        reporterEmail,
+        reporterName,
+        contentOwnerEmail,
+        contentOwnerName,
         targetType: report.targetType,
         reason: report.reason,
         reportMessage: report.message,

@@ -90,7 +90,9 @@ const getTargetsByType = async (reports: any[]) => {
       : [],
     userIds.length
       ? User.find({ _id: { $in: userIds } })
-          .select("_id username profilePic role isActive")
+          .select(
+            "_id username profilePic role +isActive bio course followersCount followingCount createdAt",
+          )
           .lean()
       : [],
   ]);
@@ -149,12 +151,28 @@ export const createReport = async ({
   }
 
   const sanitizedMessage = typeof message === "string" ? message.trim() : "";
+  const [reporter, contentOwner] = await Promise.all([
+    User.findById(reporterId).select("email username").lean(),
+    User.findById(target.ownerId).select("email username").lean(),
+  ]);
+
+  if (!reporter?.email || !contentOwner?.email) {
+    throw createServiceError(
+      404,
+      "Reporter or content owner not found",
+      "USER_NOT_FOUND",
+    );
+  }
 
   const report = await Report.create({
     reporter: reporterId,
     targetType,
     targetId,
     targetOwner: target.ownerId,
+    reporterEmail: reporter.email,
+    reporterName: reporter.username || "User",
+    targetOwnerEmail: contentOwner.email,
+    targetOwnerName: contentOwner.username || "User",
     reason,
     message: sanitizedMessage,
   });
@@ -163,24 +181,17 @@ export const createReport = async ({
   // This happens in the background without delaying the API response
   setImmediate(async () => {
     try {
-      const [reporter, contentOwner] = await Promise.all([
-        User.findById(reporterId).select("email username").lean(),
-        User.findById(target.ownerId).select("email username").lean(),
-      ]);
-
-      if (reporter?.email && contentOwner?.email) {
-        await sendReportNotificationEmails({
-          reportId: report._id.toString(),
-          reporterEmail: reporter.email,
-          reporterName: reporter.username || "User",
-          contentOwnerEmail: contentOwner.email,
-          contentOwnerName: contentOwner.username || "User",
-          targetType,
-          reason,
-          reportMessage: sanitizedMessage,
-          createdAt: report.createdAt,
-        });
-      }
+      await sendReportNotificationEmails({
+        reportId: report._id.toString(),
+        reporterEmail: reporter.email,
+        reporterName: reporter.username || "User",
+        contentOwnerEmail: contentOwner.email,
+        contentOwnerName: contentOwner.username || "User",
+        targetType,
+        reason,
+        reportMessage: sanitizedMessage,
+        createdAt: report.createdAt,
+      });
     } catch (emailError) {
       // Email errors are logged but don't affect the report creation
       console.error(

@@ -39,6 +39,33 @@ export interface ReportResolutionPayload extends ReportNotificationPayload {
 
 const APP_URL = process.env.APP_URL || "https://sharda-social.vercel.app";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sharda.social";
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character] || character,
+  );
+
+const buildTemplateContext = (
+  payload: ReportNotificationPayload,
+): ReportEmailContext => ({
+  reporterName: escapeHtml(payload.reporterName),
+  contentOwnerName: escapeHtml(payload.contentOwnerName),
+  targetType: payload.targetType,
+  reason: escapeHtml(payload.reason),
+  reportMessage: payload.reportMessage
+    ? escapeHtml(payload.reportMessage)
+    : undefined,
+  reportId: escapeHtml(payload.reportId),
+  createdAt: payload.createdAt,
+  appUrl: escapeHtml(APP_URL),
+});
 
 /**
  * Send confirmation email to the user who submitted the report
@@ -48,16 +75,7 @@ export const sendReportConfirmationEmail = async (
   payload: ReportNotificationPayload,
 ): Promise<void> => {
   try {
-    const context: ReportEmailContext = {
-      reporterName: payload.reporterName,
-      contentOwnerName: payload.contentOwnerName,
-      targetType: payload.targetType,
-      reason: payload.reason,
-      reportMessage: payload.reportMessage,
-      reportId: payload.reportId,
-      createdAt: payload.createdAt,
-      appUrl: APP_URL,
-    };
+    const context = buildTemplateContext(payload);
 
     const html = reporterConfirmationTemplate(context);
     const subject = `Report Received - We're On It`;
@@ -87,16 +105,7 @@ export const sendContentOwnerNotificationEmail = async (
   payload: ReportNotificationPayload,
 ): Promise<void> => {
   try {
-    const context: ReportEmailContext = {
-      reporterName: payload.reporterName,
-      contentOwnerName: payload.contentOwnerName,
-      targetType: payload.targetType,
-      reason: payload.reason,
-      reportMessage: payload.reportMessage,
-      reportId: payload.reportId,
-      createdAt: payload.createdAt,
-      appUrl: APP_URL,
-    };
+    const context = buildTemplateContext(payload);
 
     const html = contentOwnerNotificationTemplate(context);
     const subject = `Your ${payload.targetType} Has Been Reported`;
@@ -132,16 +141,7 @@ export const sendModeratorAlertEmail = async (
   }
 
   try {
-    const context: ReportEmailContext = {
-      reporterName: payload.reporterName,
-      contentOwnerName: payload.contentOwnerName,
-      targetType: payload.targetType,
-      reason: payload.reason,
-      reportMessage: payload.reportMessage,
-      reportId: payload.reportId,
-      createdAt: payload.createdAt,
-      appUrl: APP_URL,
-    };
+    const context = buildTemplateContext(payload);
 
     const html = moderatorAlertTemplate(context);
     const subject = `[URGENT] New Report #${payload.reportId.slice(-8)} - Action Required`;
@@ -169,16 +169,9 @@ export const sendReportResolutionEmail = async (
 ): Promise<void> => {
   try {
     const context = {
-      reporterName: payload.reporterName,
-      contentOwnerName: payload.contentOwnerName,
-      targetType: payload.targetType,
-      reason: payload.reason,
-      reportMessage: payload.reportMessage,
-      reportId: payload.reportId,
-      createdAt: payload.createdAt,
-      appUrl: APP_URL,
+      ...buildTemplateContext(payload),
       actionTaken: payload.actionTaken,
-      moderatorName: payload.moderatorName,
+      moderatorName: escapeHtml(payload.moderatorName),
     };
 
     const html = reportResolutionTemplate(context);
@@ -209,53 +202,49 @@ export const sendContentOwnerActionNotificationEmail = async (
   payload: ReportResolutionPayload,
 ): Promise<void> => {
   try {
-    // Only send if action was taken against the content owner
-    const actionsTakingEffect = [
-      "post_deleted",
-      "comment_deleted",
-      "warning_sent",
-      "user_suspended",
-      "user_deleted",
-    ];
-
-    if (!actionsTakingEffect.includes(payload.actionTaken)) {
-      return;
-    }
-
     const actionMessages: Record<string, string> = {
       post_deleted: "Your post has been removed",
       comment_deleted: "Your comment has been removed",
       warning_sent: "Your account has received a formal warning",
       user_suspended: "Your account has been temporarily suspended",
       user_deleted: "Your account has been permanently deleted",
+      ignored: "The report was dismissed after review",
+      none: "The report was reviewed and no additional action was required",
     };
+    const ownerName = escapeHtml(payload.contentOwnerName);
+    const targetType = escapeHtml(payload.targetType);
+    const actionMessage =
+      actionMessages[payload.actionTaken] || "The report has been reviewed";
+    const hasEnforcementAction = !["ignored", "none"].includes(
+      payload.actionTaken,
+    );
 
-    const subject =
-      actionMessages[payload.actionTaken] || "Account Action Taken";
+    const subject = hasEnforcementAction
+      ? actionMessage
+      : "Report Review Completed";
 
     const html = `
 <div style="color:#374151;line-height:1.6;">
   <h2 style="color:#111827;margin:0 0 16px 0;font-size:20px;font-weight:700;">
-    Moderation Action Taken
+    Report Review Completed
   </h2>
   
   <p style="margin:0 0 16px 0;color:#4B5563;">
-    Hello <strong>${payload.contentOwnerName}</strong>,
+    Hello <strong>${ownerName}</strong>,
   </p>
 
   <p style="margin:0 0 20px 0;color:#4B5563;">
-    After reviewing a report against your ${payload.targetType}, our moderation team has taken the following action:
+    Our moderation team has completed its review of a report concerning your ${targetType}. The outcome is shown below.
   </p>
 
-  <div style="background-color:#FEE2E2;border:1px solid #FECACA;border-radius:8px;padding:16px;margin:24px 0;">
-    <p style="margin:0;font-size:13px;color:#991B1B;">
-      <strong>Action Taken:</strong> ${actionMessages[payload.actionTaken]}
+  <div style="background-color:${hasEnforcementAction ? "#FEE2E2" : "#EFF6FF"};border:1px solid ${hasEnforcementAction ? "#FECACA" : "#BFDBFE"};border-radius:8px;padding:16px;margin:24px 0;">
+    <p style="margin:0;font-size:13px;color:${hasEnforcementAction ? "#991B1B" : "#1E40AF"};">
+      <strong>Review Outcome:</strong> ${actionMessage}
     </p>
   </div>
 
   <p style="margin:16px 0 0 0;color:#6B7280;font-size:13px;">
-    Please review our community guidelines to ensure future content complies with our standards. 
-    If you believe this action was unfair, you can appeal within 30 days.
+    ${hasEnforcementAction ? "Please review our community guidelines to ensure future activity complies with our standards. If you believe this decision was unfair, you can appeal within 30 days." : "Thank you for your patience while our team completed this review."}
   </p>
 </div>
     `;

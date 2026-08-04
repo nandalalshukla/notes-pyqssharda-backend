@@ -30,6 +30,26 @@ const reportSchema = new Schema(
       required: true,
     },
 
+    reporterEmail: {
+      type: String,
+      required: true,
+    },
+
+    reporterName: {
+      type: String,
+      required: true,
+    },
+
+    targetOwnerEmail: {
+      type: String,
+      required: true,
+    },
+
+    targetOwnerName: {
+      type: String,
+      required: true,
+    },
+
     reason: {
       type: String,
       enum: [
