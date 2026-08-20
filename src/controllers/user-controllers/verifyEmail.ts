@@ -23,16 +23,21 @@ export default async function verifyEmail(req: Request, res: Response) {
     });
   }
 
+  // Same generic message returned by every failure branch below — a caller
+  // who doesn't know the right (email, otp) pair can't tell whether the
+  // email isn't registered, the OTP expired, or the OTP was just wrong.
+  const INVALID_OTP_RESPONSE = {
+    success: false,
+    message: "Invalid or expired OTP",
+  } as const;
+
   try {
     const user = await User.findOne({ email }).select(
       "+emailOtpHash +emailOtpExpiry",
     );
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(400).json(INVALID_OTP_RESPONSE);
     }
 
     if (user.isEmailVerified) {

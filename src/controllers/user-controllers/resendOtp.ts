@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 
+const GENERIC_MESSAGE =
+  "If that email needs verification, a new OTP has been sent.";
+
 export const resendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
 
@@ -10,24 +13,22 @@ export const resendOtp = async (req: Request, res: Response) => {
       .select("email isEmailVerified")
       .lean();
 
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    if (user.isEmailVerified)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already verified" });
+    // Always the same 200 + generic message whether the account exists,
+    // doesn't exist, or is already verified — this used to 404 on a miss,
+    // letting anyone enumerate registered emails through this endpoint.
+    if (user && !user.isEmailVerified) {
+      await sendAndStoreOtp(user.email);
+    }
 
-    await sendAndStoreOtp(user.email);
-
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: "If email exists otp has been sent",
+      message: GENERIC_MESSAGE,
     });
   } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to send OTP" });
+    // Even on a send failure, don't leak whether the account existed.
+    return res.status(200).json({
+      success: true,
+      message: GENERIC_MESSAGE,
+    });
   }
 };

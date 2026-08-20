@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const getComments = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -22,7 +23,10 @@ export const getComments = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select("content author post likesCount createdAt updatedAt")
-        .populate("author", "_id username profilePic role")
+        .populate<{ author: PopulatedUserSummary }>(
+          "author",
+          "_id username profilePic role",
+        )
         .lean(),
       Comment.countDocuments({
         post: postId,
@@ -31,7 +35,7 @@ export const getComments = async (req: Request, res: Response) => {
       }),
     ]);
 
-    const commentIds = comments.map((comment: any) => comment._id);
+    const commentIds = comments.map((comment) => comment._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const likedCommentIds =
@@ -41,10 +45,10 @@ export const getComments = async (req: Request, res: Response) => {
             .lean()
         : [];
     const likedCommentIdSet = new Set(
-      likedCommentIds.map((like: any) => like.comment.toString()),
+      likedCommentIds.map((like) => like.comment!.toString()),
     );
 
-    const commentsWithLikes = comments.map((comment: any) => {
+    const commentsWithLikes = comments.map((comment) => {
       const commentId = comment._id.toString();
       const userLiked = likedCommentIdSet.has(commentId);
 

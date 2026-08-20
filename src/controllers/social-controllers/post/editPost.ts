@@ -4,6 +4,7 @@ import { Post } from "../../../models/social/post.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import { destroyCloudinaryAssets } from "../../../utils/destroyCloudinaryAssets.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const editPost = async (req: Request, res: Response) => {
   try {
@@ -47,24 +48,36 @@ export const editPost = async (req: Request, res: Response) => {
 
     if (removePublicIds.length > 0) {
       // Find the matching media items so we know their resource_type for Cloudinary
-      const toRemove = (post.media as any[]).filter((m) =>
+      const toRemove = post.media.filter((m) =>
         removePublicIds.includes(m.publicId),
       );
 
       if (toRemove.length > 0) {
-        await destroyCloudinaryAssets(toRemove);
+        // `media.type` isn't marked `required` in the schema, so Mongoose
+        // infers it as optional — but every write path (mapFilesToMedia)
+        // always sets it, which is the invariant destroyCloudinaryAssets
+        // relies on. Narrowing here (rather than loosening
+        // destroyCloudinaryAssets's signature) keeps that assumption local.
+        await destroyCloudinaryAssets(
+          toRemove as unknown as {
+            publicId: string;
+            type: "image" | "video" | "raw";
+          }[],
+        );
       }
 
-      // Strip removed items from the media array
-      post.media = (post.media as any[]).filter(
+      // Strip removed items from the media array. `.filter()` on a Mongoose
+      // DocumentArray returns a plain array, which isn't structurally a
+      // DocumentArray — cast back to the property's own type to assign it.
+      post.media = post.media.filter(
         (m) => !removePublicIds.includes(m.publicId),
-      ) as any;
+      ) as unknown as typeof post.media;
     }
 
     const newFiles = (req.files as Express.Multer.File[]) ?? [];
     if (newFiles.length > 0) {
       const newMedia = mapFilesToMedia(newFiles);
-      post.media = [...(post.media as any[]), ...newMedia] as any;
+      post.media = [...post.media, ...newMedia] as unknown as typeof post.media;
     }
 
     if (req.body.content !== undefined) {
@@ -75,7 +88,7 @@ export const editPost = async (req: Request, res: Response) => {
       post.type = req.body.type;
     }
 
-    if (!post.content && (post.media as any[]).length === 0) {
+    if (!post.content && post.media.length === 0) {
       return res.status(400).json({
         success: false,
         message: "A post must have text content or at least one media file.",
@@ -89,9 +102,9 @@ export const editPost = async (req: Request, res: Response) => {
       "_id username profilePic role",
     );
 
-    const files = populated.media?.map((m: any) => m.url) || [];
-    const publicIds = populated.media?.map((m: any) => m.publicId) || [];
-    const author = populated.author as any;
+    const files = populated.media?.map((m) => m.url) || [];
+    const publicIds = populated.media?.map((m) => m.publicId) || [];
+    const author = populated.author as unknown as PopulatedUserSummary;
     const userLiked = await Like.exists({
       post: populated._id,
       user: req.user!.userId,

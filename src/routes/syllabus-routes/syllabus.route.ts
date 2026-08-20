@@ -11,10 +11,10 @@ import { fetchAllSyllabus } from "../../controllers/syllabus-controllers/fetchAl
 // Validators
 import {
   syllabusUploadSchema,
-  syllabusSchema,
   updateSyllabusSchema,
   syllabusQuerySchema,
 } from "../../validators/syllabus-zod/syllabus.zod.js";
+import { idParamSchema } from "../../validators/shared/objectId.zod.js";
 
 // Multer & Middlewares
 import { uploadSyllabusMulter } from "../../config/multer.js";
@@ -64,13 +64,15 @@ router.post(
   uploadSyllabus,
 );
 
-// Update Syllabus
+// Update Syllabus — a replacement file is optional; when sent, it arrives
+// via multer just like upload does.
 router.put(
   "/edit-syllabus/:id",
   authMiddleware,
   uploadLimiter,
   cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
-  validateMiddleware(updateSyllabusSchema),
+  uploadSyllabusMulter.single("file"),
+  validateMiddleware(updateSyllabusSchema.merge(idParamSchema)),
   editSyllabus,
 );
 
@@ -79,6 +81,7 @@ router.delete(
   "/delete-syllabus/:id",
   authMiddleware,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(idParamSchema),
   deleteSyllabus,
 );
 

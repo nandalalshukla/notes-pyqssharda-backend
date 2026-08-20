@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 // Lifetimes are the single source of truth — cookie maxAge (config/cookies.ts)
 // and Session.expiresAt (models/users/session.model.ts) must match these, or
@@ -7,24 +8,24 @@ import jwt from "jsonwebtoken";
 export const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-const JWT_ALGORITHM = "HS256" as const;
+export const JWT_ALGORITHM = "HS256" as const;
 
 export function generateAccessToken(userId: string, userRole: string) {
-  return jwt.sign({ userId, userRole }, process.env.ACCESS_TOKEN_SECRET!, {
+  return jwt.sign({ userId, userRole }, env.ACCESS_TOKEN_SECRET, {
     expiresIn: "15m",
     algorithm: JWT_ALGORITHM,
   });
 }
 
 export function generateRefreshToken(userId: string) {
-  return jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET!, {
+  return jwt.sign({ userId }, env.REFRESH_TOKEN_SECRET, {
     expiresIn: "30d",
     algorithm: JWT_ALGORITHM,
   });
 }
 
 export function generateEmailVerifyToken(userId: string) {
-  return jwt.sign({ userId }, process.env.VERIFY_EMAIL_TOKEN_SECRET!, {
+  return jwt.sign({ userId }, env.VERIFY_EMAIL_TOKEN_SECRET, {
     expiresIn: "30m",
     algorithm: JWT_ALGORITHM,
   });

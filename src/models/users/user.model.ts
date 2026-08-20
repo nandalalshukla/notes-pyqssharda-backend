@@ -97,6 +97,7 @@ const userSchema = new Schema(
     contributions: {
       type: Number,
       default: 0,
+      index: true, // sorted on by fetchContributors.ts (leaderboard)
     },
 
     // 🔹 Account State

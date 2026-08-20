@@ -64,7 +64,17 @@ const getTargetInfo = async (
   return { ownerId: user._id.toString() };
 };
 
-const getTargetsByType = async (reports: any[]) => {
+/**
+ * Only the fields getTargetsByType actually reads off each report — both
+ * call sites (getReports's populated+lean array, getReportById's single
+ * populated+lean report wrapped in an array) satisfy this structurally.
+ */
+type ReportTargetRef = {
+  targetId: mongoose.Types.ObjectId;
+  targetType: ReportTargetType;
+};
+
+const getTargetsByType = async (reports: ReportTargetRef[]) => {
   const postIds: string[] = [];
   const commentIds: string[] = [];
   const userIds: string[] = [];

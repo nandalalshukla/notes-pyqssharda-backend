@@ -97,10 +97,11 @@ export async function sendEmail(
     console.log(`✅ Email sent successfully to: ${to}`);
     console.log(`📬 Message ID: ${data.id}`);
     return { success: true, messageId: data.id };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Unexpected error sending email to: ${to}`);
-    console.error(`❌ Error details:`, error.message);
-    return { success: false, error: error.message };
+    console.error(`❌ Error details:`, message);
+    return { success: false, error: message };
   }
 }
 

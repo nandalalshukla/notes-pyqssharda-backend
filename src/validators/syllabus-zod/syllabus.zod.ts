@@ -23,9 +23,11 @@ export const syllabusSchema = syllabusUploadSchema.extend({
 });
 
 /**
- * Schema for updating Syllabus metadata
+ * Schema for updating Syllabus metadata. A replacement file, if any,
+ * arrives via multer (see syllabus.route.ts) — not as a `fileUrl` string in
+ * the body — so this is based on the upload schema, not `syllabusSchema`.
  */
-export const updateSyllabusSchema = syllabusSchema.partial();
+export const updateSyllabusSchema = syllabusUploadSchema.partial();
 
 /**
  * Schema for Syllabus query/filtering

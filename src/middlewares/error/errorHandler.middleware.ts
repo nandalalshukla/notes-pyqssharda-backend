@@ -73,12 +73,13 @@ function translateError(err: unknown): {
   }
 
   // Malformed ObjectId in a route param/query (e.g. GET /posts/not-an-id).
-  // The schema-level validator names are safe to surface — a developer
-  // wrote them (e.g. "Password must be at least 8 characters").
+  // `err.path` (a field name a developer wrote, e.g. "postId") is safe to
+  // surface; `err.value` (the raw attacker-controlled input) deliberately
+  // is not reflected back into the response.
   if (err instanceof mongoose.Error.CastError) {
     return {
       statusCode: 400,
-      message: `"${err.value}" isn't a valid ${err.path}.`,
+      message: `${err.path} is not valid.`,
       code: "INVALID_ID",
       logLevel: "operational",
     };

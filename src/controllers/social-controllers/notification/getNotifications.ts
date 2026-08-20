@@ -1,6 +1,11 @@
 // controllers/notification/getNotifications.ts
 import { Request, Response } from "express";
 import { Notification } from "../../../models/social/notification.model.js";
+import type {
+  PopulatedUserSummary,
+  PopulatedNotificationPostRef,
+  PopulatedNotificationCommentRef,
+} from "../../../types/social.types.js";
 
 export const getNotifications = async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -21,15 +26,15 @@ export const getNotifications = async (req: Request, res: Response) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate({
+        .populate<{ actor: PopulatedUserSummary }>({
           path: "actor",
           select: "username profilePic role _id",
         })
-        .populate({
+        .populate<{ post: PopulatedNotificationPostRef | null }>({
           path: "post",
           select: "_id",
         })
-        .populate({
+        .populate<{ comment: PopulatedNotificationCommentRef | null }>({
           path: "comment",
           select: "_id post",
         })
@@ -39,7 +44,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     ]);
 
     // Format notifications with readable messages
-    const formattedNotifications = notifications.map((notif: any) => ({
+    const formattedNotifications = notifications.map((notif) => ({
       _id: notif._id,
       type: notif.type,
       actor: notif.actor,
@@ -64,7 +69,17 @@ export const getNotifications = async (req: Request, res: Response) => {
   }
 };
 
-function formatNotificationMessage(notif: any): string {
+/**
+ * Only the fields these two helpers actually read — deliberately narrower
+ * than the full populated notification shape returned by getNotifications.
+ */
+type NotificationForFormatting = {
+  type: "like" | "comment" | "reply" | "follow" | "share";
+  actor: PopulatedUserSummary;
+  post: PopulatedNotificationPostRef | null;
+};
+
+function formatNotificationMessage(notif: NotificationForFormatting): string {
   const actorName = notif.actor?.username || "Someone";
 
   switch (notif.type) {
@@ -83,7 +98,7 @@ function formatNotificationMessage(notif: any): string {
   }
 }
 
-function getActionLink(notif: any): string {
+function getActionLink(notif: NotificationForFormatting): string {
   if (notif.type === "follow") {
     return `/profile/${notif.actor?._id}`;
   } else if (

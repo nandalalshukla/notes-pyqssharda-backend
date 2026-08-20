@@ -38,9 +38,17 @@ export const deletePost = async (req: Request, res: Response) => {
       });
     }
 
-    // Destroy Cloudinary assets in parallel before soft-deleting
-    if ((post.media as any[]).length > 0) {
-      await destroyCloudinaryAssets(post.media as any);
+    // Destroy Cloudinary assets in parallel before soft-deleting.
+    // `media.type` isn't marked `required` in the schema, so Mongoose infers
+    // it as optional — but every write path (mapFilesToMedia) always sets
+    // it, which is the invariant destroyCloudinaryAssets relies on.
+    if (post.media.length > 0) {
+      await destroyCloudinaryAssets(
+        post.media as unknown as {
+          publicId: string;
+          type: "image" | "video" | "raw";
+        }[],
+      );
     }
 
     // Get all comment IDs for this post before deleting

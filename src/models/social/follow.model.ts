@@ -22,8 +22,10 @@ const followSchema = new Schema(
 // 🔥 Prevent duplicate follows
 followSchema.index({ follower: 1, following: 1 }, { unique: true });
 
-// 🔥 Fast queries
-followSchema.index({ follower: 1 });
-followSchema.index({ following: 1 });
+// getFollowing.ts filters by `follower` and sorts by createdAt; getFollowers.ts
+// filters by `following` and sorts by createdAt — these compound indexes
+// cover both directly instead of index-scanning + sorting in memory.
+followSchema.index({ follower: 1, createdAt: -1 });
+followSchema.index({ following: 1, createdAt: -1 });
 
 export const Follow = mongoose.model("Follow", followSchema);

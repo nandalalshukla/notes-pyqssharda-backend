@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const editComment = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -68,7 +69,7 @@ export const editComment = async (req: Request, res: Response) => {
       user: userId,
     });
 
-    const author = populated.author as any;
+    const author = populated.author as unknown as PopulatedUserSummary;
 
     return res.status(200).json({
       success: true,

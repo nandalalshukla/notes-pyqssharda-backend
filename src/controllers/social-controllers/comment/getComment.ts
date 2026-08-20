@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const getComment = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -26,7 +27,10 @@ export const getComment = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select("content author post likesCount createdAt updatedAt")
-      .populate("author", "_id username profilePic role")
+      .populate<{ author: PopulatedUserSummary }>(
+        "author",
+        "_id username profilePic role",
+      )
       .lean();
 
     if (!comment) {
@@ -44,19 +48,19 @@ export const getComment = async (req: Request, res: Response) => {
 
     const commentData = {
       _id: comment._id,
-      text: (comment as any).content,
+      text: comment.content,
       author: {
-        _id: ((comment as any).author as any)._id,
-        username: ((comment as any).author as any).username || "Anonymous",
-        avatar: ((comment as any).author as any).profilePic?.url || "",
-        profilePic: ((comment as any).author as any).profilePic,
-        role: ((comment as any).author as any).role,
+        _id: comment.author._id,
+        username: comment.author.username || "Anonymous",
+        avatar: comment.author.profilePic?.url || "",
+        profilePic: comment.author.profilePic,
+        role: comment.author.role,
       },
-      post: (comment as any).post,
-      likes: (comment as any).likesCount || 0,
+      post: comment.post,
+      likes: comment.likesCount || 0,
       likedByCurrentUser: !!userLike,
-      createdAt: (comment as any).createdAt,
-      updatedAt: (comment as any).updatedAt,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
     };
 
     return res.status(200).json({

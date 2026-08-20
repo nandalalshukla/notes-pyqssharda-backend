@@ -4,6 +4,7 @@ import { Post } from "../../../models/social/post.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
 import mongoose from "mongoose";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const getFeed = async (req: Request, res: Response) => {
   const userId = req.user?.userId; // Optional - handle both authenticated and non-authenticated users
@@ -27,12 +28,15 @@ export const getFeed = async (req: Request, res: Response) => {
         .select(
           "type content author media likesCount commentsCount createdAt updatedAt",
         )
-        .populate("author", "_id username profilePic role")
+        .populate<{ author: PopulatedUserSummary }>(
+          "author",
+          "_id username profilePic role",
+        )
         .lean(),
       Post.countDocuments(postFilter),
     ]);
 
-    const postIds = posts.map((post: any) => post._id);
+    const postIds = posts.map((post) => post._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const [likedPostIds, followedAuthors] = await Promise.all([
@@ -44,7 +48,7 @@ export const getFeed = async (req: Request, res: Response) => {
       userObjectId && postIds.length > 0
         ? Follow.find({
             follower: userObjectId,
-            following: { $in: posts.map((post: any) => post.author._id) },
+            following: { $in: posts.map((post) => post.author._id) },
           })
             .select("following")
             .lean()
@@ -52,18 +56,18 @@ export const getFeed = async (req: Request, res: Response) => {
     ]);
 
     const likedPostIdSet = new Set(
-      likedPostIds.map((like: any) => like.post.toString()),
+      likedPostIds.map((like) => like.post!.toString()),
     );
     const followedAuthorIdSet = new Set(
-      followedAuthors.map((follow: any) => follow.following.toString()),
+      followedAuthors.map((follow) => follow.following!.toString()),
     );
 
-    const postsWithEngagement = posts.map((post: any) => {
+    const postsWithEngagement = posts.map((post) => {
       const postId = post._id.toString();
 
       // Transform media to match frontend expectations
-      const files = post.media?.map((m: any) => m.url) || [];
-      const publicIds = post.media?.map((m: any) => m.publicId) || [];
+      const files = post.media?.map((m) => m.url) || [];
+      const publicIds = post.media?.map((m) => m.publicId) || [];
 
       return {
         _id: post._id,

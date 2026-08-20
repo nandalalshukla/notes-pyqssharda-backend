@@ -14,6 +14,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../../utils/errors/AppError.js";
+import type { PopulatedReporterContact } from "../../types/social.types.js";
 
 // These messages ("not found OR already deleted/suspended") don't fit
 // NotFoundError's "${resource} couldn't be found" template — a moderator
@@ -71,14 +72,17 @@ const backfillNotificationSnapshot = async (reportId: string) => {
     .select(
       "reporter targetOwner reporterEmail reporterName targetOwnerEmail targetOwnerName",
     )
-    .populate("reporter", "email username")
-    .populate("targetOwner", "email username")
+    .populate<{ reporter: PopulatedReporterContact }>("reporter", "email username")
+    .populate<{ targetOwner: PopulatedReporterContact }>(
+      "targetOwner",
+      "email username",
+    )
     .lean();
 
   if (!report) return;
 
-  const reporter = report.reporter as any;
-  const contentOwner = report.targetOwner as any;
+  const reporter = report.reporter;
+  const contentOwner = report.targetOwner;
   const snapshot = {
     reporterEmail: report.reporterEmail || reporter?.email,
     reporterName: report.reporterName || reporter?.username || "User",
@@ -134,7 +138,7 @@ export const applyModerationAction = async (
   await backfillNotificationSnapshot(reportId);
 
   const session = await mongoose.startSession();
-  let updatedReport: any;
+  let updatedReport: Awaited<ReturnType<typeof markReport>> | undefined;
 
   try {
     await session.withTransaction(async () => {
@@ -286,7 +290,10 @@ export const applyModerationAction = async (
       }
     });
 
-    return updatedReport;
+    // Every switch branch above either assigns updatedReport (via markReport)
+    // or throws before returning, so it's always set here — TS just can't
+    // see that through the withTransaction callback's control flow.
+    return updatedReport!;
   } finally {
     session.endSession();
   }
@@ -305,8 +312,14 @@ export const sendModerationActionEmails = async (
   try {
     // Fetch full report details for email context
     const report = await Report.findById(reportId)
-      .populate("reporter", "email username")
-      .populate("targetOwner", "email username")
+      .populate<{ reporter: PopulatedReporterContact }>(
+        "reporter",
+        "email username",
+      )
+      .populate<{ targetOwner: PopulatedReporterContact }>(
+        "targetOwner",
+        "email username",
+      )
       .lean();
 
     if (!report) {
@@ -314,8 +327,8 @@ export const sendModerationActionEmails = async (
       return;
     }
 
-    const reporter = report.reporter as any;
-    const contentOwner = report.targetOwner as any;
+    const reporter = report.reporter;
+    const contentOwner = report.targetOwner;
     const moderator = await User.findById(moderatorId)
       .select("username")
       .lean();

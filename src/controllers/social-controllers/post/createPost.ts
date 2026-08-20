@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Post } from "../../../models/social/post.model.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const createPost = async (req: Request, res: Response) => {
   try {
@@ -35,9 +36,9 @@ export const createPost = async (req: Request, res: Response) => {
       "_id username profilePic role",
     );
 
-    const mediaFiles = populated.media?.map((m: any) => m.url) || [];
-    const publicIds = populated.media?.map((m: any) => m.publicId) || [];
-    const author = populated.author as any;
+    const mediaFiles = populated.media?.map((m) => m.url) || [];
+    const publicIds = populated.media?.map((m) => m.publicId) || [];
+    const author = populated.author as unknown as PopulatedUserSummary;
     const responsePost = {
       _id: populated._id,
       type: populated.type,

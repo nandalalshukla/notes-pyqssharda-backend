@@ -14,9 +14,17 @@ type ReportRequest = Request & {
   };
 };
 
-const reportStore = new Map<string, { timestamp: number; targetKey: string }>();
+type UserReportHistory = {
+  // Timestamp of the most recent report, keyed by target — used for the
+  // same-item cooldown check.
+  lastByTarget: Map<string, number>;
+  // Timestamps of every report made within the current window — its length
+  // is the actual "reports per window" count.
+  timestamps: number[];
+};
 
-const getReportKey = (userId: string) => `report:${userId}`;
+const reportStore = new Map<string, UserReportHistory>();
+
 const getTargetKey = (
   targetType: string | undefined,
   targetId: string | undefined,
@@ -30,7 +38,7 @@ export const reportLimiter = (options: {
   const maxReportsPerWindow = options.maxReportsPerWindow ?? 3; // 3 reports per minute
 
   return (req: ReportRequest, res: Response, next: NextFunction) => {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -47,60 +55,56 @@ export const reportLimiter = (options: {
     }
 
     const now = Date.now();
-    const reportKey = getReportKey(userId);
     const targetKey = getTargetKey(targetType, targetId);
 
-    // Get or initialize user's report history
-    let reportEntry = reportStore.get(reportKey);
-
-    if (!reportEntry) {
-      reportStore.set(reportKey, { timestamp: now, targetKey });
-      return next();
+    let history = reportStore.get(userId);
+    if (!history) {
+      history = { lastByTarget: new Map(), timestamps: [] };
+      reportStore.set(userId, history);
     }
 
-    // Check if enough time has passed since last report
-    const timeSinceLastReport = now - reportEntry.timestamp;
-
-    if (timeSinceLastReport < windowMs) {
-      // If it's a report on the SAME item, the backend will catch it with a 409
-      // If it's a DIFFERENT item, allow it even if within cooldown window
-      if (reportEntry.targetKey === targetKey) {
-        // Same item reported too recently
-        const cooldownRemaining = Math.ceil(
-          (windowMs - timeSinceLastReport) / 1000,
-        );
-        return res.status(429).json({
-          success: false,
-          code: "REPORT_COOLDOWN",
-          message: `Please wait ${cooldownRemaining} second${cooldownRemaining > 1 ? "s" : ""} before reporting this item again`,
-          retryAfter: cooldownRemaining,
-        });
-      }
-
-      // Different item - check if under max reports per window
-      const userReports = Array.from(reportStore.entries()).filter(
-        ([key]) =>
-          key.startsWith("report:") && key === reportKey && key !== reportKey,
-      ).length;
-
-      if (userReports >= maxReportsPerWindow) {
-        const retryAfter = Math.ceil(windowMs / 1000);
-        return res.status(429).json({
-          success: false,
-          code: "RATE_LIMIT_EXCEEDED",
-          message: `You're reporting too many items. Please wait ${retryAfter} seconds before reporting again`,
-          retryAfter,
-        });
-      }
+    // Same item reported too recently — the backend also enforces this with
+    // a 409 duplicate-report check, but rejecting here saves the round trip.
+    const lastReportOnTarget = history.lastByTarget.get(targetKey);
+    if (lastReportOnTarget !== undefined && now - lastReportOnTarget < windowMs) {
+      const cooldownRemaining = Math.ceil(
+        (windowMs - (now - lastReportOnTarget)) / 1000,
+      );
+      return res.status(429).json({
+        success: false,
+        code: "REPORT_COOLDOWN",
+        message: `Please wait ${cooldownRemaining} second${cooldownRemaining > 1 ? "s" : ""} before reporting this item again`,
+        retryAfter: cooldownRemaining,
+      });
     }
 
-    // Update the report timestamp for this user
-    reportStore.set(reportKey, { timestamp: now, targetKey });
+    // Drop timestamps outside the window, then check the actual count of
+    // distinct reports made within it.
+    history.timestamps = history.timestamps.filter((t) => now - t < windowMs);
+    if (history.timestamps.length >= maxReportsPerWindow) {
+      const retryAfter = Math.ceil(
+        (windowMs - (now - history.timestamps[0])) / 1000,
+      );
+      return res.status(429).json({
+        success: false,
+        code: "RATE_LIMIT_EXCEEDED",
+        message: `You're reporting too many items. Please wait ${retryAfter} seconds before reporting again`,
+        retryAfter,
+      });
+    }
 
-    // Cleanup old entries (every 10 minutes)
+    history.timestamps.push(now);
+    history.lastByTarget.set(targetKey, now);
+
+    // Cleanup users with no activity in the last two windows (every ~1% of
+    // requests) so the map doesn't grow unbounded.
     if (Math.random() < 0.01) {
       for (const [key, entry] of reportStore.entries()) {
-        if (now - entry.timestamp > windowMs * 2) {
+        const mostRecent = Math.max(
+          entry.timestamps[entry.timestamps.length - 1] ?? 0,
+          ...entry.lastByTarget.values(),
+        );
+        if (now - mostRecent > windowMs * 2) {
           reportStore.delete(key);
         }
       }

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Like } from "../../../models/social/like.model.js";
 import { Post } from "../../../models/social/post.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
+import type { PopulatedLikeUser } from "../../../types/social.types.js";
 
 export const getLikes = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -35,7 +36,7 @@ export const getLikes = async (req: Request, res: Response) => {
 
     // Get likes with user details
     const likes = await Like.find({ post: postObjectId })
-      .populate({
+      .populate<{ user: PopulatedLikeUser }>({
         path: "user",
         select: "username email profilePic role _id",
       })
@@ -44,7 +45,7 @@ export const getLikes = async (req: Request, res: Response) => {
       .limit(limitNum)
       .lean();
 
-    const userObjectIds = likes.map((like: any) => like.user._id);
+    const userObjectIds = likes.map((like) => like.user._id);
     const currentUserObjectId = userId
       ? new mongoose.Types.ObjectId(userId)
       : null;
@@ -59,10 +60,10 @@ export const getLikes = async (req: Request, res: Response) => {
         : [];
 
     const followingSet = new Set(
-      followRelationships.map((f: any) => f.following.toString()),
+      followRelationships.map((f) => f.following!.toString()),
     );
 
-    const likeUsers = likes.map((like: any) => ({
+    const likeUsers = likes.map((like) => ({
       _id: like.user._id,
       username: like.user.username,
       email: like.user.email,

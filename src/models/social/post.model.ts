@@ -69,5 +69,9 @@ const postSchema = new Schema(
 
 postSchema.index({ isDeleted: 1, createdAt: -1 });
 postSchema.index({ author: 1, isDeleted: 1, createdAt: -1 });
+// Covers the feed's type-filtered branch (getFeedPosts.ts) — without this,
+// filtering by both isDeleted and type falls back to scanning the
+// isDeleted+createdAt index and checking `type` per document.
+postSchema.index({ isDeleted: 1, type: 1, createdAt: -1 });
 
 export const Post = mongoose.model("Post", postSchema);

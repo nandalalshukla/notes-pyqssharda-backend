@@ -80,6 +80,7 @@ router.delete(
   "/notes/:noteId",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(deleteNoteParamsSchema),
   deleteNote,
 );
 
@@ -93,6 +94,7 @@ router.delete(
   "/pyqs/:pyqId",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(deletePYQParamsSchema),
   deletePyq,
 );
 
@@ -106,6 +108,7 @@ router.delete(
   "/syllabus/:syllabusId",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(deleteSyllabusParamsSchema),
   deleteSyllabus,
 );
 
@@ -124,18 +127,21 @@ router.delete(
   "/users/:userId",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(deleteUserParamsSchema),
   deleteUser,
 );
 router.patch(
   "/users/:userId/deactivate",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before changing again." }),
+  validateMiddleware(deleteUserParamsSchema),
   deactivateUser,
 );
 router.patch(
   "/users/:userId/activate",
   interactionLimiter,
   cooldown({ windowMs: 3000, message: "Please wait before changing again." }),
+  validateMiddleware(deleteUserParamsSchema),
   activateUser,
 );
 

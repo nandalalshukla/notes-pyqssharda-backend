@@ -4,7 +4,9 @@ import {
   generateAccessToken,
   generateRefreshToken,
   REFRESH_TOKEN_TTL_MS,
+  JWT_ALGORITHM,
 } from "../../utils/generateJwtTokens.js";
+import { env } from "../../config/env.js";
 import { Request, Response } from "express";
 import {
   accessTokenCookieOptions,
@@ -24,8 +26,8 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
   try {
     // Verify the refresh token JWT
-    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, {
-      algorithms: ["HS256"],
+    const payload = jwt.verify(refreshToken, env.REFRESH_TOKEN_SECRET, {
+      algorithms: [JWT_ALGORITHM],
     }) as { userId: string };
 
     // Find the SPECIFIC session by userId + refresh token hash (not expired)

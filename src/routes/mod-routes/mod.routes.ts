@@ -32,9 +32,18 @@ import {
 } from "../../controllers/mod-controllers/reportActions.js";
 
 // Validators
-import { rejectNoteSchema } from "../../validators/mods-zod/notesManagement.zod.js";
-import { rejectPYQSchema } from "../../validators/mods-zod/pyqsManagement.zod.js";
-import { rejectSyllabusSchema } from "../../validators/mods-zod/syllabusManagement.zod.js";
+import {
+  rejectNoteSchema,
+  noteParamsSchema,
+} from "../../validators/mods-zod/notesManagement.zod.js";
+import {
+  rejectPYQSchema,
+  pyqParamsSchema,
+} from "../../validators/mods-zod/pyqsManagement.zod.js";
+import {
+  rejectSyllabusSchema,
+  syllabusParamsSchema,
+} from "../../validators/mods-zod/syllabusManagement.zod.js";
 import {
   reportParamsSchema,
   reportQuerySchema,
@@ -64,11 +73,16 @@ router.use(authMiddleware, roleMiddleware("mod", "admin"));
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 router.get("/notes/pending", interactionLimiter, fetchPendingNotes);
-router.patch("/notes/:noteId/approve", interactionLimiter, approveNote);
+router.patch(
+  "/notes/:noteId/approve",
+  interactionLimiter,
+  validateMiddleware(noteParamsSchema),
+  approveNote,
+);
 router.patch(
   "/notes/:noteId/reject",
   interactionLimiter,
-  validateMiddleware(rejectNoteSchema),
+  validateMiddleware(rejectNoteSchema.merge(noteParamsSchema)),
   rejectNote,
 );
 
@@ -78,11 +92,16 @@ router.patch(
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 router.get("/pyqs/pending", interactionLimiter, fetchPendingPyqs);
-router.patch("/pyqs/:pyqId/approve", interactionLimiter, approvePyq);
+router.patch(
+  "/pyqs/:pyqId/approve",
+  interactionLimiter,
+  validateMiddleware(pyqParamsSchema),
+  approvePyq,
+);
 router.patch(
   "/pyqs/:pyqId/reject",
   interactionLimiter,
-  validateMiddleware(rejectPYQSchema),
+  validateMiddleware(rejectPYQSchema.merge(pyqParamsSchema)),
   rejectPyq,
 );
 
@@ -95,12 +114,13 @@ router.get("/syllabus/pending", interactionLimiter, fetchPendingSyllabus);
 router.patch(
   "/syllabus/:syllabusId/approve",
   interactionLimiter,
+  validateMiddleware(syllabusParamsSchema),
   approveSyllabus,
 );
 router.patch(
   "/syllabus/:syllabusId/reject",
   interactionLimiter,
-  validateMiddleware(rejectSyllabusSchema),
+  validateMiddleware(rejectSyllabusSchema.merge(syllabusParamsSchema)),
   rejectSyllabus,
 );
 

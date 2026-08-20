@@ -4,6 +4,7 @@ import { Post } from "../../../models/social/post.model.js";
 import { User } from "../../../models/users/user.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const getUserPosts = async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -29,12 +30,15 @@ export const getUserPosts = async (req: Request, res: Response) => {
         .select(
           "type content author media likesCount commentsCount createdAt updatedAt",
         )
-        .populate("author", "_id username profilePic role")
+        .populate<{ author: PopulatedUserSummary }>(
+          "author",
+          "_id username profilePic role",
+        )
         .lean(),
       Post.countDocuments({ author: userId, isDeleted: false }),
     ]);
 
-    const postIds = posts.map((post: any) => post._id);
+    const postIds = posts.map((post) => post._id);
     const userObjectId = currentUserId
       ? new mongoose.Types.ObjectId(currentUserId)
       : null;
@@ -46,7 +50,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
             .lean()
         : [];
     const likedPostIdSet = new Set(
-      likedPostIds.map((like: any) => like.post.toString()),
+      likedPostIds.map((like) => like.post!.toString()),
     );
 
     const isFollowedByCurrentUser =
@@ -57,12 +61,12 @@ export const getUserPosts = async (req: Request, res: Response) => {
           }))
         : false;
 
-    const postsWithEngagement = posts.map((post: any) => {
+    const postsWithEngagement = posts.map((post) => {
       const postId = post._id.toString();
       const userLiked = likedPostIdSet.has(postId);
 
-      const files = post.media?.map((m: any) => m.url) || [];
-      const publicIds = post.media?.map((m: any) => m.publicId) || [];
+      const files = post.media?.map((m) => m.url) || [];
+      const publicIds = post.media?.map((m) => m.publicId) || [];
 
       return {
         _id: post._id,

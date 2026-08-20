@@ -2,17 +2,11 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "./cloudinary.js";
 import path from "path";
-import { Request } from "express";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { userId: string; userRole?: string };
-    }
-  }
-}
+// `Express.Request.user` is already declared once, globally, in
+// src/types/express.d.ts — no need to redeclare it here.
 
-function getResourceType(mimetype: string): "image" | "video" | "raw" {
+export function getResourceType(mimetype: string): "image" | "video" | "raw" {
   const imageMimeTypes = [
     "image/png",
     "image/jpeg",
@@ -40,6 +34,38 @@ function getFilenameWithoutExtension(filename: string): string {
   return path.parse(filename).name;
 }
 
+// Cloudinary's `format` param is used to pick the file extension it stores
+// under. Deriving it from the client-supplied `originalname` (as this used
+// to do) means a request can send `mimetype: "application/pdf"` (which
+// passes the fileFilter allowlist below) alongside an originalname like
+// "payload.svg" and have Cloudinary store/serve it as an SVG — a format
+// whose content can carry an executable `<script>` payload. Deriving the
+// extension from the already-allowlisted, server-observed MIME type instead
+// keeps the stored format consistent with what was actually validated.
+const MIME_TO_EXTENSION: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/bmp": "bmp",
+  "image/svg+xml": "svg",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "docx",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "pptx",
+};
+
+function getFormatFromMimetype(mimetype: string, originalname: string): string {
+  return (
+    MIME_TO_EXTENSION[mimetype] ??
+    path.extname(originalname).substring(1).toLowerCase()
+  );
+}
+
 /**
  * Sanitizes filename for Cloudinary public_id
  * Cloudinary only allows: alphanumeric, hyphens, underscores, dots, slashes
@@ -65,7 +91,7 @@ const notesStorage = new CloudinaryStorage({
       folder: "notes_uploads",
       resource_type: getResourceType(file.mimetype),
       public_id: `${Date.now()}-${sanitizedFilename}`,
-      format: path.extname(file.originalname).substring(1),
+      format: getFormatFromMimetype(file.mimetype, file.originalname),
     };
   },
 });
@@ -79,7 +105,7 @@ const pyqStorage = new CloudinaryStorage({
       folder: "pyq_uploads",
       resource_type: getResourceType(file.mimetype),
       public_id: `${Date.now()}-${sanitizedFilename}`,
-      format: path.extname(file.originalname).substring(1),
+      format: getFormatFromMimetype(file.mimetype, file.originalname),
     };
   },
 });
@@ -93,7 +119,7 @@ const syllabusStorage = new CloudinaryStorage({
       folder: "syllabus_uploads",
       resource_type: getResourceType(file.mimetype),
       public_id: `${Date.now()}-${sanitizedFilename}`,
-      format: path.extname(file.originalname).substring(1),
+      format: getFormatFromMimetype(file.mimetype, file.originalname),
     };
   },
 });
@@ -129,7 +155,7 @@ const postFileStorage = new CloudinaryStorage({
       public_id: `${Date.now()}-${sanitizedFilename}`,
       // Only set format for non-video — videos should keep their original container
       ...(resourceType !== "video" && {
-        format: path.extname(file.originalname).substring(1),
+        format: getFormatFromMimetype(file.mimetype, file.originalname),
       }),
     };
   },

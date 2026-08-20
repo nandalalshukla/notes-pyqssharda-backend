@@ -1,80 +1,17 @@
 import mongoose from "mongoose";
-import { Schema } from "mongoose";
-const ObjectId = Schema.Types.ObjectId;
-const syllabusSchema = new Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  fileUrl: {
-    type: String,
-    required: true,
-  },
-  userId: {
-    type: ObjectId,
-    ref: "User",
-    required: true,
-  },
-  program: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  courseCode: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  courseName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  semester: {
-    type: Number,
-    required: true,
-  },
-  publicId: {
-    type: String,
-    required: true,
-  },
-    //MODERATION SYSTEM
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
-    approvedBy: {
-      type: ObjectId,
-      ref: "User",
-      default: null,
-  },
-    
-    approvedAt: {
-      type: Date,
-      default: null,
-    },
+import {
+  buildResourceSchema,
+  addResourceIndexes,
+  BaseResourceFields,
+} from "../resource/resourceSchema.js";
 
-    rejectedBy: {
-      type: ObjectId,
-      ref: "User",
-      default: null,
-    },
+export type SyllabusFields = BaseResourceFields;
 
-    rejectedAt: {
-      type: Date,
-      default: null,
-    },
+const syllabusSchema = buildResourceSchema();
+addResourceIndexes(syllabusSchema);
 
-    rejectionReason: {
-      type: String,
-      default: null,
-    }
-  },
-  {
-    timestamps: true // createdAt, updatedAt
-  }
+export const Syllabus = mongoose.model<SyllabusFields>(
+  "Syllabus",
+  syllabusSchema,
+  "syllabus",
 );
-
-export const Syllabus = mongoose.model("Syllabus", syllabusSchema, "syllabus");

@@ -49,9 +49,11 @@ export const notesSchema = notesUploadSchema.extend({
 });
 
 /**
- * Schema for updating notes metadata
+ * Schema for updating notes metadata. A replacement file, if any, arrives
+ * via multer (see notes.route.ts) — not as a `fileUrl` string in the body —
+ * so this is based on the upload schema, not `notesSchema`.
  */
-export const updateNotesSchema = notesSchema.partial();
+export const updateNotesSchema = notesUploadSchema.partial();
 
 /**
  * Schema for notes query/filtering

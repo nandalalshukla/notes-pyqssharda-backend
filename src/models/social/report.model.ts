@@ -114,5 +114,9 @@ reportSchema.index(
   { unique: true },
 );
 reportSchema.index({ createdAt: -1 });
+// The moderator dashboard (report.service.ts) filters by status and sorts
+// by createdAt together — this compound index covers that query directly
+// instead of index-scanning on `status` alone and sorting in memory.
+reportSchema.index({ status: 1, createdAt: -1 });
 
 export const Report = mongoose.model("Report", reportSchema);

@@ -15,8 +15,15 @@ export const validateMiddleware =
       // e.g. email .trim().toLowerCase() — actually reach the controller.
       // Without this, a mixed-case/whitespace-padded email passes validation
       // but the controller still queries the DB with the untransformed value.
+      //
+      // req.body is REPLACED (not merged over) with the parsed result: a zod
+      // object schema silently strips any key it doesn't recognize, so
+      // `parsed` only ever contains validated fields. Merging the raw
+      // req.body back on top (the old behavior) undid that stripping —
+      // every unvalidated field the client sent would still reach the
+      // controller, defeating the point of validating in the first place.
       const parsed = schema.parse(dataToValidate) as Record<string, unknown>;
-      req.body = { ...req.body, ...parsed };
+      req.body = parsed;
       next();
     } catch (error: unknown) {
       if (error instanceof ZodError) {

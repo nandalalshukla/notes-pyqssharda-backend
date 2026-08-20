@@ -30,9 +30,11 @@ export const pyqsSchema = pyqsUploadSchema.extend({
 });
 
 /**
- * Schema for updating PYQ metadata
+ * Schema for updating PYQ metadata. A replacement file, if any, arrives via
+ * multer (see pyqs.route.ts) — not as a `fileUrl` string in the body — so
+ * this is based on the upload schema, not `pyqsSchema`.
  */
-export const updatePYQsSchema = pyqsSchema.partial();
+export const updatePYQsSchema = pyqsUploadSchema.partial();
 
 /**
  * Schema for PYQs query/filtering

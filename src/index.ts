@@ -1,4 +1,4 @@
-import "./config/env.js";
+import { env } from "./config/env.js";
 import express from "express";
 import helmet from "helmet";
 import connectDB from "./config/db.js";
@@ -19,8 +19,6 @@ import socialRouter from "./routes/social-route/social.route.js";
 import corsConfig from "./config/cors.js";
 import cookieParser from "cookie-parser";
 import { globalLimiter } from "./middlewares/rateLimit/index.js";
-
-connectDB();
 
 const app = express();
 
@@ -107,9 +105,17 @@ app.use((req, _res, next) => {
 // turns any thrown error (ours or a library's) into a safe client response.
 app.use(errorHandlerMiddleware);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+const PORT = env.PORT;
+
+// Wait for the DB connection before accepting traffic — previously the
+// server started listening immediately while connectDB() ran in the
+// background, so any request that arrived before Mongoose finished
+// connecting (routine right after a cold start/deploy) would hang for the
+// full 10s Mongoose buffering timeout and fail with a generic 500.
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server started on http://localhost:${PORT}`);
+  });
 });
 
 // Last-resort safety nets: log full detail and exit so the process

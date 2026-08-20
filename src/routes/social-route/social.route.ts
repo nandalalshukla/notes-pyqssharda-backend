@@ -50,10 +50,7 @@ import {
   editCommentSchema,
   commentParamsSchema,
 } from "../../validators/social-zod/comment.zod.js";
-import {
-  likeActionSchema,
-  likeParamsSchema,
-} from "../../validators/social-zod/like.zod.js";
+import { likeActionSchema } from "../../validators/social-zod/like.zod.js";
 import {
   followActionSchema,
   followListSchema,
@@ -224,6 +221,7 @@ router.delete(
   "/posts/:postId",
   authMiddleware,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(postParamsSchema),
   deletePost,
 );
 
@@ -257,6 +255,7 @@ router.delete(
   "/posts/:postId/comments/:commentId",
   authMiddleware,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(commentParamsSchema),
   deleteComment,
 );
 

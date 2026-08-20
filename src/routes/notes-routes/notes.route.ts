@@ -11,10 +11,10 @@ import { fetchAllNotes } from "../../controllers/notes-controllers/fetchNotes.js
 // Validators
 import {
   notesUploadSchema,
-  notesSchema,
   updateNotesSchema,
   notesQuerySchema,
 } from "../../validators/notes-zod/notes.zod.js";
+import { idParamSchema } from "../../validators/shared/objectId.zod.js";
 
 // Multer & Middlewares
 import { uploadNotesMulter } from "../../config/multer.js";
@@ -64,13 +64,17 @@ router.post(
   uploadNotes,
 );
 
-// Update notes
+// Update notes — a replacement file is optional; when sent, it arrives via
+// multer just like upload does (previously this route had no multer
+// middleware at all, so the "replace the file" flow described in the zod
+// schema/frontend form couldn't actually work).
 router.put(
   "/:id",
   authMiddleware,
   uploadLimiter,
   cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
-  validateMiddleware(updateNotesSchema),
+  uploadNotesMulter.single("file"),
+  validateMiddleware(updateNotesSchema.merge(idParamSchema)),
   editNotes,
 );
 
@@ -79,6 +83,7 @@ router.delete(
   "/:id",
   authMiddleware,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(idParamSchema),
   deleteNotes,
 );
 

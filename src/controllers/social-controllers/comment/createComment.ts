@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
 import { createNotification } from "../../../services/social/notification.service.js";
+import type { PopulatedUserSummary } from "../../../types/social.types.js";
 
 export const createComment = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -27,7 +28,7 @@ export const createComment = async (req: Request, res: Response) => {
     }
 
     // If reply, verify parent comment exists and belongs to this post
-    let parent: any = null;
+    let parent: InstanceType<typeof Comment> | null = null;
     if (parentComment) {
       parent = await Comment.findById(parentComment);
       if (!parent || parent.isDeleted || parent.post.toString() !== postId) {
@@ -78,7 +79,7 @@ export const createComment = async (req: Request, res: Response) => {
     // Format response to match frontend expectations
     const likeCount = 0; // New comment has no likes
     const userLiked = false;
-    const author = populated.author as any;
+    const author = populated.author as unknown as PopulatedUserSummary;
 
     return res.status(201).json({
       success: true,

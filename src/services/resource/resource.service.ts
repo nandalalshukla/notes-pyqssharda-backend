@@ -1,0 +1,355 @@
+import { QueryFilter, Model } from "mongoose";
+import { BaseResourceFields } from "../../models/resource/resourceSchema.js";
+import cloudinary from "../../config/cloudinary.js";
+import { getResourceType } from "../../config/multer.js";
+import { AppError } from "../../utils/errors/AppError.js";
+import {
+  incrementContribution,
+  decrementContribution,
+} from "../../utils/incrementContribution.js";
+
+/**
+ * Notes, PYQs, and Syllabus are the same "uploaded file + metadata, subject
+ * to moderation" resource shape with a couple of resource-specific fields
+ * and endpoint-specific response envelopes. This config is what a resource
+ * (see controllers/resource/notes.config.ts and friends) supplies so this
+ * file's functions — the actual list/search/create/update/delete/moderate
+ * logic — only need to be written once.
+ */
+export interface ResourceConfig<TDoc extends BaseResourceFields> {
+  model: Model<TDoc>;
+  /** e.g. "Note" — used in error messages ("Note not found"). */
+  displayName: string;
+  /** e.g. "notes" — used in ownership messages ("your own notes"). */
+  pluralDisplayName: string;
+  /** e.g. "note" — passed to the moderation email templates. */
+  emailContentType: string;
+  /** Only PYQs carry a `year` field. */
+  hasYearField: boolean;
+  /** The exact top-level JSON key each endpoint responds with — these vary
+   * per resource *and* per endpoint in the existing API (e.g. syllabus
+   * lists come back under `syllabuses` in some endpoints and `syllabus` in
+   * others), so every one is spelled out rather than derived. */
+  responseKeys: {
+    singular: string;
+    publicList: string;
+    myList: string;
+    adminList: string;
+    modList: string;
+  };
+}
+
+export interface ResourceFilePayload {
+  path: string; // Cloudinary secure_url, set by multer-storage-cloudinary
+  filename: string; // Cloudinary public_id, set by multer-storage-cloudinary
+  mimetype: string;
+}
+
+export interface SearchParams {
+  query?: string;
+  program?: string;
+  courseCode?: string;
+  semester?: string;
+  year?: string;
+}
+
+const MAX_SEARCH_RESULTS = 100;
+
+// User-supplied search text is interpolated into a RegExp — without
+// escaping, a query containing regex metacharacters (e.g. `(a+)+$`) is
+// interpreted as a pattern instead of literal text, which at best returns
+// wrong results and at worst is a catastrophic-backtracking DoS vector on a
+// public, unauthenticated endpoint.
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toRegex(value: string): RegExp {
+  return new RegExp(escapeRegex(value), "i");
+}
+
+async function destroyAsset(
+  publicId: string,
+  resourceType: BaseResourceFields["resourceType"],
+): Promise<void> {
+  try {
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+    });
+  } catch (error) {
+    // The DB write this accompanies already succeeded (or is about to) —
+    // an orphaned Cloudinary asset is a cheaper failure mode than blocking
+    // a user's delete/replace on a third-party API hiccup. Logged so it can
+    // be cleaned up manually if it ever happens.
+    console.error(`Failed to destroy Cloudinary asset ${publicId}:`, error);
+  }
+}
+
+async function creditContributionOnRemoval(doc: {
+  status: BaseResourceFields["status"];
+  userId: BaseResourceFields["userId"];
+}): Promise<void> {
+  // Only approved uploads were ever credited (see approve() below) — only
+  // those need the credit reversed when the upload goes away.
+  if (doc.status === "approved") {
+    await decrementContribution(doc.userId.toString());
+  }
+}
+
+export async function listApproved<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  limit: number,
+) {
+  return config.model
+    .find({ status: "approved" } as QueryFilter<TDoc>)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate("userId", "username")
+    .lean();
+}
+
+export async function search<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  params: SearchParams,
+) {
+  const filter: Record<string, unknown> = { status: "approved" };
+
+  if (params.query) {
+    const regex = toRegex(params.query);
+    const or: Record<string, unknown>[] = [
+      { title: regex },
+      { program: regex },
+      { courseCode: regex },
+      { courseName: regex },
+    ];
+    const numQuery = parseInt(params.query, 10);
+    if (!Number.isNaN(numQuery)) {
+      or.push({ semester: numQuery });
+    }
+    filter.$or = or;
+  }
+
+  if (params.program) filter.program = toRegex(params.program);
+  if (params.courseCode) filter.courseCode = toRegex(params.courseCode);
+
+  if (params.semester) {
+    const semesterNum = parseInt(params.semester, 10);
+    if (!Number.isNaN(semesterNum)) filter.semester = semesterNum;
+  }
+
+  // Only meaningful for PYQs — Notes/Syllabus don't have a `year` field, so
+  // filtering by it would previously silently return zero results instead
+  // of just being ignored.
+  if (config.hasYearField && params.year) {
+    filter.year = toRegex(params.year);
+  }
+
+  return config.model
+    .find(filter as QueryFilter<TDoc>)
+    .sort({ createdAt: -1 })
+    .limit(MAX_SEARCH_RESULTS)
+    .populate("userId", "username")
+    .lean();
+}
+
+export async function listForUser<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  userId: string,
+) {
+  return config.model
+    .find({ userId } as QueryFilter<TDoc>)
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
+export async function create<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  {
+    body,
+    file,
+    userId,
+  }: { body: Record<string, unknown>; file: ResourceFilePayload; userId: string },
+) {
+  const doc = new config.model({
+    ...body,
+    fileUrl: file.path,
+    publicId: file.filename,
+    resourceType: getResourceType(file.mimetype),
+    userId,
+  });
+  await doc.save();
+  return doc;
+}
+
+export async function update<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  {
+    id,
+    userId,
+    body,
+    file,
+  }: {
+    id: string;
+    userId: string;
+    body: Record<string, unknown>;
+    file: ResourceFilePayload | undefined;
+  },
+) {
+  const doc = await config.model.findById(id);
+  if (!doc) {
+    throw new AppError(`${config.displayName} not found`, 404);
+  }
+  if (doc.userId.toString() !== userId) {
+    throw new AppError(
+      `Forbidden: You can only edit your own ${config.pluralDisplayName}`,
+      403,
+    );
+  }
+
+  Object.assign(doc, body);
+
+  if (file) {
+    const oldPublicId = doc.publicId;
+    const oldResourceType = doc.resourceType;
+    doc.fileUrl = file.path;
+    doc.publicId = file.filename;
+    doc.resourceType = getResourceType(file.mimetype);
+    // The new file is already uploaded (multer-storage-cloudinary uploads
+    // during request parsing, before this handler runs) — only the old one
+    // needs cleaning up now, and only after the doc change is queued.
+    await destroyAsset(oldPublicId, oldResourceType);
+  }
+
+  await doc.save();
+  return doc;
+}
+
+export async function remove<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  { id, userId }: { id: string; userId: string },
+) {
+  const doc = await config.model.findById(id);
+  if (!doc) {
+    throw new AppError(`${config.displayName} not found`, 404);
+  }
+  if (doc.userId.toString() !== userId) {
+    throw new AppError(
+      `Forbidden: You can only delete your own ${config.pluralDisplayName}`,
+      403,
+    );
+  }
+
+  await destroyAsset(doc.publicId, doc.resourceType);
+  await doc.deleteOne();
+  await creditContributionOnRemoval(doc);
+}
+
+// ── Admin ──────────────────────────────────────────────────────────────
+
+export async function listApprovedAdmin<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+) {
+  return config.model.find({ status: "approved" } as QueryFilter<TDoc>).lean();
+}
+
+export async function removeAdmin<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  id: string,
+) {
+  const doc = await config.model.findById(id);
+  if (!doc) {
+    throw new AppError(`${config.displayName} not found`, 404);
+  }
+  await destroyAsset(doc.publicId, doc.resourceType);
+  await doc.deleteOne();
+  await creditContributionOnRemoval(doc);
+}
+
+// ── Moderation ─────────────────────────────────────────────────────────
+
+export async function listPending<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+) {
+  return config.model
+    .find({ status: "pending" } as QueryFilter<TDoc>)
+    .populate("userId", "name email username")
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
+interface UploaderInfo {
+  email: string;
+  name: string;
+}
+
+export async function approve<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  {
+    id,
+    approverId,
+    getUploader,
+  }: {
+    id: string;
+    approverId: string;
+    getUploader: (userId: string) => Promise<UploaderInfo | null>;
+  },
+) {
+  const doc = await config.model.findOne({
+    status: "pending",
+    _id: id,
+  } as QueryFilter<TDoc>);
+  if (!doc) {
+    throw new AppError(`${config.displayName} not found`, 404);
+  }
+
+  const uploader = await getUploader(doc.userId.toString());
+  if (!uploader) {
+    throw new AppError("User not found", 404);
+  }
+
+  await config.model.findByIdAndUpdate(id, {
+    status: "approved",
+    approvedAt: new Date(),
+    approvedBy: approverId,
+  });
+  await incrementContribution(doc.userId.toString());
+
+  return uploader;
+}
+
+export async function reject<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  {
+    id,
+    rejecterId,
+    rejectionReason,
+    getUploader,
+  }: {
+    id: string;
+    rejecterId: string;
+    rejectionReason: string;
+    getUploader: (userId: string) => Promise<UploaderInfo | null>;
+  },
+) {
+  const doc = await config.model.findOne({
+    status: "pending",
+    _id: id,
+  } as QueryFilter<TDoc>);
+  if (!doc) {
+    throw new AppError(`${config.displayName} not found`, 404);
+  }
+
+  const uploader = await getUploader(doc.userId.toString());
+  if (!uploader) {
+    throw new AppError("User not found", 404);
+  }
+
+  await config.model.findByIdAndUpdate(id, {
+    status: "rejected",
+    rejectionReason,
+    rejectedAt: new Date(),
+    rejectedBy: rejecterId,
+  });
+
+  return uploader;
+}

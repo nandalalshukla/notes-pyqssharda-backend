@@ -11,10 +11,10 @@ import { fetchAllPyqs } from "../../controllers/pyqs-controllers/fetchAllPyqs.js
 // Validators
 import {
   pyqsUploadSchema,
-  pyqsSchema,
   updatePYQsSchema,
   pyqsQuerySchema,
 } from "../../validators/pyqs-zod/pyqs.zod.js";
+import { idParamSchema } from "../../validators/shared/objectId.zod.js";
 
 // Multer & Middlewares
 import { uploadPyqsMulter } from "../../config/multer.js";
@@ -64,13 +64,15 @@ router.post(
   uploadPyqs,
 );
 
-// Update PYQs
+// Update PYQs — a replacement file is optional; when sent, it arrives via
+// multer just like upload does.
 router.put(
   "/edit-pyqs/:id",
   authMiddleware,
   uploadLimiter,
   cooldown({ windowMs: 5000, message: "Please wait before updating again." }),
-  validateMiddleware(updatePYQsSchema),
+  uploadPyqsMulter.single("file"),
+  validateMiddleware(updatePYQsSchema.merge(idParamSchema)),
   editPyqs,
 );
 
@@ -79,6 +81,7 @@ router.delete(
   "/delete-pyqs/:id",
   authMiddleware,
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
+  validateMiddleware(idParamSchema),
   deletePyqs,
 );
 

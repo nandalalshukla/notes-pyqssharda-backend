@@ -1,22 +1,3 @@
-import { Request, Response } from "express";
-import { Syllabus } from "../../models/syllabus/syllabus.model.js";
+import { syllabusControllers } from "./syllabus.config.js";
 
-export const fetchSpecificUserSyllabus = async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-    const syllabus = await Syllabus.find({ userId }).sort({ createdAt: -1 });
-    console.log("specifi users syllabus", syllabus)
-    res.status(200).json({
-      success: true,
-      syllabus,
-    });
-  } catch (error) {
-    throw error;
-  }
-};
+export const fetchSpecificUserSyllabus = syllabusControllers.fetchMine;

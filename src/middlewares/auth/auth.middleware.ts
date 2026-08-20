@@ -1,5 +1,13 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
+import { env } from "../../config/env.js";
+import { JWT_ALGORITHM } from "../../utils/generateJwtTokens.js";
+
+function verifyAccessToken(token: string) {
+  return jwt.verify(token, env.ACCESS_TOKEN_SECRET, {
+    algorithms: [JWT_ALGORITHM],
+  }) as { userId: string; userRole?: string };
+}
 
 export const authMiddleware = (
   req: Request,
@@ -13,10 +21,7 @@ export const authMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string, {
-      algorithms: ["HS256"],
-    }) as { userId: string; userRole?: string };
-    (req as Request).user = decoded;
+    req.user = verifyAccessToken(token);
     next();
   } catch (error) {
     return res
@@ -38,10 +43,7 @@ export const optionalAuthMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string, {
-      algorithms: ["HS256"],
-    }) as { userId: string; userRole?: string };
-    req.user = decoded;
+    req.user = verifyAccessToken(token);
   } catch {
     req.user = undefined;
   }

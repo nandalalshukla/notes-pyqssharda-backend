@@ -1,14 +1,16 @@
 import cors from "cors";
+import { env } from "./env.js";
+import { ForbiddenError } from "../utils/errors/AppError.js";
 
 const allowedOrigins: (string | RegExp)[] = [
-  process.env.VERCEL_FRONTEND_URL,
-  process.env.FRONTEND_URL,// Production frontend
+  env.VERCEL_FRONTEND_URL,
+  env.FRONTEND_URL, // Production frontend
   "http://localhost:3000", // Local development (default Next.js port)
   "http://localhost:3100", // Local development (custom port)
   "https://www.sharda.social",
   "https://sharda.social",
   "https://notes-pyqssharda.vercel.app",
-  /https:\/\/res\.cloudinary\.com/, // Cloudinary CDN
+  /^https:\/\/res\.cloudinary\.com$/, // Cloudinary CDN
 ].filter(Boolean) as (string | RegExp)[]; // Remove any undefined values
 
 const corsOptions: cors.CorsOptions = {
@@ -20,15 +22,21 @@ const corsOptions: cors.CorsOptions = {
       if (allowedOrigin instanceof RegExp) {
         return allowedOrigin.test(origin);
       }
-      return (
-        origin.startsWith(allowedOrigin as string) || allowedOrigin === origin
-      );
+      // Exact match only — `startsWith` would also let
+      // "http://localhost:3000.attacker.example" through since it has the
+      // allowed origin as a literal string prefix.
+      return origin === allowedOrigin;
     });
 
     if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      // A plain Error here would fall through the error handler's "unknown
+      // error" branch — a 500, logged as `[ERROR]` alongside real bugs. A
+      // disallowed origin is routine (bots, misconfigured clients) and
+      // fully expected, so it gets its own operational AppError → a clean
+      // 403 the client can act on, logged quietly instead of paging anyone.
+      callback(new ForbiddenError("This origin is not allowed to access this API."));
     }
   },
   credentials: true,

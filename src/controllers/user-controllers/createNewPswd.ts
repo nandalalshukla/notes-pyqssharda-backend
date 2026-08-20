@@ -13,15 +13,20 @@ export const createNewPassword = async (req: Request, res: Response) => {
       message: "Email, OTP and new password are required",
     });
   }
+  // Same message every failure branch below responds with — a caller who
+  // doesn't know the right (email, otp) pair can't tell whether the email
+  // isn't registered, has no pending reset, or the OTP expired/mismatched.
+  const INVALID_OTP_RESPONSE = {
+    success: false,
+    message: "Invalid or expired OTP",
+  } as const;
+
   try {
     const user = await User.findOne({ email }).select(
       "+emailOtpHash +emailOtpExpiry",
     );
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(400).json(INVALID_OTP_RESPONSE);
     }
 
     const hashedOtp = user.emailOtpHash;
