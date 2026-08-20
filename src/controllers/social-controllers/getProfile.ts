@@ -55,11 +55,7 @@ export const getProfile = async (req: Request, res: Response) => {
         },
       },
     });
-  } catch (err: unknown) {
-    console.error("getProfile error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+  } catch (err) {
+    throw err;
   }
 };

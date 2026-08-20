@@ -65,11 +65,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Update profile error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };
 
@@ -109,10 +105,6 @@ export const removeProfilePic = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Remove profile pic error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

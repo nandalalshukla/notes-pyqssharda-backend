@@ -80,9 +80,6 @@ export const getPost = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("getPost error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

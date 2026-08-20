@@ -2,6 +2,8 @@ import "./config/env.js";
 import express from "express";
 import helmet from "helmet";
 import connectDB from "./config/db.js";
+import { errorHandlerMiddleware } from "./middlewares/error/errorHandler.middleware.js";
+import { NotFoundError } from "./utils/errors/AppError.js";
 
 // Route Imports
 import authRouter from "./routes/users-routes/auth.route.js";
@@ -90,30 +92,36 @@ app.get("/", (req, res) => {
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * ERROR HANDLING MIDDLEWARE - Must be last
- * Catches all errors and prevents ECONNRESET from unhandled exceptions
+ * 404 + ERROR HANDLING — must be registered last, in this order
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("[ERROR HANDLER]", err);
 
-  // Prevent sending headers if already sent
-  if (res.headersSent) {
-    console.error("Headers already sent, delegating to Express error handler");
-    return next(err);
-  }
-
-  const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal server error";
-
-  res.status(statusCode).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV === "development" && { error: err.stack }),
-  });
+// Anything that reached here matched no route above — respond with the
+// same clean JSON error shape as everything else, instead of Express's
+// default HTML 404 page.
+app.use((req, _res, next) => {
+  next(new NotFoundError(`Route ${req.method} ${req.originalUrl}`));
 });
+
+// See middlewares/error/errorHandler.middleware.ts — single place that
+// turns any thrown error (ours or a library's) into a safe client response.
+app.use(errorHandlerMiddleware);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
+});
+
+// Last-resort safety nets: log full detail and exit so the process
+// supervisor (Render/PM2/systemd) restarts a clean instance, rather than
+// continuing to run in a possibly-corrupted state or dying silently with
+// no log at all — either of which is worse than a clean, visible restart.
+process.on("unhandledRejection", (reason) => {
+  console.error("[UNHANDLED REJECTION]", reason);
+  process.exit(1);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[UNCAUGHT EXCEPTION]", error);
+  process.exit(1);
 });

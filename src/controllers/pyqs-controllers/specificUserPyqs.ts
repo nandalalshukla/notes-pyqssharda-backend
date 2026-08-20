@@ -17,10 +17,6 @@ export const fetchSpecificUserPyqs = async (req: Request, res: Response) => {
       pyqs,
     });
   } catch (error) {
-    console.error("Error fetching user pyqs:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

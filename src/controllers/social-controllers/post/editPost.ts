@@ -123,7 +123,6 @@ export const editPost = async (req: Request, res: Response) => {
       data: { post: responsePost },
     });
   } catch (err) {
-    console.error("editPost error:", err);
-    return res.status(500).json({ success: false, message: "Server error." });
+    throw err;
   }
 };

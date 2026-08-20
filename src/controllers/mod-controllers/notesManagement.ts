@@ -13,10 +13,7 @@ export const fetchPendingNotes = async (req: Request, res: Response) => {
       .lean();
     res.status(200).json({ success: true, notes });
   } catch (error) {
-    console.error("Error fetching pending notes:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch pending notes" });
+    throw error;
   }
 };
 
@@ -67,10 +64,7 @@ export const rejectNote = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Note rejected successfully" });
   } catch (error) {
-    console.error("Error in rejecting note:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };
 
@@ -113,9 +107,6 @@ export const approveNote = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Note approved successfully" });
   } catch (error) {
-    console.error("Error in approving note:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

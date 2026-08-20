@@ -15,10 +15,7 @@ export const fetchPendingPyqs = async (req: Request, res: Response) => {
       .lean();
     res.status(200).json({ success: true, pyqs });
   } catch (error) {
-    console.error("Error fetching pending pyqs:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch pending pyqs" });
+    throw error;
   }
 };
 
@@ -67,10 +64,7 @@ export const rejectPyq = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Pyq rejected successfully" });
   } catch (error) {
-    console.error("Error in rejecting pyq:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };
 
@@ -110,9 +104,6 @@ export const approvePyq = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Pyq approved successfully" });
   } catch (error) {
-    console.error("Error in approving pyq:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

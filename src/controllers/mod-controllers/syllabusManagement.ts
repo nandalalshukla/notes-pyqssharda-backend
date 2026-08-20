@@ -12,10 +12,7 @@ export const fetchPendingSyllabus = async (req: Request, res: Response) => {
       .lean();
     res.status(200).json({ success: true, syllabus });
   } catch (error) {
-    console.error("Error fetching pending syllabus:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch syllabus" });
+    throw error;
   }
 };
 
@@ -71,10 +68,7 @@ export const rejectSyllabus = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Syllabus rejected successfully" });
   } catch (error) {
-    console.error("Error in rejecting syllabus:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };
 
@@ -119,9 +113,6 @@ export const approveSyllabus = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Syllabus approved successfully" });
   } catch (error) {
-    console.error("Error in approving syllabus:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

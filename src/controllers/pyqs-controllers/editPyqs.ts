@@ -64,10 +64,6 @@ export const editPyqs = async (req: Request, res: Response) => {
       pyq,
     });
   } catch (error) {
-    console.error("Error editing pyq:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

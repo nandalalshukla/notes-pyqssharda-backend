@@ -7,6 +7,20 @@ import {
   sendReportResolutionEmail,
   sendContentOwnerActionNotificationEmail,
 } from "../email/reportEmailService.js";
+import {
+  AppError,
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from "../../utils/errors/AppError.js";
+
+// These messages ("not found OR already deleted/suspended") don't fit
+// NotFoundError's "${resource} couldn't be found" template — a moderator
+// hitting this almost always means someone else's action already resolved
+// the report, not a bad id, so the wording says so explicitly.
+const targetGoneError = (message: string) =>
+  new AppError(message, 404, { code: "TARGET_NOT_FOUND" });
 
 export type ModerationAction =
   | "resolve"
@@ -17,25 +31,6 @@ export type ModerationAction =
   | "warn_user"
   | "delete_user";
 
-type ModerationError = Error & {
-  status?: number;
-  code?: string;
-  report?: unknown;
-};
-
-const createModerationError = (
-  status: number,
-  message: string,
-  code: string,
-  report?: unknown,
-) => {
-  const error = new Error(message) as ModerationError;
-  error.status = status;
-  error.code = code;
-  if (report) error.report = report;
-  return error;
-};
-
 const ensurePendingReport = async (
   reportId: string,
   session: mongoose.ClientSession,
@@ -45,7 +40,7 @@ const ensurePendingReport = async (
     .session(session);
 
   if (!report) {
-    throw createModerationError(404, "Report not found", "REPORT_NOT_FOUND");
+    throw new NotFoundError("Report", "REPORT_NOT_FOUND");
   }
 
   if (report.status !== "pending") {
@@ -54,12 +49,10 @@ const ensurePendingReport = async (
         "targetType targetId status actionTaken reviewedBy reviewedAt createdAt",
       )
       .lean();
-    throw createModerationError(
-      409,
-      "Report has already been reviewed",
-      "REPORT_ALREADY_REVIEWED",
-      latestReport || undefined,
-    );
+    throw new ConflictError("Report has already been reviewed", {
+      code: "REPORT_ALREADY_REVIEWED",
+      data: latestReport ? { report: latestReport } : undefined,
+    });
   }
 
   return report;
@@ -67,11 +60,9 @@ const ensurePendingReport = async (
 
 const requireTargetType = (targetType: string, expected: string) => {
   if (targetType !== expected) {
-    throw createModerationError(
-      400,
-      `Report target type must be ${expected}`,
-      "TARGET_TYPE_MISMATCH",
-    );
+    throw new BadRequestError(`Report target type must be ${expected}`, {
+      code: "TARGET_TYPE_MISMATCH",
+    });
   }
 };
 
@@ -126,11 +117,9 @@ const markReport = async (
     .lean();
 
   if (!updated) {
-    throw createModerationError(
-      409,
-      "Report has already been reviewed",
-      "REPORT_ALREADY_REVIEWED",
-    );
+    throw new ConflictError("Report has already been reviewed", {
+      code: "REPORT_ALREADY_REVIEWED",
+    });
   }
 
   return updated;
@@ -155,8 +144,7 @@ export const applyModerationAction = async (
         report.targetOwner?.toString() === moderatorId &&
         moderatorRole !== "admin"
       ) {
-        throw createModerationError(
-          403,
+        throw new ForbiddenError(
           "You cannot moderate your own content",
           "SELF_MODERATION",
         );
@@ -194,11 +182,7 @@ export const applyModerationAction = async (
             .lean();
 
           if (!post) {
-            throw createModerationError(
-              404,
-              "Post not found or already deleted",
-              "TARGET_NOT_FOUND",
-            );
+            throw targetGoneError("Post not found or already deleted");
           }
 
           updatedReport = await markReport(
@@ -221,11 +205,7 @@ export const applyModerationAction = async (
             .lean();
 
           if (!comment) {
-            throw createModerationError(
-              404,
-              "Comment not found or already deleted",
-              "TARGET_NOT_FOUND",
-            );
+            throw targetGoneError("Comment not found or already deleted");
           }
 
           updatedReport = await markReport(
@@ -248,11 +228,7 @@ export const applyModerationAction = async (
             .lean();
 
           if (!user) {
-            throw createModerationError(
-              404,
-              "User not found or already suspended",
-              "TARGET_NOT_FOUND",
-            );
+            throw targetGoneError("User not found or already suspended");
           }
 
           updatedReport = await markReport(
@@ -272,11 +248,7 @@ export const applyModerationAction = async (
             .lean();
 
           if (!user) {
-            throw createModerationError(
-              404,
-              "User not found",
-              "TARGET_NOT_FOUND",
-            );
+            throw new NotFoundError("User", "TARGET_NOT_FOUND");
           }
 
           updatedReport = await markReport(
@@ -295,11 +267,7 @@ export const applyModerationAction = async (
             .lean();
 
           if (!user) {
-            throw createModerationError(
-              404,
-              "User not found or already deleted",
-              "TARGET_NOT_FOUND",
-            );
+            throw targetGoneError("User not found or already deleted");
           }
 
           updatedReport = await markReport(
@@ -312,11 +280,9 @@ export const applyModerationAction = async (
           return;
         }
         default:
-          throw createModerationError(
-            400,
-            "Unsupported moderation action",
-            "ACTION_NOT_SUPPORTED",
-          );
+          throw new BadRequestError("Unsupported moderation action", {
+            code: "ACTION_NOT_SUPPORTED",
+          });
       }
     });
 

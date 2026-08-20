@@ -18,10 +18,6 @@ export const fetchSpecificUserNotes = async (req: Request, res: Response) => {
       notes,
     });
   } catch (error) {
-    console.error("Error fetching user notes:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

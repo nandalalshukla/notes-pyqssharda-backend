@@ -34,10 +34,6 @@ export const deleteSyllabus = async (req: Request, res: Response) => {
       message: "Syllabus deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting syllabus:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

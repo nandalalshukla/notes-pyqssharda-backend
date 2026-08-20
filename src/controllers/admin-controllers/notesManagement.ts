@@ -9,7 +9,7 @@ export const fetchApprovedNotes = async (req: Request, res: Response) => {
         const notes = await Note.find({ status: 'approved' }).lean();
         res.status(200).json({ success: true, notes });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Failed to fetch notes" });
+        throw error;
     }
 };
 
@@ -23,8 +23,7 @@ export const deleteNote = async (req: Request, res: Response) => {
         }
         return res.status(200).json({ success: true, message: 'Note deleted successfully' });
     } catch (error) {
-        console.error('Error in deleting note:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+        throw error;
     }
 };
 

@@ -20,10 +20,6 @@ export const fetchAllSyllabus = async (req: Request, res: Response) => {
       count: syllabuses.length,
     });
   } catch (error) {
-    console.error("Error fetching syllabuses:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

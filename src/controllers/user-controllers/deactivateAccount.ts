@@ -36,9 +36,6 @@ export const deactivateAccount = async (req: Request, res: Response) => {
       message: "User account deactivated successfully",
     });
   } catch (error) {
-    console.error("Error in deactivate user:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

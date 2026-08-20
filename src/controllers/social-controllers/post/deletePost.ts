@@ -70,7 +70,6 @@ export const deletePost = async (req: Request, res: Response) => {
       message: "Post deleted successfully.",
     });
   } catch (err) {
-    console.error("deletePost error:", err);
-    return res.status(500).json({ success: false, message: "Server error." });
+    throw err;
   }
 };

@@ -97,11 +97,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         total,
       },
     });
-  } catch (err: unknown) {
-    console.error("getUserPosts error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+  } catch (err) {
+    throw err;
   }
 };

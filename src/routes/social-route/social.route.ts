@@ -32,7 +32,9 @@ import { getUnreadCount } from "../../controllers/social-controllers/notificatio
 import {
   markAllAsRead,
   markOneAsRead,
+  deleteNotification,
 } from "../../controllers/social-controllers/notification/markAsRead.js";
+import { streamNotifications } from "../../controllers/social-controllers/notification/streamNotifications.js";
 
 // Controllers - Reports
 import { createReportController } from "../../controllers/social-controllers/report/createReport.js";
@@ -67,6 +69,8 @@ import {
   uploadLimiter,
   cooldown,
   reportLimiter,
+  notificationLimiter,
+  notificationStreamLimiter,
 } from "../../middlewares/rateLimit/index.js";
 import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
 
@@ -317,13 +321,26 @@ router.post(
  * ───────────────────────────────────────────────────────────────────────────────
  */
 
+// Live notification stream (SSE) — one long-lived connection per device;
+// the client falls back to polling /notifications if this isn't available.
+router.get(
+  "/notifications/stream",
+  authMiddleware,
+  notificationStreamLimiter,
+  streamNotifications,
+);
+
 // Get notifications (paginated)
+// clampPagination runs BEFORE validateMiddleware so an out-of-range
+// page/limit gets clamped into range first — the reverse order (as this
+// used to be) meant validation rejected anything clampPagination was
+// supposed to fix before it ever got the chance to run.
 router.get(
   "/notifications",
   authMiddleware,
-  validateMiddleware(getNotificationsSchema),
-  interactionLimiter,
+  notificationLimiter,
   clampPagination({ maxLimit: 50 }),
+  validateMiddleware(getNotificationsSchema),
   getNotifications,
 );
 
@@ -331,7 +348,7 @@ router.get(
 router.get(
   "/notifications/unread-count",
   authMiddleware,
-  interactionLimiter,
+  notificationLimiter,
   getUnreadCount,
 );
 
@@ -339,7 +356,7 @@ router.get(
 router.patch(
   "/notifications/read-all",
   authMiddleware,
-  interactionLimiter,
+  notificationLimiter,
   markAllAsRead,
 );
 
@@ -347,8 +364,18 @@ router.patch(
 router.patch(
   "/notifications/:notificationId/read",
   authMiddleware,
-  interactionLimiter,
+  notificationLimiter,
+  validateMiddleware(notificationParamsSchema),
   markOneAsRead,
+);
+
+// Delete a single notification
+router.delete(
+  "/notifications/:notificationId",
+  authMiddleware,
+  notificationLimiter,
+  validateMiddleware(notificationParamsSchema),
+  deleteNotification,
 );
 
 export default router;

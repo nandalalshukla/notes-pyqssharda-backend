@@ -60,10 +60,7 @@ export const getNotifications = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("getNotifications error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };
 
@@ -77,6 +74,8 @@ function formatNotificationMessage(notif: any): string {
       return `${actorName} liked your post.`;
     case "comment":
       return `${actorName} commented on your post.`;
+    case "reply":
+      return `${actorName} replied to your comment.`;
     case "share":
       return `${actorName} shared your post.`;
     default:
@@ -90,9 +89,10 @@ function getActionLink(notif: any): string {
   } else if (
     notif.type === "like" ||
     notif.type === "comment" ||
+    notif.type === "reply" ||
     notif.type === "share"
   ) {
-    return `/feed?postId=${notif.post?._id}`;
+    return `/?postId=${notif.post?._id}`;
   }
   return "/";
 }

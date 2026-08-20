@@ -8,7 +8,7 @@ export const fetchApprovedPyqs = async (req: Request, res: Response) => {
         const pyqs = await Pyq.find({ status: 'approved' }).lean();
         res.status(200).json({ success: true, pyqs });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Failed to fetch pyqs" });
+        throw error;
     }
 };
 
@@ -23,7 +23,6 @@ export const deletePyq = async (req: Request, res: Response) => {
         }
         return res.status(200).json({ success: true, message: 'Pyq deleted successfully' });
     } catch (error) {
-        console.error('Error in deleting pyq:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+        throw error;
     }
 };

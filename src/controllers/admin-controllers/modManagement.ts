@@ -15,9 +15,7 @@ export const fetchModRequests = async (req: Request, res: Response) => {
     ).lean();
     res.status(200).json({ success: true, mods });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch moderator requests" });
+    throw error;
   }
 };
 
@@ -70,10 +68,7 @@ export const reviewModRequest = async (req: Request, res: Response) => {
         .json({ success: false, message: "Invalid action" });
     }
   } catch (error) {
-    console.error("Error in reviewing mod request:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };
 
@@ -88,9 +83,7 @@ export const fetchAllMods = async (req: Request, res: Response) => {
       .lean();
     res.status(200).json({ success: true, mods });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch moderators" });
+    throw error;
   }
 };
 
@@ -114,9 +107,6 @@ export const removeModRole = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Moderator role removed successfully" });
   } catch (error) {
-    console.error("Error in removing moderator role:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

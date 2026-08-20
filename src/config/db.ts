@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { ensureLikeIndexes } from "../models/social/like.model.js";
+import { ensureNotificationIndexes } from "../models/social/notification.model.js";
 
 const connectDB = async () => {
   try {
@@ -7,8 +8,9 @@ const connectDB = async () => {
       dbName: process.env.MONGO_DB_NAME,
     });
     await ensureLikeIndexes();
+    await ensureNotificationIndexes();
 
-    console.log("MongoDB connected and like indexes are ready");
+    console.log("MongoDB connected and indexes are ready");
   } catch (error) {
     console.error("MongoDB connection failed:", error);
     process.exit(1);

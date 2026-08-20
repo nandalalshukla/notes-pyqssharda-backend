@@ -68,10 +68,6 @@ export const searchSyllabus = async (req: Request, res: Response) => {
       count: syllabuses.length,
     });
   } catch (error) {
-    console.error("Error searching syllabuses:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

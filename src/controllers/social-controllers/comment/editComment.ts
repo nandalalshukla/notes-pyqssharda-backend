@@ -93,9 +93,6 @@ export const editComment = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("editComment error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

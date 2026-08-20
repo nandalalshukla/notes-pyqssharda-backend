@@ -85,9 +85,6 @@ export const getLikes = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("getLikes error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

@@ -102,10 +102,6 @@ export default async function verifyEmail(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error("Verify email error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 }

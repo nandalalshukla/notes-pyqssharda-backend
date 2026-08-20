@@ -65,10 +65,6 @@ export const editNotes = async (req: Request, res: Response) => {
       note,
     });
   } catch (error) {
-    console.error("Error editing note:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

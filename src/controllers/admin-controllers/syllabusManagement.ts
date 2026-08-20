@@ -9,9 +9,7 @@ export const fetchApprovedSyllabus = async (req: Request, res: Response) => {
     const syllabus = await Syllabus.find({ status: "approved" }).lean();
     res.status(200).json({ success: true, syllabus });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch syllabus" });
+    throw error;
   }
 };
 
@@ -30,9 +28,6 @@ export const deleteSyllabus = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Syllabus deleted successfully" });
   } catch (error) {
-    console.error("Error in deleting syllabus:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

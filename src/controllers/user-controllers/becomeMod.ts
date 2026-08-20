@@ -39,9 +39,6 @@ export const becomeModerator = async (req: Request, res: Response) => {
         message: "Moderator request submitted successfully",
       });
   } catch (error) {
-    console.error("Error in become moderator:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

@@ -68,10 +68,6 @@ export const searchNotes = async (req: Request, res: Response) => {
       count: notes.length,
     });
   } catch (error) {
-    console.error("Error searching notes:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

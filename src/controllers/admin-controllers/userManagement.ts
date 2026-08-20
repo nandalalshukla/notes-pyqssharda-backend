@@ -2,117 +2,73 @@
 
 import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
+import { NotFoundError } from "../../utils/errors/AppError.js";
 
 //fetch all users
 export const fetchAllUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find()
-      .select(
-        "name email username role contributions isEmailVerified isActive createdAt modRequest",
-      )
-      .lean();
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch users" });
-  }
+  const users = await User.find()
+    .select(
+      "name email username role contributions isEmailVerified isActive createdAt modRequest",
+    )
+    .lean();
+  res.status(200).json({ success: true, users });
 };
 
 export const fetchActiveUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find({ isActive: true })
-      .select(
-        "name email username role contributions isEmailVerified isActive createdAt modRequest",
-      )
-      .lean();
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch active users" });
-  }
+  const users = await User.find({ isActive: true })
+    .select(
+      "name email username role contributions isEmailVerified isActive createdAt modRequest",
+    )
+    .lean();
+  res.status(200).json({ success: true, users });
 };
 
 export const fetchInactiveUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find({ isActive: false })
-      .select(
-        "name email username role contributions isEmailVerified isActive createdAt modRequest",
-      )
-      .lean();
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch inactive users" });
-  }
+  const users = await User.find({ isActive: false })
+    .select(
+      "name email username role contributions isEmailVerified isActive createdAt modRequest",
+    )
+    .lean();
+  res.status(200).json({ success: true, users });
 };
 
 //deactivate a user account
 export const deactivateUser = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-    user.isActive = false;
-    await user.save();
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "User account deactivated successfully",
-      });
-  } catch (error) {
-    console.error("Error in deactivate user:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new NotFoundError("User");
   }
+  user.isActive = false;
+  await user.save();
+  return res.status(200).json({
+    success: true,
+    message: "User account deactivated successfully",
+  });
 };
 
 //activate a user account
 export const activateUser = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-    user.isActive = true;
-    await user.save();
-    return res
-      .status(200)
-      .json({ success: true, message: "User account activated successfully" });
-  } catch (error) {
-    console.error("Error in activate user:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new NotFoundError("User");
   }
+  user.isActive = true;
+  await user.save();
+  return res
+    .status(200)
+    .json({ success: true, message: "User account activated successfully" });
 };
 
 //delete a user account
 export const deleteUser = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  try {
-    const user = await User.findByIdAndDelete(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "User account deleted successfully" });
-  } catch (error) {
-    console.error("Error in delete user:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+  const user = await User.findByIdAndDelete(userId);
+  if (!user) {
+    throw new NotFoundError("User");
   }
+  return res
+    .status(200)
+    .json({ success: true, message: "User account deleted successfully" });
 };

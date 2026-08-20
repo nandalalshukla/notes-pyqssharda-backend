@@ -66,9 +66,6 @@ export const getComment = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("getComment error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

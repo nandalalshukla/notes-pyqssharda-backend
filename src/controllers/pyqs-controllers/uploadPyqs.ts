@@ -53,10 +53,6 @@ export const uploadPyqs = async (req: Request, res: Response) => {
       pyq: newPyq,
     });
   } catch (error) {
-    console.error("Error uploading pyq:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

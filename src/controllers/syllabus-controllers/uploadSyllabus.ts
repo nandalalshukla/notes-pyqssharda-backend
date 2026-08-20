@@ -51,10 +51,6 @@ export const uploadSyllabus = async (req: Request, res: Response) => {
       syllabus: newSyllabus,
     });
   } catch (error) {
-    console.error("Error uploading syllabus:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

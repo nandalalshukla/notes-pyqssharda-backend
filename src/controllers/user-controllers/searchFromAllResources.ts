@@ -50,10 +50,6 @@ export const searchFromAllResources = async (req: Request, res: Response) => {
       results,
     });
   } catch (error) {
-    console.error("Error searching resources:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

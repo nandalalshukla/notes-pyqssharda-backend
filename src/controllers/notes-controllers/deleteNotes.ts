@@ -35,10 +35,6 @@ export const deleteNotes = async (req: Request, res: Response) => {
       message: "Note deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting note:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

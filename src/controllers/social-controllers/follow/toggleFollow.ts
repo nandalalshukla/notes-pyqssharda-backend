@@ -2,7 +2,8 @@
 import { Request, Response } from "express";
 import { Follow } from "../../../models/social/follow.model.js";
 import { User } from "../../../models/users/user.model.js";
-import { Notification } from "../../../models/social/notification.model.js";
+import { createNotification } from "../../../services/social/notification.service.js";
+import { ConflictError } from "../../../utils/errors/AppError.js";
 
 export const toggleFollow = async (req: Request, res: Response) => {
   const { userId: targetUserId } = req.params;
@@ -57,6 +58,11 @@ export const toggleFollow = async (req: Request, res: Response) => {
     } else {
       // Follow
       await Follow.create({ follower: currentUserId, following: targetUserId });
+      // Notification creation is intentionally NOT in this Promise.all: it
+      // never throws (see notification.service.ts), but keeping it out of
+      // the all-or-nothing batch makes that guarantee explicit rather than
+      // relying on it — a follow succeeding must never depend on how the
+      // notification side effect goes.
       const [nextTarget] = await Promise.all([
         User.findByIdAndUpdate(
           targetUserId,
@@ -64,12 +70,12 @@ export const toggleFollow = async (req: Request, res: Response) => {
           { new: true, select: "followersCount followingCount" },
         ).lean(),
         User.updateOne({ _id: currentUserId }, { $inc: { followingCount: 1 } }),
-        Notification.create({
-          recipient: targetUserId,
-          actor: currentUserId,
-          type: "follow",
-        }),
       ]);
+      await createNotification({
+        recipient: targetUserId,
+        actor: currentUserId,
+        type: "follow",
+      });
       updatedTarget = nextTarget;
       isFollowing = true;
     }
@@ -87,14 +93,12 @@ export const toggleFollow = async (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
+    // "Already following" reads better than the generic duplicate-key
+    // message errorHandler.middleware.ts would derive from the compound
+    // index's field names, so this one case still special-cases 11000.
     if (err instanceof Error && "code" in err && err.code === 11000) {
-      return res
-        .status(409)
-        .json({ success: false, message: "Already following" });
+      throw new ConflictError("Already following");
     }
-    console.error("toggleFollow error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

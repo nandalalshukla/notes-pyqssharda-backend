@@ -70,10 +70,6 @@ syllabus.fileUrl = uploadResult.secure_url;
       syllabus,
     });
   } catch (error) {
-    console.error("Error editing syllabus:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

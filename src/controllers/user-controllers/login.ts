@@ -107,10 +107,6 @@ export const loginUser = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error logging in user:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

@@ -55,10 +55,7 @@ export const fetchReports = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("fetchReports error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };
 
@@ -78,9 +75,6 @@ export const fetchReportById = async (req: Request, res: Response) => {
       data: { report },
     });
   } catch (error) {
-    console.error("fetchReportById error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

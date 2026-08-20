@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
-import { Notification } from "../../../models/social/notification.model.js";
+import { createNotification } from "../../../services/social/notification.service.js";
 
 export const createComment = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -27,8 +27,9 @@ export const createComment = async (req: Request, res: Response) => {
     }
 
     // If reply, verify parent comment exists and belongs to this post
+    let parent: any = null;
     if (parentComment) {
-      const parent = await Comment.findById(parentComment);
+      parent = await Comment.findById(parentComment);
       if (!parent || parent.isDeleted || parent.post.toString() !== postId) {
         return res
           .status(404)
@@ -46,14 +47,26 @@ export const createComment = async (req: Request, res: Response) => {
     // Increment post commentsCount
     await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
-    // Notify post author (if not commenting on own post)
-    if (post.author.toString() !== userId) {
-      await Notification.create({
-        recipient: post.author,
+    // Notify the post author about the new comment...
+    await createNotification({
+      recipient: post.author.toString(),
+      actor: userId,
+      type: "comment",
+      post: postId,
+      comment: comment._id.toString(),
+    });
+
+    // ...and, for a reply, separately notify whoever wrote the comment
+    // being replied to — previously only the post author was ever
+    // notified, so replying to someone else's comment never reached them.
+    const parentAuthorId = parent?.author?.toString();
+    if (parentAuthorId && parentAuthorId !== post.author.toString()) {
+      await createNotification({
+        recipient: parentAuthorId,
         actor: userId,
-        type: "comment",
+        type: "reply",
         post: postId,
-        comment: comment._id,
+        comment: comment._id.toString(),
       });
     }
 
@@ -91,9 +104,6 @@ export const createComment = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("createComment error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

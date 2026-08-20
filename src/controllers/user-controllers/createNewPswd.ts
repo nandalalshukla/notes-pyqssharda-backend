@@ -67,11 +67,7 @@ export const createNewPassword = async (req: Request, res: Response) => {
       message: "Password changed successfully",
     });
   } catch (error) {
-    console.error("Error in reset password:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };
 

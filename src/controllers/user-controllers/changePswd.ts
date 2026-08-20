@@ -63,11 +63,7 @@ export const changePassword = async (req: Request, res: Response) => {
       message: "Password changed successfully",
     });
   } catch (error) {
-    console.error("Error in change password:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };
 

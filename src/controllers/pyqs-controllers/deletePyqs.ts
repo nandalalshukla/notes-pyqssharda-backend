@@ -30,10 +30,6 @@ export const deletePyqs = async (req: Request, res: Response) => {
       message: "Pyq deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting pyq:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

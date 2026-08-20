@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { Like } from "../../../models/social/like.model.js";
 import { Post } from "../../../models/social/post.model.js";
 import { Comment } from "../../../models/social/comment.model.js";
-import { Notification } from "../../../models/social/notification.model.js";
+import { createNotification } from "../../../services/social/notification.service.js";
 
 export const toggleLike = async (req: Request, res: Response) => {
   const { targetId, targetType } = req.body as {
@@ -79,15 +79,17 @@ export const toggleLike = async (req: Request, res: Response) => {
 
     const likeCount = Math.max(0, (target.likesCount || 0) + likeDelta);
     const ownerId = target.author?.toString();
-    if (liked && ownerId && ownerId !== userObjectId.toString()) {
-      await Notification.create({
+    if (liked && ownerId) {
+      // createNotification never throws — a failure here can't take the
+      // like itself down with it.
+      await createNotification({
         recipient: ownerId,
-        actor: userObjectId,
+        actor: userObjectId.toString(),
         type: "like",
         ...(targetType === "post"
-          ? { post: targetObjectId }
-          : { comment: targetObjectId }),
-      } as any);
+          ? { post: targetObjectId.toString() }
+          : { comment: targetObjectId.toString() }),
+      });
     }
 
     return res.status(200).json({
@@ -102,9 +104,6 @@ export const toggleLike = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("toggleLike error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw error;
   }
 };

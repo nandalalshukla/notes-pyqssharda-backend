@@ -14,10 +14,6 @@ export const fetchContributors = async (req: Request, res: Response) => {
       contributors,
     });
   } catch (error) {
-    console.error("Error fetching contributors:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };

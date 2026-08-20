@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
 import { Post } from "../../../models/social/post.model.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
 
@@ -65,13 +64,9 @@ export const createPost = async (req: Request, res: Response) => {
       data: { post: responsePost },
     });
   } catch (err: unknown) {
-    console.error("createPost error:", err);
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({
-        success: false,
-        message: Object.values(err.errors)[0]?.message || "Invalid post data.",
-      });
-    }
-    return res.status(500).json({ success: false, message: "Server error." });
+    // mongoose.Error.ValidationError is now translated centrally (see
+    // middlewares/error/errorHandler.middleware.ts) — no need to special-case
+    // it here too.
+    throw err;
   }
 };

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError, ZodType } from "zod";
+import { flattenZodError } from "../../utils/errors/flattenZodError.js";
 
 export const validateMiddleware =
   (schema: ZodType) => (req: Request, res: Response, next: NextFunction) => {
@@ -19,14 +20,23 @@ export const validateMiddleware =
       next();
     } catch (error: unknown) {
       if (error instanceof ZodError) {
+        // Same { success, message, code, errors } contract as every other
+        // error response in the app (see errorHandler.middleware.ts) —
+        // `errors` is a flat { field: message } map, not Zod's raw
+        // internal issue format, so the frontend has one predictable shape
+        // to read field-level errors from regardless of what failed.
+        const errors = flattenZodError(error);
         return res.status(400).json({
           success: false,
-          errors: error.issues,
+          message: Object.values(errors)[0] || "Some of the submitted information isn't valid.",
+          code: "VALIDATION_FAILED",
+          errors,
         });
       }
       return res.status(400).json({
         success: false,
-        message: "Validation failed",
+        message: "Some of the submitted information isn't valid.",
+        code: "VALIDATION_FAILED",
       });
     }
   };

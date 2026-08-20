@@ -101,9 +101,6 @@ export const getFeed = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    console.error("getFeed error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    throw err;
   }
 };

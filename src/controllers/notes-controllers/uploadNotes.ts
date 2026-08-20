@@ -52,10 +52,6 @@ export const uploadNotes = async (req: Request, res: Response) => {
       note: newNote,
     });
   } catch (error) {
-    console.error("Error uploading note:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw error;
   }
 };
