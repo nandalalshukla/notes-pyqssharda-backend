@@ -1,16 +1,21 @@
-import { comparePassword } from "../../utils/hashPassword.js";
+import {
+  comparePassword,
+  DUMMY_PASSWORD_HASH,
+} from "../../utils/hashPassword.js";
 import { User } from "../../models/users/user.model.js";
 import { Session } from "../../models/users/session.model.js";
 import { Request, Response } from "express";
 import {
   generateAccessToken,
   generateRefreshToken,
+  REFRESH_TOKEN_TTL_MS,
 } from "../../utils/generateJwtTokens.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
 } from "../../config/cookies.js";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
+import { hashToken } from "../../utils/hashToken.js";
 
 export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -25,8 +30,18 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ email }).select("+password +isActive");
 
+    // Always run a bcrypt compare, even for a nonexistent user, against a
+    // fixed dummy hash — otherwise a request for an unknown email returns
+    // near-instantly while a wrong password takes ~bcrypt's cost-factor
+    // delay, letting an attacker enumerate valid emails by response timing
+    // despite the generic "Invalid credentials" message below.
+    const isPasswordValid = await comparePassword(
+      password,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
+
     // Use consistent message for security - don't reveal if email exists
-    if (!user || !(await comparePassword(password, user.password!))) {
+    if (!user || !isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
@@ -61,10 +76,10 @@ export const loginUser = async (req: Request, res: Response) => {
     // Create session instead of storing token on user
     await Session.create({
       userId: user._id,
-      refreshToken,
+      refreshTokenHash: hashToken(refreshToken),
       deviceInfo: req.headers["user-agent"],
       ipAddress: req.ip,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     });
 
     res.cookie("accessToken", accessToken, accessTokenCookieOptions);

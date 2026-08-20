@@ -2,24 +2,24 @@ import crypto from "crypto";
 import { User } from "../models/users/user.model.js";
 import { sendOTPMail } from "./email.js";
 
-async function generateOtp(): Promise<string> {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  return otp;
+function generateOtp(): string {
+  // crypto.randomInt (CSPRNG) instead of Math.random() (a fast, predictable
+  // PRNG not meant for security-sensitive values like a verification code).
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
-async function hashOtp(otp: string) {
-  const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
-  return hashedOtp;
+function hashOtp(otp: string): string {
+  return crypto.createHash("sha256").update(otp).digest("hex");
 }
 
-async function otpExpiryTime(minutes: number) {
+function otpExpiryTime(minutes: number): Date {
   const now = new Date();
   now.setMinutes(now.getMinutes() + minutes);
   return now;
 }
 
 async function sendAndStoreOtp(email: string): Promise<void> {
-  const otp = await generateOtp();
+  const otp = generateOtp();
 
   // It's important to await the email send operation here!
   const sendResult = await sendOTPMail(email, otp);
@@ -32,8 +32,8 @@ async function sendAndStoreOtp(email: string): Promise<void> {
     );
   }
 
-  const hashedOtp = await hashOtp(otp);
-  const otpExpiry = await otpExpiryTime(3);
+  const hashedOtp = hashOtp(otp);
+  const otpExpiry = otpExpiryTime(3);
   const result = await User.updateOne(
     { email },
     { $set: { emailOtpHash: hashedOtp, emailOtpExpiry: otpExpiry } },
@@ -43,9 +43,14 @@ async function sendAndStoreOtp(email: string): Promise<void> {
   }
 }
 
-async function verifyOtp(otp: string, hashedOtp: string): Promise<boolean> {
-  const hashedInputOtp = await hashOtp(otp);
-  return hashedInputOtp === hashedOtp;
+function verifyOtp(otp: string, hashedOtp: string): boolean {
+  const hashedInputBuf = Buffer.from(hashOtp(otp), "hex");
+  const storedBuf = Buffer.from(hashedOtp, "hex");
+  // Constant-time comparison — a plain `===` short-circuits on the first
+  // differing byte, which (in principle, over enough samples) leaks how
+  // many leading hex characters of the hash an attacker's guess matched.
+  if (hashedInputBuf.length !== storedBuf.length) return false;
+  return crypto.timingSafeEqual(hashedInputBuf, storedBuf);
 }
 
 export { verifyOtp, sendAndStoreOtp, generateOtp };

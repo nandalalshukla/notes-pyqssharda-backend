@@ -10,7 +10,9 @@ const sessionSchema = new Schema(
       index: true,
     },
 
-    refreshToken: {
+    // SHA-256 hash of the refresh token, never the raw bearer token — so a
+    // DB read/leak can't be used to replay a live session.
+    refreshTokenHash: {
       type: String,
       required: true,
       select: false,
@@ -34,7 +36,9 @@ const sessionSchema = new Schema(
   },
 );
 
-sessionSchema.index({ refreshToken: 1 }, { unique: true });
-sessionSchema.index({ expiresAt: 1 });
+sessionSchema.index({ refreshTokenHash: 1 }, { unique: true });
+// TTL index: MongoDB automatically deletes a session document once
+// `expiresAt` is in the past, instead of stale rows accumulating forever.
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const Session = mongoose.model("Session", sessionSchema);

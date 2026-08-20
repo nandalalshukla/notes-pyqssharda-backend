@@ -3,13 +3,17 @@ import { User } from "../../models/users/user.model.js";
 import {
   generateAccessToken,
   generateRefreshToken,
+  REFRESH_TOKEN_TTL_MS,
 } from "../../utils/generateJwtTokens.js";
 import { Request, Response } from "express";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
+  clearAccessTokenCookieOptions,
+  clearRefreshTokenCookieOptions,
 } from "../../config/cookies.js";
 import { Session } from "../../models/users/session.model.js";
+import { hashToken } from "../../utils/hashToken.js";
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
@@ -20,26 +24,31 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
   try {
     // Verify the refresh token JWT
-    const payload = jwt.verify(
-      refreshToken,
-      process.env.REFRESH_TOKEN_SECRET!,
-    ) as { userId: string };
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, {
+      algorithms: ["HS256"],
+    }) as { userId: string };
 
-    // Find the SPECIFIC session by userId + refreshToken (not expired)
+    // Find the SPECIFIC session by userId + refresh token hash (not expired)
     const session = await Session.findOne({
       userId: payload.userId,
-      refreshToken: refreshToken, // Include refresh token in query
+      refreshTokenHash: hashToken(refreshToken),
       expiresAt: { $gt: new Date() }, // not expired
-    }).select("+refreshToken");
+    });
 
     if (!session) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
-    // Get the user to access their role
-    const user = await User.findById(payload.userId).select("role");
+    // Get the user to access their role, and confirm the account is still
+    // active — otherwise a deactivated account could keep refreshing
+    // indefinitely since access tokens alone never re-check this.
+    const user = await User.findById(payload.userId).select("role +isActive");
 
-    if (!user) {
+    if (!user || !user.isActive) {
+      // Clean up the now-pointless session so it can't be used again.
+      await Session.deleteOne({ _id: session._id });
+      res.clearCookie("accessToken", clearAccessTokenCookieOptions);
+      res.clearCookie("refreshToken", clearRefreshTokenCookieOptions);
       return res.status(401).json({ message: "User not found" });
     }
 
@@ -47,8 +56,8 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const newAccessToken = generateAccessToken(payload.userId, user.role);
     const newRefreshToken = generateRefreshToken(payload.userId);
 
-    session.refreshToken = newRefreshToken;
-    session.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    session.refreshTokenHash = hashToken(newRefreshToken);
+    session.expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
     await session.save();
 
     res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
@@ -59,7 +68,6 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       message: "Token refreshed successfully",
     });
   } catch (err) {
-    const jwtError = err as jwt.JsonWebTokenError;
     return res
       .status(403)
       .json({ message: "Refresh token expired or invalid" });

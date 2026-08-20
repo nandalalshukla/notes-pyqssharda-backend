@@ -47,12 +47,27 @@ import { becomeModeratorSchema } from "../../validators/users-zod/becomeMod.zod.
 import { validateMiddleware } from "../../middlewares/auth/validate.middleware.js";
 import { authMiddleware } from "../../middlewares/auth/auth.middleware.js";
 import {
-  authLimiter,
+  createAuthLimiter,
   uploadLimiter,
   interactionLimiter,
 } from "../../middlewares/rateLimit/index.js";
 
 const router = Router();
+
+// Each auth endpoint gets its own rate-limit bucket (see authLimiter.ts) so
+// exhausting one (e.g. mistyped login passwords) can't lock a user out of an
+// unrelated action (e.g. verifying their email or resetting their password).
+const registerLimiter = createAuthLimiter();
+const loginLimiter = createAuthLimiter();
+const forgotPasswordLimiter = createAuthLimiter();
+const resetPasswordLimiter = createAuthLimiter();
+const verifyEmailLimiter = createAuthLimiter();
+const resendOtpLimiter = createAuthLimiter();
+const refreshTokenLimiter = createAuthLimiter();
+const changePasswordLimiter = createAuthLimiter();
+const deactivateLimiter = createAuthLimiter();
+const deleteAccountLimiter = createAuthLimiter();
+const removeProfilePicLimiter = createAuthLimiter();
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -63,25 +78,25 @@ const router = Router();
 // Registration
 router.post(
   "/register",
-  authLimiter,
+  registerLimiter,
   validateMiddleware(registerSchema),
   registerUser,
 );
 
 // Login
-router.post("/login", authLimiter, validateMiddleware(loginSchema), loginUser);
+router.post("/login", loginLimiter, validateMiddleware(loginSchema), loginUser);
 
 // Password Recovery
 router.post(
   "/forgot-password",
-  authLimiter,
+  forgotPasswordLimiter,
   validateMiddleware(forgotPasswordSchema),
   forgetPassword,
 );
 
 router.post(
   "/reset-password",
-  authLimiter,
+  resetPasswordLimiter,
   validateMiddleware(createNewPasswordSchema),
   createNewPassword,
 );
@@ -89,13 +104,13 @@ router.post(
 // Email Verification
 router.post(
   "/verify-email",
-  authLimiter,
+  verifyEmailLimiter,
   validateMiddleware(verifyEmailSchema),
   verifyEmail,
 );
 router.post(
   "/resend-otp",
-  authLimiter,
+  resendOtpLimiter,
   validateMiddleware(resendOtpSchema),
   resendOtp,
 );
@@ -104,7 +119,7 @@ router.post(
 router.get("/contributors", fetchContributors);
 
 // Refresh Token
-router.post("/refresh-token", authLimiter, refreshAccessToken);
+router.post("/refresh-token", refreshTokenLimiter, refreshAccessToken);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -133,15 +148,30 @@ router.put(
 router.post(
   "/change-password",
   authMiddleware,
-  authLimiter,
+  changePasswordLimiter,
   validateMiddleware(changePasswordSchema),
   changePassword,
 );
 
 // Account Management
-router.post("/deactivate", authMiddleware, authLimiter, deactivateAccount);
-router.delete("/account", authMiddleware, authLimiter, deleteAccount);
-router.delete("/profile-pic", authMiddleware, authLimiter, removeProfilePic);
+router.post(
+  "/deactivate",
+  authMiddleware,
+  deactivateLimiter,
+  deactivateAccount,
+);
+router.delete(
+  "/account",
+  authMiddleware,
+  deleteAccountLimiter,
+  deleteAccount,
+);
+router.delete(
+  "/profile-pic",
+  authMiddleware,
+  removeProfilePicLimiter,
+  removeProfilePic,
+);
 
 // Moderator Request
 router.post(

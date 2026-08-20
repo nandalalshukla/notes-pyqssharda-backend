@@ -10,7 +10,12 @@ export const validateMiddleware =
         ...req.params,
         ...req.query,
       };
-      schema.parse(dataToValidate);
+      // Use the parsed result (not the raw input) so schema transforms —
+      // e.g. email .trim().toLowerCase() — actually reach the controller.
+      // Without this, a mixed-case/whitespace-padded email passes validation
+      // but the controller still queries the DB with the untransformed value.
+      const parsed = schema.parse(dataToValidate) as Record<string, unknown>;
+      req.body = { ...req.body, ...parsed };
       next();
     } catch (error: unknown) {
       if (error instanceof ZodError) {

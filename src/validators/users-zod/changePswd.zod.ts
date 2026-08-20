@@ -1,14 +1,15 @@
 import { z } from "zod";
-import { shardaEmailSchema, passwordSchema } from "./register.zod.js";
+import { passwordSchema } from "./register.zod.js";
 
 /**
- * Schema for changing password (when user is logged in)
+ * Schema for changing password (when user is logged in).
+ * No `email`/user-identifier field on purpose — this route is authenticated,
+ * and the target account must always come from the verified access token
+ * (req.user.userId), never from client-supplied input.
  * Used in: changePassword controller
  */
 export const changePasswordSchema = z
   .object({
-    email: shardaEmailSchema.optional(),
-
     currentPassword: z
       .string()
       .min(1, { message: "Current password is required" }),

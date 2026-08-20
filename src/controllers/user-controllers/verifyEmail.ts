@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
 import { Session } from "../../models/users/session.model.js";
@@ -6,11 +5,13 @@ import { verifyOtp } from "../../utils/Otp.js";
 import {
   generateAccessToken,
   generateRefreshToken,
+  REFRESH_TOKEN_TTL_MS,
 } from "../../utils/generateJwtTokens.js";
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
 } from "../../config/cookies.js";
+import { hashToken } from "../../utils/hashToken.js";
 
 export default async function verifyEmail(req: Request, res: Response) {
   const { email, otp } = req.body;
@@ -76,10 +77,10 @@ export default async function verifyEmail(req: Request, res: Response) {
 
     await Session.create({
       userId: user._id,
-      refreshToken,
+      refreshTokenHash: hashToken(refreshToken),
       deviceInfo: req.headers["user-agent"],
       ipAddress: req.ip,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     });
 
     res.cookie("accessToken", accessToken, accessTokenCookieOptions);

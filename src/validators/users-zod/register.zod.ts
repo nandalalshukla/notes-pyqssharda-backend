@@ -2,11 +2,21 @@ import { z } from "zod";
 
 /**
  * Base password schema - reusable across password-related endpoints
- * Enforces: minimum length only
+ * Must stay in sync with the Mongoose `password.minlength` in user.model.ts —
+ * a mismatch there lets a password pass validation here and then fail at
+ * `.save()` with a confusing 500 instead of a clean 400.
  */
 export const passwordSchema = z
   .string()
-  .min(6, { message: "Password must be at least 6 characters" });
+  .min(8, { message: "Password must be at least 8 characters" })
+  .max(128, { message: "Password must not exceed 128 characters" })
+  .regex(/[a-z]/, {
+    message: "Password must contain at least one lowercase letter",
+  })
+  .regex(/[A-Z]/, {
+    message: "Password must contain at least one uppercase letter",
+  })
+  .regex(/[0-9]/, { message: "Password must contain at least one number" });
 
 /**
  * Base email schema - reusable across all email-related endpoints
@@ -43,14 +53,19 @@ export const registerSchema = z
         message: "Name can only contain letters and spaces",
       }),
 
+    // Charset/length must stay in sync with the Mongoose `username.match` /
+    // minlength / maxlength in user.model.ts — a mismatch (e.g. allowing a
+    // hyphen here that the model rejects) lets input pass validation and
+    // then fail at `.save()` with a confusing 500 instead of a clean 400.
     username: z
       .string()
       .trim()
+      .toLowerCase()
       .min(3, { message: "Username must be at least 3 characters" })
-      .max(30, { message: "Username must not exceed 30 characters" })
-      .regex(/^[a-zA-Z0-9_-]+$/, {
+      .max(20, { message: "Username must not exceed 20 characters" })
+      .regex(/^[a-z0-9._]+$/, {
         message:
-          "Username can only contain letters, numbers, hyphens, and underscores",
+          "Username can only contain lowercase letters, numbers, dots and underscores",
       }),
 
     email: shardaEmailSchema,

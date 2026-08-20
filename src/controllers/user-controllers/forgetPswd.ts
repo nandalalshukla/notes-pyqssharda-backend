@@ -3,6 +3,9 @@ import { User } from "../../models/users/user.model.js";
 import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 
+const GENERIC_MESSAGE =
+  "If an account exists for this email, a password reset OTP has been sent.";
+
 export const forgetPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) {
@@ -13,23 +16,25 @@ export const forgetPassword = async (req: Request, res: Response) => {
   }
   try {
     const user = await User.findOne({ email }).select("email").lean();
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+
+    // Always return the same 200 + generic message whether or not the
+    // account exists — the message already promises this, but the code
+    // used to 404 on a miss, letting anyone enumerate registered emails
+    // through the password-recovery endpoint.
+    if (user) {
+      await sendAndStoreOtp(user.email);
     }
-    await sendAndStoreOtp(user.email);
+
     return res.status(200).json({
       success: true,
-      message:
-        "If an account exists, a password reset OTP has been sent to your email.",
+      message: GENERIC_MESSAGE,
     });
   } catch (error) {
     console.error("Error in forget password:", error);
-    return res.status(500).json({
-      success: false,
-      message: "We are experiencing high traffic. Please try again later.",
+    // Even on a send failure, don't leak whether the account existed.
+    return res.status(200).json({
+      success: true,
+      message: GENERIC_MESSAGE,
     });
   }
 };

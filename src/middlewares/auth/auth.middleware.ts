@@ -13,14 +13,12 @@ export const authMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET as string,
-    ) as { userId: string; userRole?: string };
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string, {
+      algorithms: ["HS256"],
+    }) as { userId: string; userRole?: string };
     (req as Request).user = decoded;
     next();
   } catch (error) {
-    const jwtError = error as jwt.JsonWebTokenError;
     return res
       .status(401)
       .json({ success: false, message: "Invalid or expired token" });
@@ -40,10 +38,9 @@ export const optionalAuthMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET as string,
-    ) as { userId: string; userRole?: string };
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string, {
+      algorithms: ["HS256"],
+    }) as { userId: string; userRole?: string };
     req.user = decoded;
   } catch {
     req.user = undefined;

@@ -1,25 +1,21 @@
 import { Request, Response } from "express";
 import { Session } from "../../models/users/session.model.js";
+import { hashToken } from "../../utils/hashToken.js";
+import {
+  clearAccessTokenCookieOptions,
+  clearRefreshTokenCookieOptions,
+} from "../../config/cookies.js";
 
 export const logout = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
 
     if (refreshToken) {
-      await Session.deleteOne({ refreshToken });
+      await Session.deleteOne({ refreshTokenHash: hashToken(refreshToken) });
     }
 
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    });
-
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    });
+    res.clearCookie("accessToken", clearAccessTokenCookieOptions);
+    res.clearCookie("refreshToken", clearRefreshTokenCookieOptions);
 
     return res.status(200).json({
       success: true,
@@ -42,17 +38,9 @@ export const logoutAll = async (req: Request, res: Response) => {
     }
     const userId = req.user.userId;
     await Session.deleteMany({ userId });
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    });
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    });
+    res.clearCookie("accessToken", clearAccessTokenCookieOptions);
+    res.clearCookie("refreshToken", clearRefreshTokenCookieOptions);
 
     return res.status(200).json({
       success: true,

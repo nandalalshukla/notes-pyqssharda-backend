@@ -1,5 +1,6 @@
 import "./config/env.js";
 import express from "express";
+import helmet from "helmet";
 import connectDB from "./config/db.js";
 
 // Route Imports
@@ -28,6 +29,17 @@ app.set("trust proxy", 1);
  * MIDDLEWARE SETUP - Order matters!
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+// Standard security headers (X-Content-Type-Options, HSTS, no X-Powered-By,
+// etc). CSP/COEP are disabled here: this is a pure JSON API with no HTML
+// pages of its own, so a default CSP would only add noise, not protection —
+// the frontend (which actually renders HTML) is a separate app/deployment.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 
 // CORS must be first to handle preflight requests
 app.use(corsConfig);

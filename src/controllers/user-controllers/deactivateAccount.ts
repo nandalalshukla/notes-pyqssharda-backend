@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
+import { Session } from "../../models/users/session.model.js";
+import {
+  clearAccessTokenCookieOptions,
+  clearRefreshTokenCookieOptions,
+} from "../../config/cookies.js";
 
 export const deactivateAccount = async (req: Request, res: Response) => {
   if (!req.user) {
@@ -17,12 +22,19 @@ export const deactivateAccount = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "User account deactivated successfully",
-      });
+
+    // Deactivating only flips a flag that nothing re-checks on a still-valid
+    // access token, and refreshAccessToken previously never checked
+    // isActive either — so without this, a "deactivated" account kept full
+    // access until its tokens happened to expire. Kill every session now.
+    await Session.deleteMany({ userId });
+    res.clearCookie("accessToken", clearAccessTokenCookieOptions);
+    res.clearCookie("refreshToken", clearRefreshTokenCookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "User account deactivated successfully",
+    });
   } catch (error) {
     console.error("Error in deactivate user:", error);
     return res
