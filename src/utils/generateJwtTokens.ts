@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { env } from "../config/env.js";
 
 // Lifetimes are the single source of truth — cookie maxAge (config/cookies.ts)
@@ -17,11 +18,21 @@ export function generateAccessToken(userId: string, userRole: string) {
   });
 }
 
+// `jti` is what makes two refresh tokens for the same user distinct. HS256 is
+// deterministic and `iat`/`exp` only have one-second resolution, so without it
+// a user signing in on two devices within the same second — or rotating a
+// token twice in one second — would get byte-identical tokens, which collide
+// on the unique `refreshTokenHash` index and would also let one device's
+// logout silently kill the other's session.
 export function generateRefreshToken(userId: string) {
-  return jwt.sign({ userId }, env.REFRESH_TOKEN_SECRET, {
-    expiresIn: "30d",
-    algorithm: JWT_ALGORITHM,
-  });
+  return jwt.sign(
+    { userId, jti: crypto.randomUUID() },
+    env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: "30d",
+      algorithm: JWT_ALGORITHM,
+    },
+  );
 }
 
 export function generateEmailVerifyToken(userId: string) {
