@@ -5,6 +5,10 @@ import { User } from "../../../models/users/user.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getUserPosts = async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -30,7 +34,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         .select(
           "type content author media likesCount commentsCount createdAt updatedAt",
         )
-        .populate<{ author: PopulatedUserSummary }>(
+        .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
@@ -38,7 +42,24 @@ export const getUserPosts = async (req: Request, res: Response) => {
       Post.countDocuments({ author: userId, isDeleted: false }),
     ]);
 
-    const postIds = posts.map((post) => post._id);
+    type UserPost = (typeof posts)[number];
+
+    const orphanedPostIds = posts
+      .filter((post) => !hasPopulatedUserSummary(post.author))
+      .map((post) => post._id);
+    const visiblePosts = posts.filter(
+      (post): post is UserPost & { author: PopulatedUserSummary } =>
+        hasPopulatedUserSummary(post.author),
+    );
+
+    if (orphanedPostIds.length > 0) {
+      await Post.updateMany(
+        { _id: { $in: orphanedPostIds } },
+        { $set: { isDeleted: true } },
+      );
+    }
+
+    const postIds = visiblePosts.map((post) => post._id);
     const userObjectId = currentUserId
       ? new mongoose.Types.ObjectId(currentUserId)
       : null;
@@ -61,7 +82,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
           }))
         : false;
 
-    const postsWithEngagement = posts.map((post) => {
+    const postsWithEngagement = visiblePosts.map((post) => {
       const postId = post._id.toString();
       const userLiked = likedPostIdSet.has(postId);
 
@@ -72,14 +93,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         _id: post._id,
         type: post.type || "general",
         content: post.content,
-        author: {
-          _id: post.author._id,
-          username: post.author.username || "Anonymous",
-          avatar: post.author.profilePic?.url || "",
-          profilePic: post.author.profilePic,
-          role: post.author.role,
-          isFollowedByCurrentUser,
-        },
+        author: serializeUserSummary(post.author, { isFollowedByCurrentUser }),
         files,
         publicIds,
         likes: post.likesCount || 0,

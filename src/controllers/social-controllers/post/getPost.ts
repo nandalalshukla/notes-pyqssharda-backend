@@ -5,6 +5,10 @@ import { Like } from "../../../models/social/like.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
 import mongoose from "mongoose";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getPost = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -26,13 +30,21 @@ export const getPost = async (req: Request, res: Response) => {
       .select(
         "type content author media likesCount commentsCount createdAt updatedAt",
       )
-      .populate<{ author: PopulatedUserSummary }>(
+      .populate<{ author: PopulatedUserSummary | null }>(
         "author",
         "_id username profilePic role",
       )
       .lean();
 
     if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    if (!hasPopulatedUserSummary(post.author)) {
+      await Post.updateOne({ _id: post._id }, { $set: { isDeleted: true } });
       return res.status(404).json({
         success: false,
         message: "Post not found",
@@ -60,14 +72,9 @@ export const getPost = async (req: Request, res: Response) => {
       _id: post._id,
       type: post.type || "general",
       content: post.content,
-      author: {
-        _id: post.author._id,
-        username: post.author.username || "Anonymous",
-        avatar: post.author.profilePic?.url || "",
-        profilePic: post.author.profilePic,
-        role: post.author.role,
+      author: serializeUserSummary(post.author, {
         isFollowedByCurrentUser: !!isFollowing,
-      },
+      }),
       files,
       publicIds,
       likes: post.likesCount || 0,

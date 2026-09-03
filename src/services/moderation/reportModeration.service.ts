@@ -15,6 +15,7 @@ import {
   NotFoundError,
 } from "../../utils/errors/AppError.js";
 import type { PopulatedReporterContact } from "../../types/social.types.js";
+import { cleanupAccountReferences } from "../users/accountDeletion.service.js";
 
 // These messages ("not found OR already deleted/suspended") don't fit
 // NotFoundError's "${resource} couldn't be found" template — a moderator
@@ -266,13 +267,19 @@ export const applyModerationAction = async (
         }
         case "delete_user": {
           requireTargetType(report.targetType, "user");
-          const user = await User.findByIdAndDelete(report.targetId)
+          const user = await User.findById(report.targetId)
+            .select("_id")
             .session(session)
             .lean();
 
           if (!user) {
             throw targetGoneError("User not found or already deleted");
           }
+
+          await cleanupAccountReferences(report.targetId.toString(), {
+            deleteReports: false,
+          });
+          await User.deleteOne({ _id: report.targetId }).session(session);
 
           updatedReport = await markReport(
             reportId,

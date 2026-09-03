@@ -6,6 +6,7 @@ import type {
   PopulatedNotificationPostRef,
   PopulatedNotificationCommentRef,
 } from "../../../types/social.types.js";
+import { hasPopulatedUserSummary } from "../../../utils/socialSerializers.js";
 
 export const getNotifications = async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -26,7 +27,7 @@ export const getNotifications = async (req: Request, res: Response) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate<{ actor: PopulatedUserSummary }>({
+        .populate<{ actor: PopulatedUserSummary | null }>({
           path: "actor",
           select: "username profilePic role _id",
         })
@@ -43,8 +44,19 @@ export const getNotifications = async (req: Request, res: Response) => {
       Notification.countDocuments(baseQuery),
     ]);
 
+    const orphanedNotificationIds = notifications
+      .filter((notif) => isBrokenNotification(notif))
+      .map((notif) => notif._id);
+    const visibleNotifications = notifications.filter(
+      (notif) => !isBrokenNotification(notif),
+    );
+
+    if (orphanedNotificationIds.length > 0) {
+      await Notification.deleteMany({ _id: { $in: orphanedNotificationIds } });
+    }
+
     // Format notifications with readable messages
-    const formattedNotifications = notifications.map((notif) => ({
+    const formattedNotifications = visibleNotifications.map((notif) => ({
       _id: notif._id,
       type: notif.type,
       actor: notif.actor,
@@ -75,9 +87,20 @@ export const getNotifications = async (req: Request, res: Response) => {
  */
 type NotificationForFormatting = {
   type: "like" | "comment" | "reply" | "follow" | "share";
-  actor: PopulatedUserSummary;
+  actor: PopulatedUserSummary | null;
   post: PopulatedNotificationPostRef | null;
+  comment?: PopulatedNotificationCommentRef | null;
 };
+
+function isBrokenNotification(notif: NotificationForFormatting): boolean {
+  if (!hasPopulatedUserSummary(notif.actor)) return true;
+  if (notif.type === "follow") return false;
+  if (!notif.post) return true;
+  if ((notif.type === "comment" || notif.type === "reply") && !notif.comment) {
+    return true;
+  }
+  return false;
+}
 
 function formatNotificationMessage(notif: NotificationForFormatting): string {
   const actorName = notif.actor?.username || "Someone";

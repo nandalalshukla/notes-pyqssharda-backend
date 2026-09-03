@@ -5,6 +5,10 @@ import { Like } from "../../../models/social/like.model.js";
 import { Follow } from "../../../models/social/follow.model.js";
 import mongoose from "mongoose";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getFeed = async (req: Request, res: Response) => {
   const userId = req.user?.userId; // Optional - handle both authenticated and non-authenticated users
@@ -28,7 +32,7 @@ export const getFeed = async (req: Request, res: Response) => {
         .select(
           "type content author media likesCount commentsCount createdAt updatedAt",
         )
-        .populate<{ author: PopulatedUserSummary }>(
+        .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
@@ -36,7 +40,24 @@ export const getFeed = async (req: Request, res: Response) => {
       Post.countDocuments(postFilter),
     ]);
 
-    const postIds = posts.map((post) => post._id);
+    type FeedPost = (typeof posts)[number];
+
+    const orphanedPostIds = posts
+      .filter((post) => !hasPopulatedUserSummary(post.author))
+      .map((post) => post._id);
+    const visiblePosts = posts.filter(
+      (post): post is FeedPost & { author: PopulatedUserSummary } =>
+        hasPopulatedUserSummary(post.author),
+    );
+
+    if (orphanedPostIds.length > 0) {
+      await Post.updateMany(
+        { _id: { $in: orphanedPostIds } },
+        { $set: { isDeleted: true } },
+      );
+    }
+
+    const postIds = visiblePosts.map((post) => post._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const [likedPostIds, followedAuthors] = await Promise.all([
@@ -48,7 +69,7 @@ export const getFeed = async (req: Request, res: Response) => {
       userObjectId && postIds.length > 0
         ? Follow.find({
             follower: userObjectId,
-            following: { $in: posts.map((post) => post.author._id) },
+            following: { $in: visiblePosts.map((post) => post.author._id) },
           })
             .select("following")
             .lean()
@@ -62,7 +83,7 @@ export const getFeed = async (req: Request, res: Response) => {
       followedAuthors.map((follow) => follow.following!.toString()),
     );
 
-    const postsWithEngagement = posts.map((post) => {
+    const postsWithEngagement = visiblePosts.map((post) => {
       const postId = post._id.toString();
 
       // Transform media to match frontend expectations
@@ -73,16 +94,11 @@ export const getFeed = async (req: Request, res: Response) => {
         _id: post._id,
         type: post.type || "general",
         content: post.content,
-        author: {
-          _id: post.author._id,
-          username: post.author.username || "Anonymous",
-          avatar: post.author.profilePic?.url || "",
-          profilePic: post.author.profilePic,
-          role: post.author.role,
+        author: serializeUserSummary(post.author, {
           isFollowedByCurrentUser: followedAuthorIdSet.has(
             post.author._id.toString(),
           ),
-        },
+        }),
         files,
         publicIds,
         likes: post.likesCount || 0,

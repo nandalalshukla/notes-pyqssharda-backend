@@ -5,6 +5,7 @@ import {
   clearAccessTokenCookieOptions,
   clearRefreshTokenCookieOptions,
 } from "../../config/cookies.js";
+import { cleanupAccountReferences } from "../../services/users/accountDeletion.service.js";
 
 export const deleteAccount = async (req: Request, res: Response) => {
   if (!req.user) {
@@ -13,6 +14,8 @@ export const deleteAccount = async (req: Request, res: Response) => {
   const userId = req.user.userId;
 
   try {
+    await cleanupAccountReferences(userId);
+
     const result = await User.deleteOne({ _id: userId });
     if (result.deletedCount === 0) {
       return res

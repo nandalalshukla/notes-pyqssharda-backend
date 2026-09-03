@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import { Post } from "../../../models/social/post.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getReplies = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -24,7 +29,7 @@ export const getReplies = async (req: Request, res: Response) => {
         .select(
           "content author post parentComment likesCount createdAt updatedAt",
         )
-        .populate<{ author: PopulatedUserSummary }>(
+        .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
@@ -36,7 +41,31 @@ export const getReplies = async (req: Request, res: Response) => {
       }),
     ]);
 
-    const replyIds = replies.map((reply) => reply._id);
+    type ReplyRow = (typeof replies)[number];
+
+    const orphanedReplyIds = replies
+      .filter((reply) => !hasPopulatedUserSummary(reply.author))
+      .map((reply) => reply._id);
+    const visibleReplies = replies.filter(
+      (reply): reply is ReplyRow & { author: PopulatedUserSummary } =>
+        hasPopulatedUserSummary(reply.author),
+    );
+
+    if (orphanedReplyIds.length > 0) {
+      await Promise.all([
+        Comment.updateMany(
+          { _id: { $in: orphanedReplyIds } },
+          { $set: { isDeleted: true } },
+        ),
+        Like.deleteMany({ comment: { $in: orphanedReplyIds } }),
+        Post.updateOne(
+          { _id: postId },
+          { $inc: { commentsCount: -orphanedReplyIds.length } },
+        ),
+      ]);
+    }
+
+    const replyIds = visibleReplies.map((reply) => reply._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const likedReplyIds =
@@ -49,20 +78,14 @@ export const getReplies = async (req: Request, res: Response) => {
       likedReplyIds.map((like) => like.comment!.toString()),
     );
 
-    const repliesWithLikes = replies.map((reply) => {
+    const repliesWithLikes = visibleReplies.map((reply) => {
       const replyId = reply._id.toString();
       const userLiked = likedReplyIdSet.has(replyId);
 
       return {
         _id: reply._id,
         text: reply.content,
-        author: {
-          _id: reply.author._id,
-          username: reply.author.username || "Anonymous",
-          avatar: reply.author.profilePic?.url || "",
-          profilePic: reply.author.profilePic,
-          role: reply.author.role,
-        },
+        author: serializeUserSummary(reply.author),
         post: reply.post,
         parentComment: reply.parentComment,
         likes: reply.likesCount || 0,

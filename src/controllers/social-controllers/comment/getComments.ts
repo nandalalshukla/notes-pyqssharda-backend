@@ -3,7 +3,12 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import { Post } from "../../../models/social/post.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getComments = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -23,7 +28,7 @@ export const getComments = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select("content author post likesCount createdAt updatedAt")
-        .populate<{ author: PopulatedUserSummary }>(
+        .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
@@ -35,7 +40,31 @@ export const getComments = async (req: Request, res: Response) => {
       }),
     ]);
 
-    const commentIds = comments.map((comment) => comment._id);
+    type CommentRow = (typeof comments)[number];
+
+    const orphanedCommentIds = comments
+      .filter((comment) => !hasPopulatedUserSummary(comment.author))
+      .map((comment) => comment._id);
+    const visibleComments = comments.filter(
+      (comment): comment is CommentRow & { author: PopulatedUserSummary } =>
+        hasPopulatedUserSummary(comment.author),
+    );
+
+    if (orphanedCommentIds.length > 0) {
+      await Promise.all([
+        Comment.updateMany(
+          { _id: { $in: orphanedCommentIds } },
+          { $set: { isDeleted: true } },
+        ),
+        Like.deleteMany({ comment: { $in: orphanedCommentIds } }),
+        Post.updateOne(
+          { _id: postId },
+          { $inc: { commentsCount: -orphanedCommentIds.length } },
+        ),
+      ]);
+    }
+
+    const commentIds = visibleComments.map((comment) => comment._id);
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
     const likedCommentIds =
@@ -48,20 +77,14 @@ export const getComments = async (req: Request, res: Response) => {
       likedCommentIds.map((like) => like.comment!.toString()),
     );
 
-    const commentsWithLikes = comments.map((comment) => {
+    const commentsWithLikes = visibleComments.map((comment) => {
       const commentId = comment._id.toString();
       const userLiked = likedCommentIdSet.has(commentId);
 
       return {
         _id: comment._id,
         text: comment.content,
-        author: {
-          _id: comment.author._id,
-          username: comment.author.username || "Anonymous",
-          avatar: comment.author.profilePic?.url || "",
-          profilePic: comment.author.profilePic,
-          role: comment.author.role,
-        },
+        author: serializeUserSummary(comment.author),
         post: comment.post,
         likes: comment.likesCount || 0,
         likedByCurrentUser: !!userLiked,

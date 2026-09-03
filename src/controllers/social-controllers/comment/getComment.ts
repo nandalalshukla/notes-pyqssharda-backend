@@ -3,7 +3,12 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
+import { Post } from "../../../models/social/post.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  hasPopulatedUserSummary,
+  serializeUserSummary,
+} from "../../../utils/socialSerializers.js";
 
 export const getComment = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -27,13 +32,25 @@ export const getComment = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select("content author post likesCount createdAt updatedAt")
-      .populate<{ author: PopulatedUserSummary }>(
+      .populate<{ author: PopulatedUserSummary | null }>(
         "author",
         "_id username profilePic role",
       )
       .lean();
 
     if (!comment) {
+      return res.status(404).json({
+        success: false,
+        message: "Comment not found",
+      });
+    }
+
+    if (!hasPopulatedUserSummary(comment.author)) {
+      await Promise.all([
+        Comment.updateOne({ _id: comment._id }, { $set: { isDeleted: true } }),
+        Like.deleteMany({ comment: comment._id }),
+        Post.updateOne({ _id: comment.post }, { $inc: { commentsCount: -1 } }),
+      ]);
       return res.status(404).json({
         success: false,
         message: "Comment not found",
@@ -49,13 +66,7 @@ export const getComment = async (req: Request, res: Response) => {
     const commentData = {
       _id: comment._id,
       text: comment.content,
-      author: {
-        _id: comment.author._id,
-        username: comment.author.username || "Anonymous",
-        avatar: comment.author.profilePic?.url || "",
-        profilePic: comment.author.profilePic,
-        role: comment.author.role,
-      },
+      author: serializeUserSummary(comment.author),
       post: comment.post,
       likes: comment.likesCount || 0,
       likedByCurrentUser: !!userLike,

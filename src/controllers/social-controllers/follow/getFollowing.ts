@@ -1,6 +1,7 @@
 // controllers/follow/getFollowing.ts
 import { Request, Response } from "express";
 import { Follow } from "../../../models/social/follow.model.js";
+import { User } from "../../../models/users/user.model.js";
 
 export const getFollowing = async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -19,12 +20,25 @@ export const getFollowing = async (req: Request, res: Response) => {
         .lean(),
       Follow.countDocuments({ follower: userId }),
     ]);
+    const orphanedFollowIds = following
+      .filter((f) => !f.following)
+      .map((f) => f._id);
+    const visibleFollowing = following.filter((f) => f.following);
+    if (orphanedFollowIds.length > 0) {
+      await Promise.all([
+        Follow.deleteMany({ _id: { $in: orphanedFollowIds } }),
+        User.updateOne(
+          { _id: userId },
+          { $inc: { followingCount: -orphanedFollowIds.length } },
+        ),
+      ]);
+    }
     const totalPages = Math.ceil(total / limit);
 
     return res.status(200).json({
       success: true,
       data: {
-        data: following.map((f) => f.following),
+        data: visibleFollowing.map((f) => f.following),
         total,
         page,
         limit,
