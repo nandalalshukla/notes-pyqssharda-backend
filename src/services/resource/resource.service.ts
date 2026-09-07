@@ -438,6 +438,92 @@ export async function listApprovedAdmin<TDoc extends BaseResourceFields>(
   return config.model.find({ status: "approved" } as QueryFilter<TDoc>).lean();
 }
 
+export type ResourceStatus = BaseResourceFields["status"];
+
+export interface AdminListParams {
+  /** Omitted means every status — which is what the "All" tab asks for. */
+  status?: ResourceStatus;
+  page?: number;
+  limit?: number;
+  query?: string;
+  program?: string;
+}
+
+/**
+ * The admin console's view of a resource collection: any status, paged.
+ *
+ * Distinct from `listApprovedAdmin`, which returns every approved document
+ * in one unpaginated array. That was survivable when the collection held a
+ * handful of hand-uploaded files; it is not now that PYQs alone holds
+ * thousands of imported papers, and it could never show a pending or
+ * rejected upload — which is precisely what an admin needs to act on.
+ */
+export async function listForAdmin<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  params: AdminListParams,
+) {
+  const page = Math.max(1, params.page || 1);
+  const limit = Math.min(100, Math.max(1, params.limit || 25));
+
+  const filter: Record<string, unknown> = {};
+  if (params.status) filter.status = params.status;
+  if (params.program) filter.program = params.program;
+  if (params.query) {
+    const regex = toRegex(params.query);
+    filter.$or = [
+      { title: regex },
+      { courseName: regex },
+      { courseCode: regex },
+    ];
+  }
+
+  const [docs, total] = await Promise.all([
+    config.model
+      .find(filter as QueryFilter<TDoc>)
+      // Newest first: an admin is nearly always here to deal with what
+      // arrived most recently.
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("userId", "username email name")
+      .lean(),
+    config.model.countDocuments(filter as QueryFilter<TDoc>),
+  ]);
+
+  return {
+    docs,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    },
+  };
+}
+
+/**
+ * How many documents sit in each status, for the console's tab badges.
+ *
+ * One grouped aggregation rather than three `countDocuments` calls — the
+ * counts are always displayed together, so fetching them together is both
+ * fewer round trips and guaranteed to be internally consistent.
+ */
+export async function countsByStatus<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+): Promise<Record<ResourceStatus, number> & { all: number }> {
+  const rows = await config.model.aggregate<{ _id: ResourceStatus; n: number }>(
+    [{ $group: { _id: "$status", n: { $sum: 1 } } }],
+  );
+
+  const counts = { pending: 0, approved: 0, rejected: 0, all: 0 };
+  for (const row of rows) {
+    if (row._id in counts) counts[row._id] = row.n;
+    counts.all += row.n;
+  }
+  return counts;
+}
+
 export async function removeAdmin<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
   id: string,

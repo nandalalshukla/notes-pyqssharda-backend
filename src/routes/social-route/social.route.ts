@@ -280,11 +280,17 @@ router.delete(
  */
 
 // Toggle like on post/comment
+// No `cooldown` here. Liking is a toggle people flip quickly, and a
+// one-second-per-user cooldown answered the second tap with a 429 — which
+// the client then treated as a failure and rolled the heart back to the
+// wrong state. The client now coalesces a burst of taps into at most one
+// request per target (see the like-coalescing note in social.store.ts), so
+// the traffic this was guarding against no longer reaches the server, and
+// `interactionLimiter` still caps the overall rate.
 router.post(
   "/likes/toggle",
   authMiddleware,
   interactionLimiter,
-  cooldown({ windowMs: 1000, message: "Please wait before liking again." }),
   validateMiddleware(likeActionSchema),
   toggleLike,
 );

@@ -95,8 +95,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
 
   /** One approved resource, for its own detail page. */
   const fetchOne = async (req: Request, res: Response) => {
-    const id = req.params[config.managementIdParam] ?? req.params.id;
-    const doc = await resourceService.getPublicById(config, id);
+    const doc = await resourceService.getPublicById(config, resourceId(req));
 
     if (!doc) {
       throw new AppError(`${config.displayName} not found`, 404);
@@ -190,6 +189,58 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
 
   // ── Admin ──────────────────────────────────────────────────────────────
 
+  /**
+   * The resource id from the URL.
+   *
+   * These controllers are mounted twice: on per-resource routes that name
+   * the param (`/notes/:noteId`) and on the generic admin content routes
+   * that don't (`/admin/content/:type/:id`). Reading either keeps one
+   * controller serving both instead of duplicating them per mounting.
+   */
+  function resourceId(req: Request): string {
+    return req.params[config.managementIdParam] ?? req.params.id;
+  }
+
+  /** Paginated, status-filtered list for the admin content console. */
+  const adminList = async (req: Request, res: Response) => {
+    const num = (v: unknown) => {
+      const n = parseInt(String(v ?? ""), 10);
+      return Number.isNaN(n) ? undefined : n;
+    };
+    const str = (v: unknown) =>
+      typeof v === "string" && v.trim() ? v.trim() : undefined;
+
+    const status = str(req.query.status);
+    const result = await resourceService.listForAdmin(config, {
+      // "all" is the console's own word for "no filter"; the service takes
+      // an absent status to mean the same thing.
+      status:
+        status && status !== "all"
+          ? (status as resourceService.ResourceStatus)
+          : undefined,
+      page: num(req.query.page),
+      limit: num(req.query.limit),
+      query: str(req.query.query) ?? str(req.query.q),
+      program: str(req.query.program),
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        [config.responseKeys.adminList]: result.docs,
+        pagination: result.pagination,
+      },
+    });
+  };
+
+  /** Per-status totals, for the console's tab badges. */
+  const adminCounts = async (_req: Request, res: Response) => {
+    res.status(200).json({
+      success: true,
+      data: { counts: await resourceService.countsByStatus(config) },
+    });
+  };
+
   const fetchApprovedAdmin = async (_req: Request, res: Response) => {
     const docs = await resourceService.listApprovedAdmin(config);
     res.status(200).json({
@@ -199,7 +250,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const removeAdmin = async (req: Request, res: Response) => {
-    const id = req.params[config.managementIdParam];
+    const id = resourceId(req);
     await resourceService.removeAdmin(config, id);
     res.status(200).json({
       success: true,
@@ -218,7 +269,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const approve = async (req: Request, res: Response) => {
-    const id = req.params[config.managementIdParam];
+    const id = resourceId(req);
     const uploader = await resourceService.approve(config, {
       id,
       approverId: req.user!.userId,
@@ -242,7 +293,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const reject = async (req: Request, res: Response) => {
-    const id = req.params[config.managementIdParam];
+    const id = resourceId(req);
     const { rejectionReason } = req.body;
     const uploader = await resourceService.reject(config, {
       id,
@@ -281,6 +332,8 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
     edit,
     remove,
     fetchApprovedAdmin,
+    adminList,
+    adminCounts,
     removeAdmin,
     fetchPending,
     approve,

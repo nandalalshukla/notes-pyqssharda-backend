@@ -37,7 +37,22 @@ import {
   reviewModRequest,
 } from "../../controllers/admin-controllers/modManagement.js";
 
+// Controllers - Content (notes / pyqs / syllabus, all through one set)
+import {
+  listContent,
+  contentCounts,
+  approveContent,
+  rejectContent,
+  deleteContent,
+} from "../../controllers/admin-controllers/contentManagement.js";
+
 // Validators
+import {
+  listContentSchema,
+  contentCountsSchema,
+  contentActionSchema,
+  rejectContentSchema,
+} from "../../validators/admin-zod/contentManagement.zod.js";
 import { deleteNoteParamsSchema } from "../../validators/admin-zod/notesManagement.zod.js";
 import { deletePYQParamsSchema } from "../../validators/admin-zod/pyqsManagement.zod.js";
 import { deleteSyllabusParamsSchema } from "../../validators/admin-zod/syllabusManagement.zod.js";
@@ -110,6 +125,66 @@ router.delete(
   cooldown({ windowMs: 3000, message: "Please wait before deleting again." }),
   validateMiddleware(deleteSyllabusParamsSchema),
   deleteSyllabus,
+);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * CONTENT MANAGEMENT ROUTES
+ *
+ * One parameterised set covering notes, pyqs and syllabus — `:type` is
+ * validated against the resource map in contentManagement.ts, so the route
+ * and the controller can't disagree about which types exist.
+ *
+ * These sit alongside the older per-resource routes below rather than
+ * replacing them, so nothing already calling those breaks.
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+// Per-status totals, for the console's tab badges.
+router.get(
+  "/content/:type/counts",
+  interactionLimiter,
+  validateMiddleware(contentCountsSchema),
+  contentCounts,
+);
+
+// Paginated list; ?status=pending|approved|rejected|all
+router.get(
+  "/content/:type",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  validateMiddleware(listContentSchema),
+  listContent,
+);
+
+// Publish a pending upload.
+//
+// No `cooldown` on the review actions: working through a queue means
+// clicking approve repeatedly, and a per-action cooldown blocks the second
+// click. `interactionLimiter` still caps the overall rate, and this mirrors
+// the moderator routes, which have never had one either.
+router.patch(
+  "/content/:type/:id/approve",
+  interactionLimiter,
+  validateMiddleware(contentActionSchema),
+  approveContent,
+);
+
+// Decline a pending upload. A reason is required — the uploader is emailed it.
+router.patch(
+  "/content/:type/:id/reject",
+  interactionLimiter,
+  validateMiddleware(rejectContentSchema),
+  rejectContent,
+);
+
+// Remove a resource at any status, including its Cloudinary asset.
+router.delete(
+  "/content/:type/:id",
+  interactionLimiter,
+  cooldown({ windowMs: 2000, message: "Please wait before deleting again." }),
+  validateMiddleware(contentActionSchema),
+  deleteContent,
 );
 
 /**
