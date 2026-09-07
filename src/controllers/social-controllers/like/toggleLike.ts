@@ -18,7 +18,15 @@ export const toggleLike = async (req: Request, res: Response) => {
 
     const target =
       targetType === "post"
-        ? await Post.findOne({ _id: targetObjectId, isDeleted: false })
+        ? await Post.findOne({
+            _id: targetObjectId,
+            isDeleted: false,
+            // A post awaiting review isn't published yet, so it can't
+            // collect likes — including from its own author. Filtering in
+            // the query (rather than checking after) means the response is
+            // the same 404 an unpublished post gives everywhere else.
+            moderationStatus: "approved",
+          })
             .select("_id author likesCount")
             .lean()
         : await Comment.findOne({ _id: targetObjectId, isDeleted: false })

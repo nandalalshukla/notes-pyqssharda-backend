@@ -13,6 +13,7 @@ import {
   serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
 import { mergeLostFoundFromBody } from "./lostFound.helpers.js";
+import { resolveModerationStatus } from "../../../utils/postModeration.js";
 
 export const editPost = async (req: Request, res: Response) => {
   try {
@@ -131,6 +132,32 @@ export const editPost = async (req: Request, res: Response) => {
       });
     }
 
+    // Re-run the publication rule against the post's *new* type. An edit is
+    // a re-submission: a member rewriting an announcement that was already
+    // approved sends it back to the queue, and one that switches a general
+    // post over to "event" enters the queue for the first time. Otherwise
+    // approval could be sidestepped by editing after the fact.
+    //
+    // Going the other way (a member switching an announcement back to a
+    // general post) clears the review state, since general posts were never
+    // subject to it.
+    const previousStatus = post.moderationStatus;
+    // Only ever "pending" or "approved" — a rejection is a reviewer's
+    // verdict, never something an edit can reinstate.
+    const nextStatus = resolveModerationStatus(post.type, req.user!.userRole);
+    post.moderationStatus = nextStatus;
+
+    // The edited post is a fresh submission and carries no verdict yet, so
+    // the previous reviewer, timestamp and reason all go — otherwise a
+    // rewritten post would still show "rejected because..." for content
+    // that no longer exists.
+    //
+    // Written through `.set()` rather than by assignment: the schema
+    // declares these `default: null`, but Mongoose's inferred document type
+    // reads them as non-nullable, so a plain `post.reviewedBy = null` is a
+    // type error even though null is exactly what the schema stores.
+    post.set({ reviewedBy: null, reviewedAt: null, rejectionReason: null });
+
     await post.save();
 
     const populated = await post.populate(
@@ -157,6 +184,8 @@ export const editPost = async (req: Request, res: Response) => {
         viewerId: req.user!.userId,
       }),
       isAnonymous: Boolean(populated.isAnonymous),
+      moderationStatus: populated.moderationStatus,
+      rejectionReason: populated.rejectionReason ?? null,
       lostFound: serializeLostFound(populated.lostFound),
       files,
       publicIds,
@@ -169,7 +198,12 @@ export const editPost = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: "Post updated successfully.",
+      message:
+        nextStatus === "pending"
+          ? previousStatus === "approved"
+            ? "Updated and sent back for review — it'll return to the feed once approved."
+            : "Updated and sent for review."
+          : "Post updated successfully.",
       data: { post: responsePost },
     });
   } catch (err) {

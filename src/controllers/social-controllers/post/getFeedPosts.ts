@@ -29,12 +29,25 @@ export const getFeed = async (req: Request, res: Response) => {
     (lostFoundStatus === "open" || lostFoundStatus === "resolved")
       ? lostFoundStatus
       : undefined;
+  const viewerObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
   const postFilter = {
     isDeleted: false,
     ...(requestedType ? { type: requestedType } : {}),
     ...(requestedLostFoundStatus
       ? { "lostFound.status": requestedLostFoundStatus }
       : {}),
+    // Posts awaiting (or refused) review are invisible to everyone except
+    // their own author, who keeps seeing theirs in place with a status
+    // banner — otherwise submitting an announcement would look exactly
+    // like the post silently vanishing.
+    ...(viewerObjectId
+      ? {
+          $or: [
+            { moderationStatus: "approved" },
+            { author: viewerObjectId },
+          ],
+        }
+      : { moderationStatus: "approved" }),
   };
 
   try {
@@ -44,7 +57,7 @@ export const getFeed = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
@@ -72,7 +85,7 @@ export const getFeed = async (req: Request, res: Response) => {
     }
 
     const postIds = visiblePosts.map((post) => post._id);
-    const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+    const userObjectId = viewerObjectId;
 
     const [likedPostIds, followedAuthors] = await Promise.all([
       userObjectId && postIds.length > 0
@@ -123,6 +136,10 @@ export const getFeed = async (req: Request, res: Response) => {
           ),
         }),
         isAnonymous: Boolean(post.isAnonymous),
+        moderationStatus: post.moderationStatus || "approved",
+        // Only ever reaches the author — nobody else receives an
+        // unapproved post in the first place.
+        rejectionReason: post.rejectionReason ?? null,
         lostFound: serializeLostFound(post.lostFound),
         files,
         publicIds,

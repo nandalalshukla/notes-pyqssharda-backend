@@ -3,6 +3,7 @@ import { env } from "./env.js";
 import { ensureLikeIndexes } from "../models/social/like.model.js";
 import { ensureNotificationIndexes } from "../models/social/notification.model.js";
 import { ensureSessionIndexes } from "../models/users/session.model.js";
+import { ensurePostModerationDefaults } from "../models/social/post.model.js";
 
 const connectDB = async () => {
   try {
@@ -12,6 +13,7 @@ const connectDB = async () => {
     await ensureLikeIndexes();
     await ensureNotificationIndexes();
     await ensureSessionIndexes();
+    await ensurePostModerationDefaults();
 
     console.log("MongoDB connected and indexes are ready");
   } catch (error) {

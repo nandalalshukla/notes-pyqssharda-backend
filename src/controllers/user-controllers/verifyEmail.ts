@@ -12,6 +12,7 @@ import {
   refreshTokenCookieOptions,
 } from "../../config/cookies.js";
 import { hashToken } from "../../utils/hashToken.js";
+import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
 
 export default async function verifyEmail(req: Request, res: Response) {
   const { email, otp } = req.body;
@@ -76,7 +77,12 @@ export default async function verifyEmail(req: Request, res: Response) {
     user.emailOtpExpiry = undefined; // clear this too
     await user.save();
 
-    // Create session
+    // Verifying signs the user in, rather than sending them back to the
+    // login screen to type the password they entered a minute ago: the OTP
+    // they just supplied proves both that they own the email and that they
+    // are the person who registered with it. Same session, cookies and
+    // response body as a normal login (see login.ts) so the client can
+    // treat the two identically.
     const accessToken = generateAccessToken(user._id.toString(), user.role);
     const refreshToken = generateRefreshToken(user._id.toString());
 
@@ -93,18 +99,8 @@ export default async function verifyEmail(req: Request, res: Response) {
 
     return res.status(200).json({
       success: true,
-      message: "Email verified successfully",
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          profilePic: user.profilePic,
-          isEmailVerified: user.isEmailVerified,
-        },
-      },
+      message: "Email verified — you're signed in",
+      data: { user: serializeAuthUser(user) },
     });
   } catch (error) {
     throw error;

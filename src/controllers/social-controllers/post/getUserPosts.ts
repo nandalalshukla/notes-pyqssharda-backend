@@ -37,7 +37,12 @@ export const getUserPosts = async (req: Request, res: Response) => {
     const postFilter = {
       author: userId,
       isDeleted: false,
-      ...(isOwnProfile ? {} : { isAnonymous: { $ne: true } }),
+      // Same two exclusions as everywhere else, both lifted on your own
+      // profile: anonymous posts (listing them here would attribute them)
+      // and posts still awaiting review.
+      ...(isOwnProfile
+        ? {}
+        : { isAnonymous: { $ne: true }, moderationStatus: "approved" }),
     };
 
     const [posts, total] = await Promise.all([
@@ -46,7 +51,7 @@ export const getUserPosts = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
@@ -113,6 +118,8 @@ export const getUserPosts = async (req: Request, res: Response) => {
           isFollowedByCurrentUser,
         }),
         isAnonymous: Boolean(post.isAnonymous),
+        moderationStatus: post.moderationStatus || "approved",
+        rejectionReason: isOwnProfile ? (post.rejectionReason ?? null) : null,
         lostFound: serializeLostFound(post.lostFound),
         files,
         publicIds,

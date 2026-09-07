@@ -1,7 +1,14 @@
 import { Notification } from "../../models/social/notification.model.js";
 import { publishToUser } from "./notificationStream.service.js";
 
-export type NotificationType = "like" | "comment" | "reply" | "follow" | "share";
+export type NotificationType =
+  | "like"
+  | "comment"
+  | "reply"
+  | "follow"
+  | "share"
+  | "post_approved"
+  | "post_rejected";
 
 type CreateNotificationParams = {
   recipient: string;

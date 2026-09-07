@@ -10,6 +10,7 @@ import {
   serializeLostFound,
   serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
+import { isPostReviewer } from "../../../utils/postModeration.js";
 
 export const getPost = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -29,7 +30,7 @@ export const getPost = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select(
-        "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
+        "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason createdAt updatedAt",
       )
       .populate<{ author: PopulatedUserSummary | null }>(
         "author",
@@ -46,6 +47,20 @@ export const getPost = async (req: Request, res: Response) => {
 
     if (!hasPopulatedUserSummary(post.author)) {
       await Post.updateOne({ _id: post._id }, { $set: { isDeleted: true } });
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    // A post still in (or refused by) review is readable by its author and
+    // by the staff who review it — to everyone else it doesn't exist yet,
+    // and says so with a 404 rather than a 403, which would confirm that
+    // something is there.
+    const isPending = (post.moderationStatus || "approved") !== "approved";
+    const viewerIsAuthor =
+      Boolean(userId) && String(userId) === post.author._id.toString();
+    if (isPending && !viewerIsAuthor && !isPostReviewer(req.user?.userRole)) {
       return res.status(404).json({
         success: false,
         message: "Post not found",
@@ -82,6 +97,8 @@ export const getPost = async (req: Request, res: Response) => {
         isFollowedByCurrentUser: !!isFollowing,
       }),
       isAnonymous: Boolean(post.isAnonymous),
+      moderationStatus: post.moderationStatus || "approved",
+      rejectionReason: viewerIsAuthor ? (post.rejectionReason ?? null) : null,
       lostFound: serializeLostFound(post.lostFound),
       files,
       publicIds,

@@ -21,7 +21,14 @@ export const createComment = async (req: Request, res: Response) => {
       });
     }
     const post = await Post.findById(postId);
-    if (!post || post.isDeleted) {
+    // An unapproved post is not published yet — nobody can see it to
+    // comment on it, and its author shouldn't be able to build a comment
+    // thread under something that may never go live.
+    if (
+      !post ||
+      post.isDeleted ||
+      (post.moderationStatus || "approved") !== "approved"
+    ) {
       return res
         .status(404)
         .json({ success: false, message: "Post not found" });

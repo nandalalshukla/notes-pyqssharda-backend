@@ -18,6 +18,11 @@ import {
   rejectSyllabus,
 } from "../../controllers/mod-controllers/syllabusManagement.js";
 import {
+  fetchPendingPosts,
+  approvePost,
+  rejectPost,
+} from "../../controllers/mod-controllers/postManagement.js";
+import {
   fetchReportById,
   fetchReports,
 } from "../../controllers/mod-controllers/reportManagement.js";
@@ -44,6 +49,10 @@ import {
   rejectSyllabusSchema,
   syllabusParamsSchema,
 } from "../../validators/mods-zod/syllabusManagement.zod.js";
+import {
+  rejectPostSchema,
+  postModerationParamsSchema,
+} from "../../validators/mods-zod/postManagement.zod.js";
 import {
   reportParamsSchema,
   reportQuerySchema,
@@ -122,6 +131,32 @@ router.patch(
   interactionLimiter,
   validateMiddleware(rejectSyllabusSchema.merge(syllabusParamsSchema)),
   rejectSyllabus,
+);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * POSTS MANAGEMENT ROUTES
+ * Events and announcements submitted by general members, awaiting review
+ * before they appear in the feed (see utils/postModeration.ts).
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+router.get(
+  "/posts/pending",
+  interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
+  fetchPendingPosts,
+);
+router.patch(
+  "/posts/:postId/approve",
+  interactionLimiter,
+  validateMiddleware(postModerationParamsSchema),
+  approvePost,
+);
+router.patch(
+  "/posts/:postId/reject",
+  interactionLimiter,
+  validateMiddleware(rejectPostSchema.merge(postModerationParamsSchema)),
+  rejectPost,
 );
 
 /**

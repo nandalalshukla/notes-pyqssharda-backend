@@ -46,7 +46,11 @@ export const getProfile = async (req: Request, res: Response) => {
       Post.countDocuments({
         author: userId,
         isDeleted: false,
-        ...(isOwnProfile ? {} : { isAnonymous: { $ne: true } }),
+        // Must match getUserPosts' filter exactly — a count that disagreed
+        // with the visible list would itself hint at the hidden posts.
+        ...(isOwnProfile
+          ? {}
+          : { isAnonymous: { $ne: true }, moderationStatus: "approved" }),
       }),
       currentUserId && currentUserId !== userId
         ? Follow.findOne({ follower: currentUserId, following: userId }).select(

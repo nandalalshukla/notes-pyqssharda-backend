@@ -19,7 +19,17 @@ const notificationSchema = new Schema(
 
     type: {
       type: String,
-      enum: ["like", "comment", "reply", "follow", "share"],
+      enum: [
+        "like",
+        "comment",
+        "reply",
+        "follow",
+        "share",
+        // Review verdicts on a member's event/announcement submission
+        // (mod-controllers/postManagement.ts).
+        "post_approved",
+        "post_rejected",
+      ],
       required: true,
     },
 

@@ -86,7 +86,14 @@ export const getNotifications = async (req: Request, res: Response) => {
  * than the full populated notification shape returned by getNotifications.
  */
 type NotificationForFormatting = {
-  type: "like" | "comment" | "reply" | "follow" | "share";
+  type:
+    | "like"
+    | "comment"
+    | "reply"
+    | "follow"
+    | "share"
+    | "post_approved"
+    | "post_rejected";
   actor: PopulatedUserSummary | null;
   post: PopulatedNotificationPostRef | null;
   comment?: PopulatedNotificationCommentRef | null;
@@ -116,6 +123,13 @@ function formatNotificationMessage(notif: NotificationForFormatting): string {
       return `${actorName} replied to your comment.`;
     case "share":
       return `${actorName} shared your post.`;
+    // Deliberately impersonal: who reviewed a post is between the
+    // moderation team and the post, not something to put in front of the
+    // author as "so-and-so rejected you".
+    case "post_approved":
+      return "Your post was approved and is now live.";
+    case "post_rejected":
+      return "Your post wasn't approved. Open it to see why.";
     default:
       return "New notification";
   }
@@ -128,7 +142,9 @@ function getActionLink(notif: NotificationForFormatting): string {
     notif.type === "like" ||
     notif.type === "comment" ||
     notif.type === "reply" ||
-    notif.type === "share"
+    notif.type === "share" ||
+    notif.type === "post_approved" ||
+    notif.type === "post_rejected"
   ) {
     return `/?postId=${notif.post?._id}`;
   }

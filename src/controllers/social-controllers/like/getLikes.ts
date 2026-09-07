@@ -28,7 +28,14 @@ export const getLikes = async (req: Request, res: Response) => {
 
     // Verify post exists
     const postObjectId = new mongoose.Types.ObjectId(postId);
-    const post = await Post.findOne({ _id: postObjectId, isDeleted: false })
+    // Unapproved posts can't be liked (see toggleLike), so their likes
+    // list is empty by construction — 404 rather than advertising that the
+    // post exists.
+    const post = await Post.findOne({
+      _id: postObjectId,
+      isDeleted: false,
+      moderationStatus: "approved",
+    })
       .select("_id")
       .lean();
 

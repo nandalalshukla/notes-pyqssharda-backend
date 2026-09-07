@@ -122,6 +122,54 @@ const postSchema = new Schema(
       default: undefined,
     },
 
+    // 🔹 Publication review (see utils/postModeration.ts for the rule)
+    //
+    // Events and announcements written by a general member wait here as
+    // "pending" until a moderator or admin approves them; everything else
+    // is created "approved" and behaves exactly as it always has.
+    //
+    // `default: "approved"` is what keeps this backwards-compatible: every
+    // post that existed before this field was added reads back as approved
+    // and stays visible.
+    //
+    // Named `moderationStatus` rather than `status` (the name the
+    // notes/PYQ/syllabus resources use for the same concept) because
+    // `lostFound.status` already means something entirely different on
+    // this model — open vs. resolved — and two neighbouring `status`
+    // fields would be a standing invitation to read the wrong one.
+    moderationStatus: {
+      type: String,
+      enum: ["approved", "pending", "rejected"],
+      default: "approved",
+      required: true,
+      index: true,
+    },
+
+    // Who last approved or rejected this post, and when. A single
+    // reviewer/timestamp pair rather than the separate approvedBy/rejectedBy
+    // pairs the resource schema keeps: a post can cycle through review
+    // repeatedly (every edit re-submits it), so separate pairs would leave
+    // a rejected post still advertising a stale `approvedAt`.
+    reviewedBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Kept after a re-submission so the author can still see why their
+    // previous attempt was turned down while they rewrite it.
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Rejection reason too long"],
+      default: null,
+    },
+
     media: [
       {
         type: {
@@ -163,12 +211,23 @@ const postSchema = new Schema(
   },
 );
 
-postSchema.index({ isDeleted: 1, createdAt: -1 });
+// The public feed's two shapes. Both lead with the visibility predicates
+// every public read applies (isDeleted + moderationStatus) so the sort can
+// be served straight off the index.
+//
+// The feed also ORs in "...or the post is mine", so an author can see their
+// own pending post; that branch is served by the author index below.
+//
+// These two replace narrower isDeleted-only versions. Post has no
+// syncIndexes() call at boot (unlike Like/Notification/Session — see
+// config/db.ts), so the superseded indexes linger on an existing database
+// until someone drops them by hand; they're redundant, not harmful.
+postSchema.index({ isDeleted: 1, moderationStatus: 1, createdAt: -1 });
 postSchema.index({ author: 1, isDeleted: 1, createdAt: -1 });
 // Covers the feed's type-filtered branch (getFeedPosts.ts) — without this,
-// filtering by both isDeleted and type falls back to scanning the
-// isDeleted+createdAt index and checking `type` per document.
-postSchema.index({ isDeleted: 1, type: 1, createdAt: -1 });
+// filtering by isDeleted, moderationStatus and type falls back to scanning
+// the index above and checking `type` per document.
+postSchema.index({ isDeleted: 1, moderationStatus: 1, type: 1, createdAt: -1 });
 // Covers the lost & found board's "open only" / "resolved only" filter,
 // which narrows on type + lostFound.status together.
 //
@@ -185,3 +244,30 @@ postSchema.index(
 );
 
 export const Post = mongoose.model("Post", postSchema);
+
+/**
+ * Backfills `moderationStatus` onto posts that predate the field.
+ *
+ * A Mongoose `default` is applied when a document is *written*, never to
+ * documents already in the collection — so without this, every post
+ * created before review existed would have no `moderationStatus` at all
+ * and would stop matching the `{ moderationStatus: "approved" }` filter
+ * that now guards every public read. The entire existing feed would
+ * silently disappear.
+ *
+ * Runs at boot alongside the other ensure*() migrations (see config/db.ts)
+ * and is idempotent: once the backfill has happened the filter matches
+ * nothing and the call is a no-op.
+ */
+export const ensurePostModerationDefaults = async () => {
+  const result = await Post.updateMany(
+    { moderationStatus: { $exists: false } },
+    { $set: { moderationStatus: "approved" } },
+  );
+
+  if (result.modifiedCount > 0) {
+    console.log(
+      `Backfilled moderationStatus on ${result.modifiedCount} existing post(s)`,
+    );
+  }
+};

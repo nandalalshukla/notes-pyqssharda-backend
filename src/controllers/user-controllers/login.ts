@@ -16,6 +16,7 @@ import {
 } from "../../config/cookies.js";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { hashToken } from "../../utils/hashToken.js";
+import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
 
 export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -88,23 +89,7 @@ export const loginUser = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          profilePic: user.profilePic,
-          bio: user.bio,
-          course: user.course,
-          followersCount: user.followersCount,
-          followingCount: user.followingCount,
-          contributions: user.contributions,
-          isEmailVerified: user.isEmailVerified,
-          createdAt: user.createdAt,
-        },
-      },
+      data: { user: serializeAuthUser(user) },
     });
   } catch (error) {
     throw error;

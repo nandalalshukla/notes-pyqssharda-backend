@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User } from "../../models/users/user.model.js";
 import cloudinary from "../../config/cloudinary.js";
+import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
 
 declare global {
   namespace Express {
@@ -63,24 +64,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          bio: user.bio,
-          course: user.course,
-          contactNo: user.contactNo,
-          privacy: user.privacy,
-          profilePic: user.profilePic,
-          followersCount: user.followersCount,
-          followingCount: user.followingCount,
-          contributions: user.contributions,
-          isEmailVerified: user.isEmailVerified,
-        },
-      },
+      data: { user: serializeAuthUser(user) },
     });
   } catch (error) {
     throw error;
@@ -118,9 +102,11 @@ export const removeProfilePic = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Profile picture removed successfully",
-      data: {
-        profilePic: user.profilePic,
-      },
+      // Returns the whole user, not just `profilePic`. The client writes
+      // this straight into its auth store, and a payload without a `user`
+      // key set that store to undefined — removing your avatar logged you
+      // out of the UI until the next reload.
+      data: { user: serializeAuthUser(user), profilePic: user.profilePic },
     });
   } catch (error) {
     throw error;

@@ -7,6 +7,7 @@ import {
   serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
 import { buildLostFoundFromBody } from "./lostFound.helpers.js";
+import { resolveModerationStatus } from "../../../utils/postModeration.js";
 
 export const createPost = async (req: Request, res: Response) => {
   try {
@@ -36,11 +37,20 @@ export const createPost = async (req: Request, res: Response) => {
     const lostFound =
       type === "lost_found" ? buildLostFoundFromBody(req.body) : undefined;
 
+    // Decided entirely server-side from the caller's own JWT role — never
+    // from anything in the request body, which the validator strips of any
+    // field it doesn't know about anyway.
+    const moderationStatus = resolveModerationStatus(
+      type,
+      req.user!.userRole,
+    );
+
     const post = await Post.create({
       author: req.user!.userId,
       type,
       content: content?.trim() ?? "",
       isAnonymous: Boolean(isAnonymous),
+      moderationStatus,
       ...(lostFound ? { lostFound } : {}),
       media,
     });
@@ -66,6 +76,8 @@ export const createPost = async (req: Request, res: Response) => {
         isFollowedByCurrentUser: false,
       }),
       isAnonymous: Boolean(populated.isAnonymous),
+      moderationStatus: populated.moderationStatus,
+      rejectionReason: populated.rejectionReason ?? null,
       lostFound: serializeLostFound(populated.lostFound),
       files: mediaFiles,
       publicIds,
@@ -78,7 +90,10 @@ export const createPost = async (req: Request, res: Response) => {
 
     return res.status(201).json({
       success: true,
-      message: "Post created successfully.",
+      message:
+        moderationStatus === "pending"
+          ? "Sent for review. It'll go live once a moderator approves it."
+          : "Post created successfully.",
       data: { post: responsePost },
     });
   } catch (err: unknown) {
