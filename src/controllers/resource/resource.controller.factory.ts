@@ -93,6 +93,24 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
     });
   };
 
+  /** One approved resource, for its own detail page. */
+  const fetchOne = async (req: Request, res: Response) => {
+    const id = req.params[config.managementIdParam] ?? req.params.id;
+    const doc = await resourceService.getPublicById(config, id);
+
+    if (!doc) {
+      throw new AppError(`${config.displayName} not found`, 404);
+    }
+
+    // Detail pages are public and change rarely; letting the browser and
+    // any CDN hold one briefly keeps repeat views off the database.
+    res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+    res.status(200).json({
+      success: true,
+      data: { [config.responseKeys.singular]: doc },
+    });
+  };
+
   const search = async (req: Request, res: Response) => {
     const { query, program, courseCode, semester, year } = req.query;
     if (query !== undefined && typeof query !== "string") {
@@ -255,6 +273,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   return {
     fetchAll,
     browse,
+    fetchOne,
     filterOptions,
     search,
     fetchMine,

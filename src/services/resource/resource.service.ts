@@ -1,4 +1,4 @@
-import { QueryFilter, Model } from "mongoose";
+import mongoose, { QueryFilter, Model } from "mongoose";
 import { BaseResourceFields } from "../../models/resource/resourceSchema.js";
 import cloudinary from "../../config/cloudinary.js";
 import { getResourceType } from "../../config/multer.js";
@@ -135,6 +135,25 @@ export async function listApproved<TDoc extends BaseResourceFields>(
     .find({ status: "approved" } as QueryFilter<TDoc>)
     .sort({ createdAt: -1 })
     .limit(limit)
+    .populate("userId", "username")
+    .lean();
+}
+
+/**
+ * One approved resource by id, for its own public detail page.
+ *
+ * Restricted to `status: "approved"` so a pending or rejected upload can't
+ * be reached by guessing its id — the list endpoints already filter the
+ * same way, and a detail page that ignored it would be a way around them.
+ */
+export async function getPublicById<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  id: string,
+) {
+  if (!mongoose.isValidObjectId(id)) return null;
+
+  return config.model
+    .findOne({ _id: id, status: "approved" } as QueryFilter<TDoc>)
     .populate("userId", "username")
     .lean();
 }

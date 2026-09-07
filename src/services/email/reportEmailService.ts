@@ -37,7 +37,7 @@ export interface ReportResolutionPayload extends ReportNotificationPayload {
   contentOwnerName: string;
 }
 
-const APP_URL = process.env.APP_URL || "https://sharda-social.vercel.app";
+const APP_URL = process.env.APP_URL || "https://sharda.social";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sharda.social";
 const escapeHtml = (value: string) =>
   value.replace(

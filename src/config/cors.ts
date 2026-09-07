@@ -7,8 +7,13 @@ const allowedOrigins: (string | RegExp)[] = [
   env.FRONTEND_URL, // Production frontend
   "http://localhost:3000", // Local development (default Next.js port)
   "http://localhost:3100", // Local development (custom port)
-  "https://www.sharda.social",
+  // The live site. Both hosts are allowed because both resolve; the www
+  // one is expected to 301 to the apex, but a request that arrives before
+  // that redirect still needs to work.
   "https://sharda.social",
+  "https://www.sharda.social",
+  // The old Vercel host, kept so existing deploy previews and any stale
+  // bookmarks keep functioning.
   "https://notes-pyqssharda.vercel.app",
   /^https:\/\/res\.cloudinary\.com$/, // Cloudinary CDN
 ].filter(Boolean) as (string | RegExp)[]; // Remove any undefined values

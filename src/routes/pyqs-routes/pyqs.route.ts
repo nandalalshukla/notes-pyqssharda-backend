@@ -6,7 +6,7 @@ import { uploadPyqs } from "../../controllers/pyqs-controllers/uploadPyqs.js";
 import { searchPyqs } from "../../controllers/pyqs-controllers/searchPyqs.js";
 import { deletePyqs } from "../../controllers/pyqs-controllers/deletePyqs.js";
 import { fetchSpecificUserPyqs } from "../../controllers/pyqs-controllers/specificUserPyqs.js";
-import { fetchAllPyqs, browsePyqs, pyqFilterOptions } from "../../controllers/pyqs-controllers/fetchAllPyqs.js";
+import { fetchAllPyqs, browsePyqs, pyqFilterOptions, fetchPyqById } from "../../controllers/pyqs-controllers/fetchAllPyqs.js";
 
 // Validators
 import {
@@ -59,6 +59,11 @@ router.get(
 
 // Options for the browse filters — only values that actually match something.
 router.get("/pyq-filters", interactionLimiter, pyqFilterOptions);
+
+// One paper, for its own page on the site. Mounted under a literal
+// "/paper/" prefix rather than a bare "/:pyqId" so it can never shadow the
+// named routes above ("/all-pyqs" would otherwise match as an id).
+router.get("/paper/:pyqId", interactionLimiter, fetchPyqById);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
