@@ -7,7 +7,8 @@ import { Follow } from "../../../models/social/follow.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
 import {
   hasPopulatedUserSummary,
-  serializeUserSummary,
+  serializeLostFound,
+  serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
 
 export const getUserPosts = async (req: Request, res: Response) => {
@@ -26,20 +27,33 @@ export const getUserPosts = async (req: Request, res: Response) => {
       });
     }
 
+    // A profile page is a list of "posts by this person" — so listing
+    // someone's anonymous posts there would deanonymize every one of them
+    // at a glance. They stay in the query only for the owner's own
+    // profile, where they're already attributable and the owner needs a
+    // place to manage them from.
+    const isOwnProfile =
+      Boolean(currentUserId) && String(currentUserId) === String(userId);
+    const postFilter = {
+      author: userId,
+      isDeleted: false,
+      ...(isOwnProfile ? {} : { isAnonymous: { $ne: true } }),
+    };
+
     const [posts, total] = await Promise.all([
-      Post.find({ author: userId, isDeleted: false })
+      Post.find(postFilter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
         .lean(),
-      Post.countDocuments({ author: userId, isDeleted: false }),
+      Post.countDocuments(postFilter),
     ]);
 
     type UserPost = (typeof posts)[number];
@@ -93,7 +107,13 @@ export const getUserPosts = async (req: Request, res: Response) => {
         _id: post._id,
         type: post.type || "general",
         content: post.content,
-        author: serializeUserSummary(post.author, { isFollowedByCurrentUser }),
+        author: serializePostAuthor(post.author, {
+          isAnonymous: post.isAnonymous,
+          viewerId: currentUserId,
+          isFollowedByCurrentUser,
+        }),
+        isAnonymous: Boolean(post.isAnonymous),
+        lostFound: serializeLostFound(post.lostFound),
         files,
         publicIds,
         likes: post.likesCount || 0,

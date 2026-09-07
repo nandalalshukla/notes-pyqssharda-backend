@@ -251,6 +251,7 @@ function updateNote(data: UpdateNotesInput) {
 | ---------------------------- | ------------------- | ------------------- |
 | `createPostSchema`           | Create post         | post.zod.ts         |
 | `editPostSchema`             | Edit post           | post.zod.ts         |
+| `lostFoundStatusUpdateSchema`| Resolve/reopen item | post.zod.ts         |
 | `createCommentSchema`        | Create comment      | comment.zod.ts      |
 | `editCommentSchema`          | Edit comment        | comment.zod.ts      |
 | `getCommentsSchema`          | Fetch comments      | comment.zod.ts      |

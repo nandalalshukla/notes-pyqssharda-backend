@@ -12,7 +12,8 @@ declare global {
 
 export const updateProfile = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
-  const { bio, course, contactNo, name } = req.body;
+  const { bio, course, contactNo, name, showEmail, showContactNo, showCourse } =
+    req.body;
 
   try {
     const user = await User.findById(userId);
@@ -29,6 +30,22 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (bio !== undefined) user.bio = bio.trim();
     if (course !== undefined) user.course = course.trim();
     if (contactNo !== undefined) user.contactNo = contactNo.trim();
+
+    // ── Privacy toggles — each independently settable ────────────────────────
+    // Every flag falls back to its current value (then to the schema
+    // default of `true`), so a request that only sends `showEmail` leaves
+    // the other two exactly as the user last set them.
+    if (
+      showEmail !== undefined ||
+      showContactNo !== undefined ||
+      showCourse !== undefined
+    ) {
+      user.privacy = {
+        showEmail: showEmail ?? user.privacy?.showEmail ?? true,
+        showContactNo: showContactNo ?? user.privacy?.showContactNo ?? true,
+        showCourse: showCourse ?? user.privacy?.showCourse ?? true,
+      };
+    }
 
     // ── Profile pic — only runs if a file was uploaded ───────────────────────
     if (req.file) {
@@ -56,6 +73,7 @@ export const updateProfile = async (req: Request, res: Response) => {
           bio: user.bio,
           course: user.course,
           contactNo: user.contactNo,
+          privacy: user.privacy,
           profilePic: user.profilePic,
           followersCount: user.followersCount,
           followingCount: user.followingCount,

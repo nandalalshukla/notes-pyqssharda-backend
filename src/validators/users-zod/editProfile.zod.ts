@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 /**
+ * Profile updates are sent as `multipart/form-data` (multer handles the
+ * avatar), so booleans arrive as the strings "true"/"false". This accepts
+ * a real boolean too, so a JSON client needs no special casing.
+ */
+const formBoolean = z
+  .union([z.boolean(), z.string()])
+  .transform((value) =>
+    typeof value === "boolean" ? value : value.toLowerCase() === "true",
+  );
+
+/**
  * Schema for updating user profile
  * Used in: updateProfile controller
  * Note: profilePic file is handled by multer, only text fields are validated
@@ -35,6 +46,14 @@ export const editProfileSchema = z.object({
       message: "Contact number must be exactly 10 digits",
     })
     .optional(),
+
+  // ── Privacy toggles ────────────────────────────────────────────────────────
+  // Sent flat rather than as a nested `privacy` object because FormData
+  // can't carry nesting without a JSON round-trip. Each is independently
+  // optional so a form can submit just the one the user changed.
+  showEmail: formBoolean.optional(),
+  showContactNo: formBoolean.optional(),
+  showCourse: formBoolean.optional(),
 });
 
 export type EditProfileInput = z.infer<typeof editProfileSchema>;

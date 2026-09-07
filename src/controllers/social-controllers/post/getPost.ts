@@ -7,7 +7,8 @@ import mongoose from "mongoose";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
 import {
   hasPopulatedUserSummary,
-  serializeUserSummary,
+  serializeLostFound,
+  serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
 
 export const getPost = async (req: Request, res: Response) => {
@@ -28,7 +29,7 @@ export const getPost = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select(
-        "type content author media likesCount commentsCount createdAt updatedAt",
+        "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
       )
       .populate<{ author: PopulatedUserSummary | null }>(
         "author",
@@ -57,7 +58,10 @@ export const getPost = async (req: Request, res: Response) => {
       userObjectId
         ? Like.findOne({ user: userObjectId, post: postId }).lean()
         : Promise.resolve(null),
-      userObjectId
+      // Skipped for anonymous posts — see the matching note in
+      // getFeedPosts.ts: probing follow state for a hidden author leaks
+      // information about who they are.
+      userObjectId && !post.isAnonymous
         ? Follow.findOne({
             follower: userObjectId,
             following: post.author._id,
@@ -72,9 +76,13 @@ export const getPost = async (req: Request, res: Response) => {
       _id: post._id,
       type: post.type || "general",
       content: post.content,
-      author: serializeUserSummary(post.author, {
+      author: serializePostAuthor(post.author, {
+        isAnonymous: post.isAnonymous,
+        viewerId: userId,
         isFollowedByCurrentUser: !!isFollowing,
       }),
+      isAnonymous: Boolean(post.isAnonymous),
+      lostFound: serializeLostFound(post.lostFound),
       files,
       publicIds,
       likes: post.likesCount || 0,

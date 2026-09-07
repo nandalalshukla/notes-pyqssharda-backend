@@ -7,6 +7,7 @@ import { deletePost } from "../../controllers/social-controllers/post/deletePost
 import { getFeed } from "../../controllers/social-controllers/post/getFeedPosts.js";
 import { getUserPosts } from "../../controllers/social-controllers/post/getUserPosts.js";
 import { getPost } from "../../controllers/social-controllers/post/getPost.js";
+import { updateLostFoundStatus } from "../../controllers/social-controllers/post/updateLostFoundStatus.js";
 
 // Controllers - Comments
 import { createComment } from "../../controllers/social-controllers/comment/createComment.js";
@@ -44,6 +45,7 @@ import {
   createPostSchema,
   editPostSchema,
   postParamsSchema,
+  lostFoundStatusUpdateSchema,
 } from "../../validators/social-zod/post.zod.js";
 import {
   createCommentSchema,
@@ -214,6 +216,18 @@ router.patch(
   uploadPostFiles,
   validateMiddleware(editPostSchema),
   editPost,
+);
+
+// Toggle a lost & found post between open and resolved. Separate from the
+// PATCH above so this one-field, author-only action stays a plain JSON
+// request instead of going through multipart parsing and the upload limiter.
+router.patch(
+  "/posts/:postId/lost-found/status",
+  authMiddleware,
+  interactionLimiter,
+  cooldown({ windowMs: 2000, message: "Please wait before updating again." }),
+  validateMiddleware(lostFoundStatusUpdateSchema),
+  updateLostFoundStatus,
 );
 
 // Delete post

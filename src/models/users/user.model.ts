@@ -83,6 +83,26 @@ const userSchema = new Schema(
       default: null,
     },
 
+    // 🔹 Privacy — what other students may see on this user's public
+    // profile. Every flag defaults to `true` so existing accounts keep
+    // behaving exactly as they did before these settings existed; a user
+    // opts *out* of sharing, never in. Enforced server-side in
+    // getProfile / getLikes / fetchContributors — never by the client.
+    privacy: {
+      showEmail: {
+        type: Boolean,
+        default: true,
+      },
+      showContactNo: {
+        type: Boolean,
+        default: true,
+      },
+      showCourse: {
+        type: Boolean,
+        default: true,
+      },
+    },
+
     // 🔹 Social Metrics (IMPORTANT: counts only, no arrays)
     followersCount: {
       type: Number,

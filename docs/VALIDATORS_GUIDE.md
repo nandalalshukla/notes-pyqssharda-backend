@@ -192,6 +192,7 @@ export const resourceMetadataSchema; // Course/program metadata (reused in notes
 | ---------------------------- | ------------------------------ |
 | `createPostSchema`           | Create new post                |
 | `editPostSchema`             | Edit existing post             |
+| `lostFoundStatusUpdateSchema`| Resolve/reopen a lost & found post |
 | `createCommentSchema`        | Create comment                 |
 | `editCommentSchema`          | Edit comment                   |
 | `getCommentsSchema`          | Fetch comments with pagination |

@@ -2,10 +2,15 @@ import { Request, Response } from "express";
 import { Post } from "../../../models/social/post.model.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import {
+  serializeLostFound,
+  serializePostAuthor,
+} from "../../../utils/socialSerializers.js";
+import { buildLostFoundFromBody } from "./lostFound.helpers.js";
 
 export const createPost = async (req: Request, res: Response) => {
   try {
-    const { content, type = "general" } = req.body;
+    const { content, type = "general", isAnonymous = false } = req.body;
     const files = (req.files as Express.Multer.File[]) ?? [];
 
     if (!content?.trim() && files.length === 0) {
@@ -24,10 +29,19 @@ export const createPost = async (req: Request, res: Response) => {
       });
     }
 
+    // Only lost & found posts carry the sub-document; for every other type
+    // it stays `undefined` so nothing empty is persisted. The validator has
+    // already guaranteed kind + itemName are present when type is
+    // "lost_found", so this can't produce a half-filled sub-document.
+    const lostFound =
+      type === "lost_found" ? buildLostFoundFromBody(req.body) : undefined;
+
     const post = await Post.create({
       author: req.user!.userId,
       type,
       content: content?.trim() ?? "",
+      isAnonymous: Boolean(isAnonymous),
+      ...(lostFound ? { lostFound } : {}),
       media,
     });
 
@@ -43,13 +57,16 @@ export const createPost = async (req: Request, res: Response) => {
       _id: populated._id,
       type: populated.type,
       content: populated.content,
-      author: {
-        _id: author._id,
-        username: author.username || "Anonymous",
-        avatar: author.profilePic?.url || "",
-        profilePic: author.profilePic,
-        role: author.role,
-      },
+      // The creator is always the viewer here, so they see their real
+      // profile back even on an anonymous post — `isAnonymous` below is
+      // what tells the UI to show the "Posted anonymously" marker.
+      author: serializePostAuthor(author, {
+        isAnonymous: populated.isAnonymous,
+        viewerId: req.user!.userId,
+        isFollowedByCurrentUser: false,
+      }),
+      isAnonymous: Boolean(populated.isAnonymous),
+      lostFound: serializeLostFound(populated.lostFound),
       files: mediaFiles,
       publicIds,
       likes: populated.likesCount || 0,

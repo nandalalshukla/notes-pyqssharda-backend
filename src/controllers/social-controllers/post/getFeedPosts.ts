@@ -7,7 +7,8 @@ import mongoose from "mongoose";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
 import {
   hasPopulatedUserSummary,
-  serializeUserSummary,
+  serializeLostFound,
+  serializePostAuthor,
 } from "../../../utils/socialSerializers.js";
 
 export const getFeed = async (req: Request, res: Response) => {
@@ -15,12 +16,25 @@ export const getFeed = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const type = req.query.type as string | undefined;
+  const lostFoundStatus = req.query.lostFoundStatus as string | undefined;
   const skip = (page - 1) * limit;
   const requestedType =
-    type === "event" || type === "announcement" ? type : undefined;
+    type === "event" || type === "announcement" || type === "lost_found"
+      ? type
+      : undefined;
+  // Only meaningful on the lost & found board — a status filter on the
+  // general feed would silently drop every post that has no `lostFound`.
+  const requestedLostFoundStatus =
+    requestedType === "lost_found" &&
+    (lostFoundStatus === "open" || lostFoundStatus === "resolved")
+      ? lostFoundStatus
+      : undefined;
   const postFilter = {
     isDeleted: false,
     ...(requestedType ? { type: requestedType } : {}),
+    ...(requestedLostFoundStatus
+      ? { "lostFound.status": requestedLostFoundStatus }
+      : {}),
   };
 
   try {
@@ -30,7 +44,7 @@ export const getFeed = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
@@ -69,7 +83,14 @@ export const getFeed = async (req: Request, res: Response) => {
       userObjectId && postIds.length > 0
         ? Follow.find({
             follower: userObjectId,
-            following: { $in: visiblePosts.map((post) => post.author._id) },
+            // Anonymous posts are excluded from this lookup on purpose: a
+            // follow-state probe for their author is a side channel that
+            // would narrow down who wrote them.
+            following: {
+              $in: visiblePosts
+                .filter((post) => !post.isAnonymous)
+                .map((post) => post.author._id),
+            },
           })
             .select("following")
             .lean()
@@ -94,11 +115,15 @@ export const getFeed = async (req: Request, res: Response) => {
         _id: post._id,
         type: post.type || "general",
         content: post.content,
-        author: serializeUserSummary(post.author, {
+        author: serializePostAuthor(post.author, {
+          isAnonymous: post.isAnonymous,
+          viewerId: userId,
           isFollowedByCurrentUser: followedAuthorIdSet.has(
             post.author._id.toString(),
           ),
         }),
+        isAnonymous: Boolean(post.isAnonymous),
+        lostFound: serializeLostFound(post.lostFound),
         files,
         publicIds,
         likes: post.likesCount || 0,

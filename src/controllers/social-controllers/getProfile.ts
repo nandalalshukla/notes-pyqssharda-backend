@@ -10,7 +10,7 @@ export const getProfile = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(userId)
       .select(
-        "_id name username email bio profilePic course contactNo followersCount followingCount contributions role +isActive",
+        "_id name username email bio profilePic course contactNo privacy followersCount followingCount contributions role +isActive",
       )
       .lean();
 
@@ -21,8 +21,33 @@ export const getProfile = async (req: Request, res: Response) => {
       });
     }
 
+    const isOwnProfile = currentUserId === userId;
+
+    // Privacy flags are advisory only for the owner — you always see your
+    // own details (the settings screen has to be able to show you what
+    // you're hiding). For everyone else they're enforced here, by simply
+    // not putting the value on the wire: masking in the client would still
+    // ship the data to whoever opened devtools.
+    //
+    // `?? true` mirrors the schema default so accounts created before
+    // these settings existed keep sharing exactly what they shared before.
+    const privacy = {
+      showEmail: user.privacy?.showEmail ?? true,
+      showContactNo: user.privacy?.showContactNo ?? true,
+      showCourse: user.privacy?.showCourse ?? true,
+    };
+    const canSee = (flag: boolean) => isOwnProfile || flag;
+
     const [postsCount, followRelation] = await Promise.all([
-      Post.countDocuments({ author: userId, isDeleted: false }),
+      // Anonymous posts are excluded from someone else's view of the
+      // count for the same reason getUserPosts omits them from the list:
+      // a count that doesn't match the visible posts would itself hint
+      // that hidden ones exist.
+      Post.countDocuments({
+        author: userId,
+        isDeleted: false,
+        ...(isOwnProfile ? {} : { isAnonymous: { $ne: true } }),
+      }),
       currentUserId && currentUserId !== userId
         ? Follow.findOne({ follower: currentUserId, following: userId }).select(
             "_id",
@@ -38,12 +63,15 @@ export const getProfile = async (req: Request, res: Response) => {
           _id: user._id,
           name: user.name,
           username: user.username,
-          email: user.email,
+          email: canSee(privacy.showEmail) ? user.email : null,
           bio: user.bio,
           profilePic: user.profilePic,
-          course: user.course,
-          contactNo: user.contactNo,
+          course: canSee(privacy.showCourse) ? user.course : null,
+          contactNo: canSee(privacy.showContactNo) ? user.contactNo : null,
           role: user.role,
+          // Only the owner is told what the settings are — to anyone else
+          // even the shape of someone's privacy choices is their business.
+          ...(isOwnProfile ? { privacy } : {}),
           stats: {
             postsCount,
             followersCount: user.followersCount,
@@ -51,7 +79,7 @@ export const getProfile = async (req: Request, res: Response) => {
             contributions: user.contributions,
           },
           isFollowedByCurrentUser,
-          isOwnProfile: currentUserId === userId,
+          isOwnProfile,
         },
       },
     });

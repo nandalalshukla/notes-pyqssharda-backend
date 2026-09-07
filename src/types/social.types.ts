@@ -36,8 +36,9 @@ export interface PopulatedUserSummary {
 
 /**
  * User populated via `.populate({ path: "user", select: "username email
- * profilePic role _id" })` on Like — used by like/getLikes.ts. Same as
- * PopulatedUserSummary plus `email`.
+ * profilePic role privacy _id" })` on Like — used by like/getLikes.ts.
+ * Same as PopulatedUserSummary plus `email` and the `privacy` flags that
+ * decide whether that email may actually be shown to the requester.
  */
 export interface PopulatedLikeUser {
   _id: Types.ObjectId;
@@ -45,6 +46,7 @@ export interface PopulatedLikeUser {
   email: string;
   profilePic?: ProfilePic;
   role: string;
+  privacy?: UserPrivacySettings;
 }
 
 /**
@@ -67,4 +69,75 @@ export interface PopulatedNotificationPostRef {
 export interface PopulatedNotificationCommentRef {
   _id: Types.ObjectId;
   post: Types.ObjectId;
+}
+
+export type LostFoundKind = "lost" | "found";
+
+export type LostFoundCategory =
+  | "electronics"
+  | "documents"
+  | "stationery"
+  | "clothing"
+  | "accessories"
+  | "keys"
+  | "wallet"
+  | "id_card"
+  | "other";
+
+export type LostFoundStatus = "open" | "resolved";
+
+/**
+ * The `lostFound` sub-document as Mongoose hands it back off a `.lean()`
+ * read or a hydrated document. Every field except `kind`/`itemName` is
+ * optional at the schema level, and documents written before the field
+ * existed have it absent entirely — so this is deliberately wider than
+ * what a write is allowed to be (see LostFoundWriteInput).
+ */
+export interface StoredLostFound {
+  kind?: LostFoundKind | null;
+  itemName?: string | null;
+  category?: LostFoundCategory | null;
+  location?: string | null;
+  dateOccurred?: Date | null;
+  contactInfo?: string | null;
+  status?: LostFoundStatus | null;
+  resolvedAt?: Date | null;
+}
+
+/**
+ * What the create/edit controllers hand to Mongoose for `Post.lostFound`.
+ *
+ * Absent values are `undefined` rather than `null` here because that's
+ * what Mongoose's inferred write type accepts — it then applies the
+ * schema's own `default: null` for anything left unset, which is how a
+ * cleared date ends up stored as null.
+ */
+export interface LostFoundWriteInput {
+  kind: LostFoundKind | undefined;
+  itemName: string | undefined;
+  category: LostFoundCategory;
+  location: string;
+  dateOccurred: Date | undefined;
+  contactInfo: string;
+  status: LostFoundStatus;
+  resolvedAt: Date | undefined;
+}
+
+/** The wire shape produced by `serializeLostFound` (utils/socialSerializers.ts). */
+export interface SerializedLostFound {
+  kind: LostFoundKind;
+  itemName: string;
+  category: LostFoundCategory;
+  location: string;
+  dateOccurred: Date | null;
+  contactInfo: string;
+  status: LostFoundStatus;
+  resolvedAt: Date | null;
+}
+
+/** The `privacy` embedded sub-document on User (users/user.model.ts). */
+export interface UserPrivacySettings {
+  showEmail?: boolean;
+  showContactNo?: boolean;
+  showCourse?: boolean;
 }

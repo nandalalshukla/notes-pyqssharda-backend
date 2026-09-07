@@ -4,7 +4,15 @@ import { Post } from "../../../models/social/post.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import { destroyCloudinaryAssets } from "../../../utils/destroyCloudinaryAssets.js";
 import { mapFilesToMedia } from "../../../utils/mapFilesToMedia.js";
-import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import type {
+  PopulatedUserSummary,
+  StoredLostFound,
+} from "../../../types/social.types.js";
+import {
+  serializeLostFound,
+  serializePostAuthor,
+} from "../../../utils/socialSerializers.js";
+import { mergeLostFoundFromBody } from "./lostFound.helpers.js";
 
 export const editPost = async (req: Request, res: Response) => {
   try {
@@ -88,6 +96,34 @@ export const editPost = async (req: Request, res: Response) => {
       post.type = req.body.type;
     }
 
+    if (req.body.isAnonymous !== undefined) {
+      post.isAnonymous = Boolean(req.body.isAnonymous);
+    }
+
+    if (post.type === "lost_found") {
+      const merged = mergeLostFoundFromBody(
+        post.lostFound as StoredLostFound | null | undefined,
+        req.body,
+      );
+
+      // A post being switched *into* lost & found mid-edit has nothing to
+      // merge onto, so the two fields the card can't render without have
+      // to be supplied by this request.
+      if (!merged.kind || !merged.itemName) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "A lost & found post needs an item name and whether it was lost or found.",
+        });
+      }
+
+      post.lostFound = merged as unknown as typeof post.lostFound;
+    } else if (req.body.type !== undefined) {
+      // Switched away from lost & found — drop the now-meaningless details
+      // rather than leaving them to resurface if it's switched back.
+      post.lostFound = undefined;
+    }
+
     if (!post.content && post.media.length === 0) {
       return res.status(400).json({
         success: false,
@@ -114,13 +150,14 @@ export const editPost = async (req: Request, res: Response) => {
       _id: populated._id,
       type: populated.type,
       content: populated.content,
-      author: {
-        _id: author._id,
-        username: author.username || "Anonymous",
-        avatar: author.profilePic?.url || "",
-        profilePic: author.profilePic,
-        role: author.role,
-      },
+      // Editing is author-only, so the viewer is by definition the author
+      // and sees their real profile back even on an anonymous post.
+      author: serializePostAuthor(author, {
+        isAnonymous: populated.isAnonymous,
+        viewerId: req.user!.userId,
+      }),
+      isAnonymous: Boolean(populated.isAnonymous),
+      lostFound: serializeLostFound(populated.lostFound),
       files,
       publicIds,
       likes: populated.likesCount || 0,

@@ -46,7 +46,7 @@ export const getLikes = async (req: Request, res: Response) => {
     const likes = await Like.find({ post: postObjectId })
       .populate<{ user: PopulatedLikeUser | null }>({
         path: "user",
-        select: "username email profilePic role _id",
+        select: "username email profilePic role privacy _id",
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -91,14 +91,25 @@ export const getLikes = async (req: Request, res: Response) => {
       followRelationships.map((f) => f.following!.toString()),
     );
 
-    const likeUsers = visibleLikes.map((like) => ({
-      _id: like.user._id,
-      username: like.user.username,
-      email: like.user.email,
-      profilePic: like.user.profilePic,
-      role: like.user.role,
-      isFollowedByCurrentUser: followingSet.has(like.user._id.toString()),
-    }));
+    const likeUsers = visibleLikes.map((like) => {
+      // Respect the liker's "show my email" setting — this list is public
+      // (anyone can open a post's likes), so it can't be a back door around
+      // the privacy toggle enforced on the profile endpoint. Viewers only
+      // ever see their own address here regardless of their setting.
+      // `?? true` matches the schema default, so accounts predating the
+      // setting keep behaving as before.
+      const showEmail = like.user.privacy?.showEmail ?? true;
+      const isSelf = Boolean(userId) && String(userId) === like.user._id.toString();
+
+      return {
+        _id: like.user._id,
+        username: like.user.username,
+        email: showEmail || isSelf ? like.user.email : null,
+        profilePic: like.user.profilePic,
+        role: like.user.role,
+        isFollowedByCurrentUser: followingSet.has(like.user._id.toString()),
+      };
+    });
 
     return res.status(200).json({
       success: true,
