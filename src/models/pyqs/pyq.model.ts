@@ -58,6 +58,10 @@ const pyqSchema = buildResourceSchema({
 // them a filtered browse of ~6k papers is a collection scan plus an
 // in-memory sort.
 pyqSchema.index({ status: 1, program: 1, semester: 1, year: 1, createdAt: -1 });
+// Matches the browse endpoint's default sort exactly, so an unfiltered
+// first page walks the index instead of scanning every paper and sorting
+// the whole collection in memory.
+pyqSchema.index({ status: 1, year: -1, semester: 1, courseCode: 1 });
 pyqSchema.index({ status: 1, school: 1, createdAt: -1 });
 // One imported paper per source bitstream — makes a concurrent or repeated
 // import physically unable to double-insert, rather than relying on the

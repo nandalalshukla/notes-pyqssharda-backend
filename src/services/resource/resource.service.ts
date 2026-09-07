@@ -68,6 +68,37 @@ function toRegex(value: string): RegExp {
   return new RegExp(escapeRegex(value), "i");
 }
 
+/**
+ * A course-code matcher that tolerates how people actually type codes.
+ *
+ * Codes are stored with a space ("CSE 252") but users type "cse252",
+ * "CSE-252" or "cse 2" interchangeably. So the separator is normalised
+ * away on both sides and re-inserted as optional.
+ *
+ * Anchored where possible: a code search means "starts with", and an
+ * anchored prefix can use the courseCode index, whereas a floating
+ * /CSE2/ forces a scan of every document.
+ */
+function courseCodePattern(input: string): RegExp {
+  const cleaned = input.replace(/[^A-Za-z0-9]/g, "");
+  const split = /^([A-Za-z]+)(\d*)$/.exec(cleaned);
+
+  if (split) {
+    const [, letters, digits] = split;
+    // "\\s*" — a literal backslash-s reaching the RegExp, not the string
+    // escape "\s" (which JavaScript would collapse to a plain "s" and quietly
+    // turn "CSE 252" into a search for "CSEs252").
+    return new RegExp(
+      "^" + escapeRegex(letters) + "\\s*" + escapeRegex(digits),
+      "i",
+    );
+  }
+
+  // Digits only, or something mixed — fall back to a contains match, which
+  // can't use the index but is the only thing that can match at all.
+  return new RegExp(escapeRegex(cleaned || input), "i");
+}
+
 async function destroyAsset(
   publicId: string,
   resourceType: BaseResourceFields["resourceType"],
@@ -144,14 +175,14 @@ export async function listPublic<TDoc extends BaseResourceFields>(
     filter.semester = Number(params.semester);
   }
   if (params.courseCode) {
-    filter.courseCode = toRegex(params.courseCode);
+    filter.courseCode = courseCodePattern(params.courseCode);
   }
   if (params.query) {
     const regex = toRegex(params.query);
     filter.$or = [
-      { title: regex },
       { courseName: regex },
       { courseCode: regex },
+      { title: regex },
     ];
   }
 
@@ -181,12 +212,43 @@ export async function listPublic<TDoc extends BaseResourceFields>(
 }
 
 /**
+ * Filter options are identical for every visitor and only change when new
+ * resources are approved or imported, yet the browse page asks for them on
+ * every load. Four `distinct()` calls per page view is pure waste, so the
+ * answer is held for a short while.
+ *
+ * Deliberately a plain in-process Map rather than Redis: the data is tiny,
+ * regenerating it is cheap, and a stale entry is harmless for a minute.
+ */
+const filterOptionsCache = new Map<
+  string,
+  { value: FilterOptions; expiresAt: number }
+>();
+const FILTER_OPTIONS_TTL_MS = 60_000;
+
+export interface FilterOptions {
+  programs: string[];
+  schools: string[];
+  years: string[];
+  semesters: number[];
+}
+
+/** Drops the cached options so the next read rebuilds them. */
+export function invalidateFilterOptions(displayName?: string) {
+  if (displayName) filterOptionsCache.delete(displayName);
+  else filterOptionsCache.clear();
+}
+
+/**
  * The distinct values present among approved resources, so the browse
  * filters offer only options that will actually return something.
  */
 export async function listFilterOptions<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
-) {
+): Promise<FilterOptions> {
+  const cached = filterOptionsCache.get(config.displayName);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
   const base = { status: "approved" } as QueryFilter<TDoc>;
   const [programs, schools, years, semesters] = await Promise.all([
     config.model.distinct("program", base),
@@ -198,13 +260,19 @@ export async function listFilterOptions<TDoc extends BaseResourceFields>(
   const clean = (values: unknown[]) =>
     values.filter((v) => v !== null && v !== undefined && v !== "");
 
-  return {
+  const value: FilterOptions = {
     programs: (clean(programs) as string[]).sort(),
     schools: (clean(schools) as string[]).sort(),
     // Newest academic year first — that's the order people look in.
     years: (clean(years) as string[]).sort().reverse(),
     semesters: (clean(semesters) as number[]).sort((a, b) => a - b),
   };
+
+  filterOptionsCache.set(config.displayName, {
+    value,
+    expiresAt: Date.now() + FILTER_OPTIONS_TTL_MS,
+  });
+  return value;
 }
 
 export async function search<TDoc extends BaseResourceFields>(
@@ -411,6 +479,9 @@ export async function approve<TDoc extends BaseResourceFields>(
     approvedAt: new Date(),
     approvedBy: approverId,
   });
+  // A newly approved resource can introduce a program, year or semester the
+  // filter dropdowns don't list yet.
+  invalidateFilterOptions(config.displayName);
   await incrementContribution(doc.userId.toString());
 
   return uploader;

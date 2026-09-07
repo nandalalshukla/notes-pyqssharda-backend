@@ -82,6 +82,11 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const filterOptions = async (_req: Request, res: Response) => {
+    // Public, identical for everyone, and cheap to regenerate — so let the
+    // browser and any CDN in front of the API hold it briefly too, rather
+    // than every page load reaching MongoDB. `stale-while-revalidate` keeps
+    // navigation instant while a fresh copy is fetched in the background.
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     res.status(200).json({
       success: true,
       data: await resourceService.listFilterOptions(config),
