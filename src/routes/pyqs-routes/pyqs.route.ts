@@ -6,7 +6,7 @@ import { uploadPyqs } from "../../controllers/pyqs-controllers/uploadPyqs.js";
 import { searchPyqs } from "../../controllers/pyqs-controllers/searchPyqs.js";
 import { deletePyqs } from "../../controllers/pyqs-controllers/deletePyqs.js";
 import { fetchSpecificUserPyqs } from "../../controllers/pyqs-controllers/specificUserPyqs.js";
-import { fetchAllPyqs } from "../../controllers/pyqs-controllers/fetchAllPyqs.js";
+import { fetchAllPyqs, browsePyqs, pyqFilterOptions } from "../../controllers/pyqs-controllers/fetchAllPyqs.js";
 
 // Validators
 import {
@@ -46,6 +46,19 @@ router.get(
 
 // Fetch all approved PYQs
 router.get("/all-pyqs", interactionLimiter, fetchAllPyqs);
+
+// Paginated, filtered browse for the PYQs library page. Separate from
+// /all-pyqs (a flat top-N) so that endpoint's existing callers are
+// unaffected.
+router.get(
+  "/browse-pyqs",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  browsePyqs,
+);
+
+// Options for the browse filters — only values that actually match something.
+router.get("/pyq-filters", interactionLimiter, pyqFilterOptions);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════

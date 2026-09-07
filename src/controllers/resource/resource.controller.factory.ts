@@ -48,6 +48,46 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
     });
   };
 
+  /**
+   * Paginated, filtered browse. Kept separate from `fetchAll` (the flat
+   * top-N above) so existing callers of that endpoint keep their response
+   * shape unchanged.
+   */
+  const browse = async (req: Request, res: Response) => {
+    const num = (v: unknown) => {
+      const n = parseInt(String(v ?? ""), 10);
+      return Number.isNaN(n) ? undefined : n;
+    };
+    const str = (v: unknown) =>
+      typeof v === "string" && v.trim() ? v.trim() : undefined;
+
+    const result = await resourceService.listPublic(config, {
+      page: num(req.query.page),
+      limit: num(req.query.limit),
+      program: str(req.query.program),
+      school: str(req.query.school),
+      semester: str(req.query.semester),
+      year: str(req.query.year),
+      courseCode: str(req.query.courseCode),
+      query: str(req.query.query) ?? str(req.query.q),
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        [config.responseKeys.publicList]: result.docs,
+        pagination: result.pagination,
+      },
+    });
+  };
+
+  const filterOptions = async (_req: Request, res: Response) => {
+    res.status(200).json({
+      success: true,
+      data: await resourceService.listFilterOptions(config),
+    });
+  };
+
   const search = async (req: Request, res: Response) => {
     const { query, program, courseCode, semester, year } = req.query;
     if (query !== undefined && typeof query !== "string") {
@@ -209,6 +249,8 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
 
   return {
     fetchAll,
+    browse,
+    filterOptions,
     search,
     fetchMine,
     upload,

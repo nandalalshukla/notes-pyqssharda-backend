@@ -108,6 +108,105 @@ export async function listApproved<TDoc extends BaseResourceFields>(
     .lean();
 }
 
+export interface PublicListParams {
+  page?: number;
+  limit?: number;
+  program?: string;
+  school?: string;
+  semester?: string;
+  year?: string;
+  courseCode?: string;
+  query?: string;
+}
+
+/**
+ * The browsable, filtered, paginated view of approved resources.
+ *
+ * `listApproved` above returns a flat top-N and is what the old
+ * "latest uploads" strip uses. It stopped being enough once the PYQ
+ * collection went from a handful of hand-uploaded papers to thousands
+ * imported from the university repository: without paging and
+ * server-side filters, browsing means shipping the entire collection to
+ * the browser and filtering it there.
+ */
+export async function listPublic<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+  params: PublicListParams,
+) {
+  const page = Math.max(1, params.page || 1);
+  const limit = Math.min(100, Math.max(1, params.limit || 24));
+
+  const filter: Record<string, unknown> = { status: "approved" };
+  if (params.program) filter.program = params.program;
+  if (params.school) filter.school = params.school;
+  if (params.year) filter.year = params.year;
+  if (params.semester && !Number.isNaN(Number(params.semester))) {
+    filter.semester = Number(params.semester);
+  }
+  if (params.courseCode) {
+    filter.courseCode = toRegex(params.courseCode);
+  }
+  if (params.query) {
+    const regex = toRegex(params.query);
+    filter.$or = [
+      { title: regex },
+      { courseName: regex },
+      { courseCode: regex },
+    ];
+  }
+
+  const [docs, total] = await Promise.all([
+    config.model
+      .find(filter as QueryFilter<TDoc>)
+      // Newest academic year first, then by course code so a semester's
+      // papers read in a predictable order rather than upload order.
+      .sort({ year: -1, semester: 1, courseCode: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("userId", "username")
+      .lean(),
+    config.model.countDocuments(filter as QueryFilter<TDoc>),
+  ]);
+
+  return {
+    docs,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    },
+  };
+}
+
+/**
+ * The distinct values present among approved resources, so the browse
+ * filters offer only options that will actually return something.
+ */
+export async function listFilterOptions<TDoc extends BaseResourceFields>(
+  config: ResourceConfig<TDoc>,
+) {
+  const base = { status: "approved" } as QueryFilter<TDoc>;
+  const [programs, schools, years, semesters] = await Promise.all([
+    config.model.distinct("program", base),
+    config.model.distinct("school", base),
+    config.model.distinct("year", base),
+    config.model.distinct("semester", base),
+  ]);
+
+  const clean = (values: unknown[]) =>
+    values.filter((v) => v !== null && v !== undefined && v !== "");
+
+  return {
+    programs: (clean(programs) as string[]).sort(),
+    schools: (clean(schools) as string[]).sort(),
+    // Newest academic year first — that's the order people look in.
+    years: (clean(years) as string[]).sort().reverse(),
+    semesters: (clean(semesters) as number[]).sort((a, b) => a - b),
+  };
+}
+
 export async function search<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
   params: SearchParams,

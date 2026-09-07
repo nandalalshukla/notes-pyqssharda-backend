@@ -42,3 +42,9 @@ coverage/
 # Misc
 # ---------------------------
 *.tsbuildinfo
+
+# pyq-import working files
+scripts/pyq-import/.cache/
+scripts/pyq-import/.checkpoint.jsonl
+scripts/pyq-import/dry-run.json
+scripts/pyq-import/needs-review.json
