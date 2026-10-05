@@ -4,6 +4,7 @@ export const postTypeSchema = z.enum([
   "general",
   "event",
   "announcement",
+  "opportunity",
   "lost_found",
 ]);
 

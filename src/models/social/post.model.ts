@@ -93,7 +93,7 @@ const postSchema = new Schema(
 
     type: {
       type: String,
-      enum: ["general", "event", "announcement", "lost_found"],
+      enum: ["general", "event", "announcement", "opportunity", "lost_found"],
       default: "general",
       required: true,
       index: true,

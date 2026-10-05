@@ -19,7 +19,10 @@ export const getFeed = async (req: Request, res: Response) => {
   const lostFoundStatus = req.query.lostFoundStatus as string | undefined;
   const skip = (page - 1) * limit;
   const requestedType =
-    type === "event" || type === "announcement" || type === "lost_found"
+    type === "event" ||
+    type === "announcement" ||
+    type === "opportunity" ||
+    type === "lost_found"
       ? type
       : undefined;
   // Only meaningful on the lost & found board — a status filter on the
