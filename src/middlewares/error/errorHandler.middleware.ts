@@ -121,7 +121,7 @@ function translateError(err: unknown): {
 
   if (err instanceof multer.MulterError) {
     const messages: Partial<Record<multer.MulterError["code"], string>> = {
-      LIMIT_FILE_SIZE: "That file is too large.",
+      LIMIT_FILE_SIZE: "That file is too large. Notes can be up to 100 MB.",
       LIMIT_FILE_COUNT: "Too many files — please upload fewer at once.",
       LIMIT_UNEXPECTED_FILE: "That file wasn't expected here.",
     };

@@ -161,11 +161,11 @@ const postFileStorage = new CloudinaryStorage({
   },
 });
 
-// ─── existing multer instances unchanged ─────────────────────────────────────
+const MAX_NOTE_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 export const uploadNotesMulter = multer({
   storage: notesStorage,
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: MAX_NOTE_FILE_SIZE_BYTES },
   fileFilter(req, file, cb) {
     const allowed = [
       "application/pdf",
