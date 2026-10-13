@@ -51,13 +51,19 @@ app.use(express.urlencoded({ extended: true, limit: "200kb" }));
 app.use(cookieParser());
 
 app.use((req, _res, next) => {
-  console.log("[REQUEST]", {
+  console.log("[IP DEBUG]", {
     ip: req.ip,
-    url: req.originalUrl,
-    method: req.method,
+    ips: req.ips,
+    socketIp: req.socket.remoteAddress,
+    forwardedFor: req.get("x-forwarded-for"),
+    realIp: req.get("x-real-ip"),
+    path: req.originalUrl,
   });
+
   next();
 });
+
+app.use(globalLimiter);
 // Global rate limiter
 app.use(globalLimiter);
 
