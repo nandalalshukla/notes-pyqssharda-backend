@@ -50,6 +50,14 @@ app.use(express.json({ limit: "200kb" }));
 app.use(express.urlencoded({ extended: true, limit: "200kb" }));
 app.use(cookieParser());
 
+app.use((req, _res, next) => {
+  console.log("[REQUEST]", {
+    ip: req.ip,
+    url: req.originalUrl,
+    method: req.method,
+  });
+  next();
+});
 // Global rate limiter
 app.use(globalLimiter);
 
