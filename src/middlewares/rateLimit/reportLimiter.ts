@@ -34,7 +34,7 @@ export const reportLimiter = (options: {
   windowMs?: number;
   maxReportsPerWindow?: number;
 }): RequestHandler => {
-  const windowMs = options.windowMs ?? 60000; // 1 minute
+  const windowMs = options.windowMs ?? 600000; // 1 minute
   const maxReportsPerWindow = options.maxReportsPerWindow ?? 3; // 3 reports per minute
 
   return (req: ReportRequest, res: Response, next: NextFunction) => {

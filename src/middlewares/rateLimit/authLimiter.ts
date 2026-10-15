@@ -13,7 +13,7 @@ import type { RequestHandler } from "express";
 export function createAuthLimiter(): RequestHandler {
   return rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    limit: 10, // 10 attempts per IP per route
+    limit: 5, //5 attempts per IP per route
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => req.ip || "anonymous",

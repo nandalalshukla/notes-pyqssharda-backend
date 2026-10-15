@@ -304,7 +304,7 @@ router.post(
 router.post(
   "/reports",
   authMiddleware,
-  reportLimiter({ windowMs: 60000, maxReportsPerWindow: 3 }),
+  reportLimiter({ windowMs: 600000, maxReportsPerWindow: 3 }),
   validateMiddleware(createReportSchema),
   createReportController,
 );
