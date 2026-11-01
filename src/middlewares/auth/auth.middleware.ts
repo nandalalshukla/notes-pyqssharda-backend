@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import { env } from "../../config/env.js";
 import { JWT_ALGORITHM } from "../../utils/generateJwtTokens.js";
+import { getAccessToken } from "../../utils/clientTokens.js";
 
 function verifyAccessToken(token: string) {
   return jwt.verify(token, env.ACCESS_TOKEN_SECRET, {
@@ -14,7 +15,7 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction,
 ) => {
-  const token = req.cookies?.accessToken;
+  const token = getAccessToken(req);
 
   if (!token) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -36,7 +37,7 @@ export const optionalAuthMiddleware = (
   _res: Response,
   next: NextFunction,
 ) => {
-  const token = req.cookies?.accessToken;
+  const token = getAccessToken(req);
 
   if (!token) {
     return next();

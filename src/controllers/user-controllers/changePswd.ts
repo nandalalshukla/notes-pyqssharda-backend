@@ -4,6 +4,7 @@ import { Session } from "../../models/users/session.model.js";
 import { Request, Response } from "express";
 import { hashPassword, comparePassword } from "../../utils/hashPassword.js";
 import { hashToken } from "../../utils/hashToken.js";
+import { getRefreshToken } from "../../utils/clientTokens.js";
 
 export const changePassword = async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = req.body;
@@ -50,7 +51,7 @@ export const changePassword = async (req: Request, res: Response) => {
     // session/device — otherwise a stolen session survives the very action
     // meant to secure the account. Keep the current session so the caller
     // isn't logged out by their own request.
-    const currentRefreshToken = req.cookies?.refreshToken;
+    const currentRefreshToken = getRefreshToken(req);
     await Session.deleteMany({
       userId: user._id,
       ...(currentRefreshToken && {

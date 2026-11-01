@@ -10,10 +10,7 @@ import {
   generateRefreshToken,
   REFRESH_TOKEN_TTL_MS,
 } from "../../utils/generateJwtTokens.js";
-import {
-  accessTokenCookieOptions,
-  refreshTokenCookieOptions,
-} from "../../config/cookies.js";
+import { deliverTokens } from "../../utils/clientTokens.js";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { hashToken } from "../../utils/hashToken.js";
 import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
@@ -83,13 +80,12 @@ export const loginUser = async (req: Request, res: Response) => {
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     });
 
-    res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-    res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+    const tokenPayload = deliverTokens(req, res, accessToken, refreshToken);
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      data: { user: serializeAuthUser(user) },
+      data: { user: serializeAuthUser(user), ...tokenPayload },
     });
   } catch (error) {
     throw error;

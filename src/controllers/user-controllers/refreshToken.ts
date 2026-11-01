@@ -8,9 +8,8 @@ import {
 } from "../../utils/generateJwtTokens.js";
 import { env } from "../../config/env.js";
 import { Request, Response } from "express";
+import { deliverTokens, getRefreshToken } from "../../utils/clientTokens.js";
 import {
-  accessTokenCookieOptions,
-  refreshTokenCookieOptions,
   clearAccessTokenCookieOptions,
   clearRefreshTokenCookieOptions,
 } from "../../config/cookies.js";
@@ -18,7 +17,7 @@ import { Session } from "../../models/users/session.model.js";
 import { hashToken } from "../../utils/hashToken.js";
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = getRefreshToken(req);
 
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token missing" });
@@ -62,12 +61,17 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     session.expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
     await session.save();
 
-    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
-    res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
+    const tokenPayload = deliverTokens(
+      req,
+      res,
+      newAccessToken,
+      newRefreshToken,
+    );
 
     return res.json({
       success: true,
       message: "Token refreshed successfully",
+      ...(tokenPayload.tokens && { data: tokenPayload }),
     });
   } catch (err) {
     return res

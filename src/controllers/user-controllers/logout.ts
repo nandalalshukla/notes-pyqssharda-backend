@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Session } from "../../models/users/session.model.js";
 import { hashToken } from "../../utils/hashToken.js";
+import { getRefreshToken } from "../../utils/clientTokens.js";
 import {
   clearAccessTokenCookieOptions,
   clearRefreshTokenCookieOptions,
@@ -8,7 +9,7 @@ import {
 
 export const logout = async (req: Request, res: Response) => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = getRefreshToken(req);
 
     if (refreshToken) {
       await Session.deleteOne({ refreshTokenHash: hashToken(refreshToken) });
