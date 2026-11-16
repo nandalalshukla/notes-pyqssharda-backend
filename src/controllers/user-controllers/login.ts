@@ -26,7 +26,9 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await User.findOne({ email }).select("+password +isActive");
+    const user = await User.findOne({ email }).select(
+      "+password +isActive +verificationExpiresAt",
+    );
 
     // Always run a bcrypt compare, even for a nonexistent user, against a
     // fixed dummy hash — otherwise a request for an unknown email returns
@@ -54,8 +56,24 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     if (!user.isEmailVerified) {
-      sendAndStoreOtp(user.email)
-        .then(() => console.log(`✅ OTP sent successfully to ${email}`))
+      const now = new Date();
+      if (!user.verificationExpiresAt || user.verificationExpiresAt <= now) {
+        await User.deleteOne({
+          _id: user._id,
+          isEmailVerified: false,
+          $or: [
+            { verificationExpiresAt: { $exists: false } },
+            { verificationExpiresAt: { $lte: now } },
+          ],
+        });
+        return res.status(410).json({
+          success: false,
+          message: "Your registration has expired. Please create a new account.",
+          code: "REGISTRATION_EXPIRED",
+        });
+      }
+
+      sendAndStoreOtp(user.email, "email-verification")
         .catch((emailError) => {
           console.error("⚠️ Failed to send OTP email:", emailError);
           console.error("User can request resend OTP later.");

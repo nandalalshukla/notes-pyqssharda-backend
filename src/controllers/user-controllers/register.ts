@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { hashPassword } from "../../utils/hashPassword.js";
 import { BadRequestError, ConflictError } from "../../utils/errors/AppError.js";
+import { UNVERIFIED_ACCOUNT_TTL_MS } from "../../config/auth.js";
 
 export const registerUser = async (req: Request, res: Response) => {
   const { name, username, email, password } = req.body;
@@ -11,9 +12,21 @@ export const registerUser = async (req: Request, res: Response) => {
     throw new BadRequestError("All fields are required");
   }
 
-  // Single query to check both duplicates at once
+  const normalizedUsername = username.toLowerCase();
+  const now = new Date();
+
+  // MongoDB's TTL monitor is asynchronous. Remove an expired reservation
+  // inline so a user can reclaim their email/username immediately after the
+  // 24-hour window instead of waiting for the background TTL pass.
+  await User.deleteMany({
+    isEmailVerified: { $ne: true },
+    verificationExpiresAt: { $lte: now },
+    $or: [{ email }, { username: normalizedUsername }],
+  });
+
+  // Single query to check both active reservations and registered accounts.
   const existingUser = await User.findOne({
-    $or: [{ email }, { username: username.toLowerCase() }],
+    $or: [{ email }, { username: normalizedUsername }],
   });
 
   if (existingUser) {
@@ -25,9 +38,10 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const newUser = new User({
     name,
-    username: username.toLowerCase(),
+    username: normalizedUsername,
     email,
     password: hashedPwd,
+    verificationExpiresAt: new Date(Date.now() + UNVERIFIED_ACCOUNT_TTL_MS),
   });
 
   // A duplicate-key race (two concurrent registrations for the same
@@ -37,7 +51,7 @@ export const registerUser = async (req: Request, res: Response) => {
   await newUser.save();
 
   // Send OTP in background — non-blocking
-  sendAndStoreOtp(newUser.email)
+  sendAndStoreOtp(newUser.email, "email-verification")
     .then(() => console.log(`✅ OTP sent successfully to ${email}`))
     .catch((emailError) => {
       console.error("⚠️ Failed to send OTP email:", emailError);
@@ -56,6 +70,7 @@ export const registerUser = async (req: Request, res: Response) => {
         isEmailVerified: false,
       },
     },
-    message: "Account created successfully, please verify your email",
+    message:
+      "Account created. Verify your email within 24 hours to keep your account.",
   });
 };

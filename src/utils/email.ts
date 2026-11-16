@@ -1,4 +1,7 @@
 import { resend, EMAIL_CONFIG } from "../config/email.js";
+import { OTP_TTL_MINUTES } from "../config/auth.js";
+
+export type OtpPurpose = "email-verification" | "password-reset";
 
 interface SendEmailResponse {
   success: boolean;
@@ -105,13 +108,27 @@ export async function sendEmail(
   }
 }
 
-export async function sendOTPMail(email: string, otp: string) {
+export async function sendOTPMail(
+  email: string,
+  otp: string,
+  purpose: OtpPurpose,
+) {
+  const isEmailVerification = purpose === "email-verification";
+  const heading = isEmailVerification
+    ? "Verify your email address"
+    : "Reset your password";
+  const instruction = isEmailVerification
+    ? "Use the code below to verify your email for Sharda Online Library."
+    : "Use the code below to reset your Sharda Online Library password. If you did not request this, you can safely ignore this email.";
+  const subject = isEmailVerification
+    ? "Verify Your Email - Sharda Online Library"
+    : "Password Reset Code - Sharda Online Library";
   const content = `
     <h2 style="margin:0 0 16px 0;font-size:22px;font-weight:600;color:#111827;">
-      Verify your email address
+      ${heading}
     </h2>
     <p style="margin:0 0 24px 0;font-size:14px;line-height:1.7;color:#4B5563;">
-      Use the verification code below to confirm your email for Sharda Online Library.
+      ${instruction}
     </p>
     <div style="margin:0 0 24px 0;padding:18px 24px;border-radius:10px;border:1px solid #E5E7EB;background-color:#F9FAFB;text-align:center;">
       <span style="display:inline-block;font-family:'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:26px;font-weight:700;letter-spacing:10px;color:#4C1D95;">
@@ -119,14 +136,14 @@ export async function sendOTPMail(email: string, otp: string) {
       </span>
     </div>
     <p style="margin:0 0 8px 0;font-size:13px;color:#6B7280;">
-      This code will expire in <strong>10 minutes</strong>.
+      This code will expire in <strong>${OTP_TTL_MINUTES} minutes</strong>.
     </p>
     <p style="margin:0;font-size:12px;color:#9CA3AF;line-height:1.6;">
       If you did not request this, you can safely ignore this email.
     </p>
   `;
 
-  return sendEmail(email, "Verify Your Email - Sharda Online Library", content);
+  return sendEmail(email, subject, content);
 }
 
 export async function sendWelcomeMail(email: string, name: string) {

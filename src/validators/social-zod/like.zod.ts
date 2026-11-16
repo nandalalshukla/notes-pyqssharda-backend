@@ -11,6 +11,11 @@ export const likeActionSchema = z.object({
   targetType: z.enum(["post", "comment"]),
 });
 
+/** Idempotent like state. Repeating this request leaves the state unchanged. */
+export const setLikeStateSchema = likeActionSchema.extend({
+  liked: z.boolean(),
+});
+
 /**
  * Extracted params schema for like endpoints
  */
@@ -21,4 +26,5 @@ export const likeParamsSchema = z.object({
 });
 
 export type LikeActionInput = z.infer<typeof likeActionSchema>;
+export type SetLikeStateInput = z.infer<typeof setLikeStateSchema>;
 export type LikeParams = z.infer<typeof likeParamsSchema>;

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { UNVERIFIED_ACCOUNT_TTL_MS } from "../../config/auth.js";
 
 const userSchema = new Schema(
   {
@@ -132,6 +133,14 @@ const userSchema = new Schema(
       default: false,
     },
 
+    // Present only while registration is unverified. The TTL index is
+    // created explicitly after the legacy-data backfill in config/db.ts;
+    // verified accounts have this field unset and are never TTL candidates.
+    verificationExpiresAt: {
+      type: Date,
+      select: false,
+    },
+
     // 🔹 Security / Auth Flows
     passwordChangedAt: Date,
 
@@ -163,6 +172,17 @@ const userSchema = new Schema(
       select: false,
     },
 
+    emailOtpPurpose: {
+      type: String,
+      enum: ["email-verification", "password-reset"],
+      select: false,
+    },
+
+    emailOtpSentAt: {
+      type: Date,
+      select: false,
+    },
+
     forgotPasswordToken: {
       type: String,
       select: false,
@@ -182,8 +202,50 @@ userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   delete obj.emailOtpHash;
+  delete obj.emailOtpExpiry;
+  delete obj.emailOtpPurpose;
+  delete obj.emailOtpSentAt;
+  delete obj.verificationExpiresAt;
   delete obj.forgotPasswordToken;
   return obj;
 };
 
 export const User = mongoose.model("User", userSchema);
+
+/**
+ * Backfill legacy pending registrations before enabling the TTL index.
+ * Existing users expire 24 hours after their original creation time; users
+ * without a valid createdAt value receive a full 24-hour migration grace.
+ * The filter makes this safe to run on every application start and from
+ * multiple application instances at once.
+ */
+export async function ensureUnverifiedAccountExpiry() {
+  const now = new Date();
+  const result = await User.collection.updateMany(
+    {
+      isEmailVerified: { $ne: true },
+      verificationExpiresAt: null,
+    },
+    [
+      {
+        $set: {
+          verificationExpiresAt: {
+            $add: [{ $ifNull: ["$createdAt", now] }, UNVERIFIED_ACCOUNT_TTL_MS],
+          },
+        },
+      },
+    ],
+  );
+
+  const indexName = "verificationExpiresAt_ttl";
+  await User.collection.createIndex(
+    { verificationExpiresAt: 1 },
+    { expireAfterSeconds: 0, name: indexName },
+  );
+
+  if (result.modifiedCount > 0) {
+    console.log(
+      `Backfilled verification expiry for ${result.modifiedCount} unverified account(s)`,
+    );
+  }
+}

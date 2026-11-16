@@ -22,19 +22,16 @@ export const createNewPassword = async (req: Request, res: Response) => {
   } as const;
 
   try {
-    const user = await User.findOne({ email }).select(
-      "+emailOtpHash +emailOtpExpiry",
+    const user = await User.findOne({ email, isEmailVerified: true }).select(
+      "+emailOtpHash +emailOtpExpiry +emailOtpPurpose",
     );
     if (!user) {
       return res.status(400).json(INVALID_OTP_RESPONSE);
     }
 
     const hashedOtp = user.emailOtpHash;
-    if (!hashedOtp) {
-      return res.status(400).json({
-        success: false,
-        message: "No OTP found for this user, please request a new one",
-      });
+    if (!hashedOtp || user.emailOtpPurpose !== "password-reset") {
+      return res.status(400).json(INVALID_OTP_RESPONSE);
     }
 
     // Previously missing entirely — an OTP whose `emailOtpExpiry` had
@@ -56,11 +53,31 @@ export const createNewPassword = async (req: Request, res: Response) => {
     }
 
     const hashedNewPassword = await hashPassword(newPassword);
-    user.password = hashedNewPassword;
-    user.passwordChangedAt = new Date();
-    user.emailOtpHash = undefined;
-    user.emailOtpExpiry = undefined;
-    await user.save();
+    const updateResult = await User.updateOne(
+      {
+        _id: user._id,
+        isEmailVerified: true,
+        emailOtpHash: hashedOtp,
+        emailOtpPurpose: "password-reset",
+        emailOtpExpiry: { $gt: new Date() },
+      },
+      {
+        $set: {
+          password: hashedNewPassword,
+          passwordChangedAt: new Date(),
+        },
+        $unset: {
+          emailOtpHash: 1,
+          emailOtpExpiry: 1,
+          emailOtpPurpose: 1,
+          emailOtpSentAt: 1,
+        },
+      },
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(400).json(INVALID_OTP_RESPONSE);
+    }
 
     // A password reset is a recovery action taken because the account may
     // be compromised — every existing session (including any an attacker

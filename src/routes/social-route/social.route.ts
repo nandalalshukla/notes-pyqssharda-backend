@@ -19,6 +19,7 @@ import { getComment } from "../../controllers/social-controllers/comment/getComm
 
 // Controllers - Likes
 import { toggleLike } from "../../controllers/social-controllers/like/toggleLike.js";
+import { setLikeStateController } from "../../controllers/social-controllers/like/setLikeState.js";
 import { getLikes } from "../../controllers/social-controllers/like/getLikes.js";
 
 // Controllers - Follow
@@ -52,7 +53,10 @@ import {
   editCommentSchema,
   commentParamsSchema,
 } from "../../validators/social-zod/comment.zod.js";
-import { likeActionSchema } from "../../validators/social-zod/like.zod.js";
+import {
+  likeActionSchema,
+  setLikeStateSchema,
+} from "../../validators/social-zod/like.zod.js";
 import {
   followActionSchema,
   followListSchema,
@@ -279,14 +283,17 @@ router.delete(
  * ───────────────────────────────────────────────────────────────────────────────
  */
 
-// Toggle like on post/comment
-// No `cooldown` here. Liking is a toggle people flip quickly, and a
-// one-second-per-user cooldown answered the second tap with a 429 — which
-// the client then treated as a failure and rolled the heart back to the
-// wrong state. The client now coalesces a burst of taps into at most one
-// request per target (see the like-coalescing note in social.store.ts), so
-// the traffic this was guarding against no longer reaches the server, and
-// `interactionLimiter` still caps the overall rate.
+// Desired-state writes are safe to retry and return the committed state.
+router.put(
+  "/likes/state",
+  authMiddleware,
+  interactionLimiter,
+  validateMiddleware(setLikeStateSchema),
+  setLikeStateController,
+);
+
+// Compatibility for already-installed app builds. The operation is
+// transactionally safe, but toggles cannot be idempotent across retries.
 router.post(
   "/likes/toggle",
   authMiddleware,
