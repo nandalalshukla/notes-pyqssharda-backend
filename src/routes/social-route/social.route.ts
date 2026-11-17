@@ -90,6 +90,14 @@ import { uploadPostFilesMulter } from "../../config/multer.js";
 
 const router = Router();
 
+// Global site metrics pulse. It records only anonymous, hashed browser IDs.
+router.post(
+  "/analytics/pulse",
+  siteAnalyticsLimiter,
+  validateMiddleware(siteAnalyticsPulseSchema),
+  pulseSiteAnalytics,
+);
+
 const uploadPostFiles = (req: Request, res: Response, next: NextFunction) => {
   uploadPostFilesMulter.array("files")(req, res, (error: unknown) => {
     if (error) {

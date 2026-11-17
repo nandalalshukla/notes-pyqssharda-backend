@@ -5,6 +5,7 @@ import { ensureNotificationIndexes } from "../models/social/notification.model.j
 import { ensureSessionIndexes } from "../models/users/session.model.js";
 import { ensurePostModerationDefaults } from "../models/social/post.model.js";
 import { ensureUnverifiedAccountExpiry } from "../models/users/user.model.js";
+import { ensureSiteAnalyticsIndexes } from "../models/analytics/siteAnalytics.model.js";
 
 const connectDB = async () => {
   try {
@@ -16,6 +17,7 @@ const connectDB = async () => {
     await ensureSessionIndexes();
     await ensurePostModerationDefaults();
     await ensureUnverifiedAccountExpiry();
+    await ensureSiteAnalyticsIndexes(env.SITE_INITIAL_PAGE_VIEWS);
 
     console.log("MongoDB connected and indexes are ready");
   } catch (error) {
