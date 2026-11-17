@@ -103,7 +103,8 @@ async function changeTargetCount(
       },
     },
   ];
-  const options = { new: true, session };
+  // Mongoose 9 requires updatePipeline for aggregation-pipeline updates.
+  const options = { new: true, session, updatePipeline: true };
   const filter = targetFilter(targetType, targetId);
 
   const updated =
