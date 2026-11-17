@@ -76,6 +76,9 @@ import {
   notificationStreamLimiter,
 } from "../../middlewares/rateLimit/index.js";
 import { clampPagination } from "../../middlewares/security/pagination.middleware.js";
+import { siteAnalyticsLimiter } from "../../middlewares/rateLimit/siteAnalyticsLimiter.js";
+import { pulseSiteAnalytics } from "../../controllers/social-controllers/siteAnalytics/pulse.js";
+import { siteAnalyticsPulseSchema } from "../../validators/social-zod/siteAnalytics.zod.js";
 
 // Middlewares & Multer
 import {

@@ -22,6 +22,7 @@ const envSchema = z.object({
 
   MONGO_URI: z.string().min(1, "MONGO_URI is required"),
   MONGO_DB_NAME: z.string().min(1, "MONGO_DB_NAME is required"),
+  SITE_INITIAL_PAGE_VIEWS: z.coerce.number().int().nonnegative().default(22_000),
 
   ACCESS_TOKEN_SECRET: z.string().min(1, "ACCESS_TOKEN_SECRET is required"),
   REFRESH_TOKEN_SECRET: z.string().min(1, "REFRESH_TOKEN_SECRET is required"),
