@@ -1,32 +1,37 @@
 import { CookieOptions } from "express";
 import { ACCESS_TOKEN_TTL_MS, REFRESH_TOKEN_TTL_MS } from "../utils/generateJwtTokens.js";
 
+// Browser traffic is same-origin through the frontend's /api/proxy rewrite.
+// Lax cookies block cross-site POST/iframe requests while supporting normal
+// top-level navigation. Keep Secure in production and allow local HTTP dev.
+const secure = process.env.NODE_ENV === "production";
+
 // maxAge here MUST match the corresponding JWT's `expiresIn` in
 // generateJwtTokens.ts. If the cookie outlives the token, the browser keeps
 // sending a JWT that `jwt.verify` will reject as expired well before the
 // cookie itself disappears — which surfaced as random forced logouts.
 export const accessTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none", // Cross-origin: frontend and backend are separate origins
+  secure,
+  sameSite: "lax",
   maxAge: ACCESS_TOKEN_TTL_MS,
   path: "/",
 };
 
 export const refreshTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  secure,
+  sameSite: "lax",
   maxAge: REFRESH_TOKEN_TTL_MS,
   path: "/",
 };
 
 export const verifyEmailCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  secure,
+  sameSite: "lax",
   maxAge: 10 * 60 * 1000, // 10 minutes
-  path: "/api/auth",
+  path: "/api/v1/auth",
 };
 
 // clearCookie() must be called with the SAME name/domain/path/secure/sameSite
@@ -36,14 +41,14 @@ export const verifyEmailCookieOptions: CookieOptions = {
 // past `expires` date.
 export const clearAccessTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  secure,
+  sameSite: "lax",
   path: "/",
 };
 
 export const clearRefreshTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  secure,
+  sameSite: "lax",
   path: "/",
 };

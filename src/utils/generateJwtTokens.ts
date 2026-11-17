@@ -11,8 +11,8 @@ export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export const JWT_ALGORITHM = "HS256" as const;
 
-export function generateAccessToken(userId: string, userRole: string) {
-  return jwt.sign({ userId, userRole }, env.ACCESS_TOKEN_SECRET, {
+export function generateAccessToken(userId: string, userRole: string, sessionId: string) {
+  return jwt.sign({ userId, userRole, sid: sessionId }, env.ACCESS_TOKEN_SECRET, {
     expiresIn: "15m",
     algorithm: JWT_ALGORITHM,
   });
@@ -24,9 +24,9 @@ export function generateAccessToken(userId: string, userRole: string) {
 // token twice in one second — would get byte-identical tokens, which collide
 // on the unique `refreshTokenHash` index and would also let one device's
 // logout silently kill the other's session.
-export function generateRefreshToken(userId: string) {
+export function generateRefreshToken(userId: string, sessionId: string) {
   return jwt.sign(
-    { userId, jti: crypto.randomUUID() },
+    { userId, sid: sessionId, jti: crypto.randomUUID() },
     env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: "30d",

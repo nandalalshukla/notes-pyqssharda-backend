@@ -14,6 +14,7 @@ import { deliverTokens } from "../../utils/clientTokens.js";
 import { sendAndStoreOtp } from "../../utils/Otp.js";
 import { hashToken } from "../../utils/hashToken.js";
 import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
+import { Types } from "mongoose";
 
 export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -86,11 +87,13 @@ export const loginUser = async (req: Request, res: Response) => {
       });
     }
 
-    const accessToken = generateAccessToken(user._id.toString(), user.role);
-    const refreshToken = generateRefreshToken(user._id.toString());
+    const sessionId = new Types.ObjectId().toString();
+    const accessToken = generateAccessToken(user._id.toString(), user.role, sessionId);
+    const refreshToken = generateRefreshToken(user._id.toString(), sessionId);
 
     // Create session instead of storing token on user
     await Session.create({
+      _id: sessionId,
       userId: user._id,
       refreshTokenHash: hashToken(refreshToken),
       deviceInfo: req.headers["user-agent"],

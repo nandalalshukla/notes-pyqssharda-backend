@@ -3,14 +3,6 @@ import { User } from "../../models/users/user.model.js";
 import cloudinary from "../../config/cloudinary.js";
 import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { userId: string; userRole?: string };
-    }
-  }
-}
-
 export const updateProfile = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   const { bio, course, contactNo, name, showEmail, showContactNo, showCourse } =

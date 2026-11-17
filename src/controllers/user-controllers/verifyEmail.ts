@@ -10,6 +10,7 @@ import {
 import { deliverTokens } from "../../utils/clientTokens.js";
 import { hashToken } from "../../utils/hashToken.js";
 import { serializeAuthUser } from "../../utils/serializeAuthUser.js";
+import { Types } from "mongoose";
 
 export default async function verifyEmail(req: Request, res: Response) {
   const { email, otp } = req.body;
@@ -160,10 +161,12 @@ export default async function verifyEmail(req: Request, res: Response) {
     // are the person who registered with it. Same session, cookies and
     // response body as a normal login (see login.ts) so the client can
     // treat the two identically.
-    const accessToken = generateAccessToken(user._id.toString(), user.role);
-    const refreshToken = generateRefreshToken(user._id.toString());
+    const sessionId = new Types.ObjectId().toString();
+    const accessToken = generateAccessToken(user._id.toString(), user.role, sessionId);
+    const refreshToken = generateRefreshToken(user._id.toString(), sessionId);
 
     await Session.create({
+      _id: sessionId,
       userId: user._id,
       refreshTokenHash: hashToken(refreshToken),
       deviceInfo: req.headers["user-agent"],
