@@ -41,7 +41,7 @@ export interface ClassifiedEntry extends RawEntry {
  * course name.
  */
 const CODE_RE =
-  /\b([A-Za-z]{2,6})(?:\s*(?:1st|2nd|3rd|4th|5th|6th|7th|8th))?\s*[\s_-]?\s*(?!20\d{2}\b)(\d{3,4})\s*([A-Za-z])?\b/g;
+  /\b([A-Za-z]{2,6})(?:\s*(?:1st|2nd|3rd|4th|5th|6th|7th|8th))?\s*[\s_-]?\s*(?!20\d{2}\b)(\d{2,4})\s*([A-Za-z])?\b/g;
 
 /** Letters that look like a code prefix but are school tags, months, etc. */
 const NOT_A_CODE = new Set([
@@ -166,6 +166,22 @@ const PROGRAM_BY_SCHOOL_PREFIX: Record<string, Record<string, string>> = {
     BIA: "BA (Hons)", BSP: "B.Sc Pharmaceutical Sciences",
     BSI: "B.Sc (Hons)", OPE: "Common / Open Elective",
   },
+  Business: {
+    BBA: "BBA",
+    BCM: "B.Com",
+    MBA: "MBA",
+    BEC: "BA Economics",
+    BAN: "BA Economics",
+    MTH: "Common / Open Elective",
+    ENG: "Common / Open Elective",
+    ARP: "Common / Open Elective",
+    EVS: "Common / Open Elective",
+    COC: "Common / Open Elective",
+    OPE: "Common / Open Elective",
+    OEC: "Common / Open Elective",
+    VAC: "Common / Open Elective",
+    SEC: "Common / Open Elective",
+  },
 };
 
 /** Used when a prefix isn't in the table, so every row still gets a value. */
@@ -179,6 +195,8 @@ const SCHOOL_DEFAULT_PROGRAM: Record<string, string> = {
   Nursing: "B.Sc Nursing",
   Pharmacy: "B.Pharm",
   Education: "B.Ed",
+  Business: "Business (Other)",
+  Doctoral: "PhD (Other)",
 };
 
 /** Maps a full school name onto the short keys used by the tables above. */
@@ -194,6 +212,7 @@ export function schoolKey(school: string): string | null {
   if (s.includes("pharmacy")) return "Pharmacy";
   if (s.includes("education")) return "Education";
   if (s.includes("business")) return "Business";
+  if (s.includes("phd")) return "Doctoral";
   if (s.includes("architecture")) return "Architecture";
   return null;
 }
@@ -289,6 +308,16 @@ function extractSemester(
   }
 
   if (digits) {
+    // Newer Engineering files use compact 0xx codes (e.g. CSE 062).
+    // Their second digit carries the semester; treating the leading zero as
+    // a semester left hundreds of current papers unclassifiable.
+    const compactSemester = digits.length === 3 && digits[0] === "0"
+      ? Number(digits[1])
+      : null;
+    if (compactSemester !== null && compactSemester >= 1 && compactSemester <= 8) {
+      return { semester: compactSemester, source: "from-code" };
+    }
+
     const digit = Number(digits[0]);
 
     const yearNumbered =
@@ -365,16 +394,38 @@ export function classify(entry: RawEntry): ClassifiedEntry {
     codePrefix,
   );
 
-  // The bundle item's title IS the academic year, and is more reliable than
-  // the filename — Dental omits the year from filenames entirely.
-  const year = normalizeYear(entry.itemTitle) || normalizeYear(stem);
-  const courseName = cleanName(stem) || null;
+  // A normal item title is the academic year and is especially useful for
+  // Dental, whose filenames omit years. Some DSpace bundles combine multiple
+  // years in one item title; in that case the filename is the only way to
+  // assign the paper to its actual year.
+  const itemYear = normalizeYear(entry.itemTitle);
+  const itemYearMatches = entry.itemTitle.match(/20\d{2}\s*[-–]\s*\d{2,4}/g) ?? [];
+  const itemStart = itemYear ? Number(itemYear.slice(0, 4)) : NaN;
+  const itemEndSuffix = itemYear?.slice(5) ?? "";
+  const itemEnd = itemEndSuffix.length === 2
+    ? Number(`${String(itemStart).slice(0, 2)}${itemEndSuffix}`)
+    : Number(itemEndSuffix);
+  const itemYearIsSingle = itemYearMatches.length === 1 && itemEnd - itemStart === 1;
+  const year = (itemYearIsSingle ? itemYear : normalizeYear(stem)) || itemYear;
+  // Code-only PDFs still have a useful searchable label. Preserve the source
+  // filename as the name instead of silently dropping a paper for review.
+  const courseName = cleanName(stem) || stem.trim() || null;
 
   const prefix = codePrefix;
   let program: string | null = null;
   let programSource: ClassifiedEntry["programSource"] = "none";
+  const doctoral = /phd|doctoral/i.test(`${entry.school} ${entry.collection}`);
+  const postgraduate = /post\s*graduate/i.test(entry.collection);
 
-  if (key && prefix && PROGRAM_BY_SCHOOL_PREFIX[key]?.[prefix]) {
+  if (doctoral) {
+    program = "PhD (Other)";
+    programSource = "school-default";
+  } else if (postgraduate) {
+    // PG filenames often omit their degree name. Keep them searchable under
+    // a broad truthful program label rather than assigning an UG program.
+    program = "Postgraduate (Other)";
+    programSource = "school-default";
+  } else if (key && prefix && PROGRAM_BY_SCHOOL_PREFIX[key]?.[prefix]) {
     program = PROGRAM_BY_SCHOOL_PREFIX[key][prefix];
     programSource = "prefix";
   } else if (key && SCHOOL_DEFAULT_PROGRAM[key]) {

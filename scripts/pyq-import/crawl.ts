@@ -1,6 +1,6 @@
 /**
  * Crawls the university's DSpace (JSPUI) repository and writes an inventory
- * of every undergraduate question paper it holds.
+ * of undergraduate, postgraduate, and doctoral coursework papers.
  *
  * Why HTML and not an API: the repository's OAI-PMH endpoint answers, but
  * its index was never built server-side ("No matches for the query" for
@@ -8,8 +8,8 @@
  * isn't deployed. The rendered pages are the only source of truth.
  *
  * Structure it walks:
- *   PYQ community -> school sub-communities -> "Under Graduate" collection
- *   -> one item per academic year -> hundreds of PDF bitstreams per item.
+ *   PYQ community -> school sub-communities -> UG/PG collection (or the
+ *   standalone PhD coursework community) -> academic year -> PDF bitstreams.
  *
  * Read-only. Pages are cached on disk so re-runs don't re-hammer a campus
  * server, and so a failed import can be retried without re-crawling.
@@ -27,6 +27,7 @@ const ROOT_HANDLE = process.env.DSPACE_PYQ_HANDLE ?? "/jspui/handle/123456789/1"
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CACHE_DIR = join(HERE, ".cache");
+const REFRESH_CACHE = process.argv.includes("--refresh");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -35,7 +36,7 @@ async function fetchPage(path: string): Promise<string> {
   mkdirSync(CACHE_DIR, { recursive: true });
   const key = path.replace(/[^A-Za-z0-9]+/g, "_").slice(0, 150) + ".html";
   const cached = join(CACHE_DIR, key);
-  if (existsSync(cached)) return readFileSync(cached, "utf-8");
+  if (!REFRESH_CACHE && existsSync(cached)) return readFileSync(cached, "utf-8");
 
   const url = BASE + path;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -51,13 +52,12 @@ async function fetchPage(path: string): Promise<string> {
       return body;
     } catch (err) {
       if (attempt === 2) {
-        console.error(`  !! failed ${url}: ${(err as Error).message}`);
-        return "";
+        throw new Error(`Failed to crawl ${url} after 3 attempts: ${(err as Error).message}`);
       }
       await sleep(2000 * (attempt + 1));
     }
   }
-  return "";
+  throw new Error(`Failed to crawl ${BASE + path}`);
 }
 
 function decodeEntities(text: string): string {
@@ -97,6 +97,13 @@ function bitstreams(html: string): string[] {
   const re = /href="(\/jspui\/bitstream\/[^"]+)"/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
+    const fileName = decodeEntities(
+      decodeURIComponent(m[1].split("?")[0].split("/").pop() ?? ""),
+    );
+    // DSpace also links shortcuts and other attachments from paper items.
+    // Only PDF documents belong in the PYQ library.
+    const hasExtension = /\.[^.]+$/.test(fileName);
+    if (hasExtension && !/\.pdf$/i.test(fileName)) continue;
     if (!seen.has(m[1])) {
       seen.add(m[1]);
       out.push(m[1]);
@@ -113,50 +120,66 @@ export async function crawl(): Promise<RawEntry[]> {
   console.log(`Schools: ${schools.length}`);
 
   const inventory: RawEntry[] = [];
+  const visited = new Set<string>();
+  visited.add(ROOT_HANDLE);
 
   for (const school of schools) {
+    visited.add(school.href);
     const schoolHtml = await fetchPage(school.href);
-    // Undergraduate only. Collection naming varies across schools:
-    // "Under Graduate", "Under Graduate  (UG)".
-    const ugCollections = handleLinks(schoolHtml).filter((l) =>
-      /^under\s*graduate/i.test(l.label.trim()),
+    // Collection naming varies across schools; walk both UG and PG, plus
+    // the standalone doctoral coursework community.
+    const academicCollections = handleLinks(schoolHtml).filter((l) =>
+      /^(under|post)\s*graduate/i.test(l.label.trim()),
     );
+    if (school.label.startsWith("SU PHD")) {
+      academicCollections.push({ href: school.href, label: "PhD Course Work" });
+      visited.delete(school.href);
+    }
 
     console.log(`\n${school.label}`);
-    if (ugCollections.length === 0) {
-      console.log("   (no undergraduate collection)");
+    if (academicCollections.length === 0) {
+      console.log("   (no UG/PG collection)");
       continue;
     }
 
-    for (const collection of ugCollections) {
-      const colHtml = await fetchPage(collection.href);
-      // Item rows are the links that aren't navigation back up the tree.
-      const items = handleLinks(colHtml).filter(
-        (l) =>
-          !/^(under|post)\s*graduate/i.test(l.label) &&
-          !l.label.toUpperCase().includes("QUESTION PAPERS") &&
-          !l.label.startsWith("School of"),
-      );
-      console.log(`   ${collection.label}: ${items.length} academic years`);
+    for (const collection of academicCollections) {
+      let itemCount = 0;
+      const walk = async (href: string, label: string, academicYear: string) => {
+        if (visited.has(href)) return;
+        visited.add(href);
 
-      for (const item of items) {
-        const itemHtml = await fetchPage(item.href);
-        const files = bitstreams(itemHtml);
-        console.log(`      ${item.label.padEnd(16)} ${String(files.length).padStart(5)} PDFs`);
-
-        for (const bitstream of files) {
-          inventory.push({
-            school: school.label,
-            collection: collection.label,
-            itemHandle: item.href,
-            itemTitle: item.label,
-            bitstream,
-            filename: decodeEntities(
-              decodeURIComponent(bitstream.split("/").pop() ?? ""),
-            ),
-          });
+        const html = await fetchPage(href);
+        const year = /20\d{2}\s*[-–]\s*\d{2,4}/.test(label) ? label : academicYear;
+        const files = bitstreams(html);
+        if (files.length) {
+          itemCount += 1;
+          console.log(`      ${year.padEnd(16)} ${String(files.length).padStart(5)} PDFs`);
+          for (const bitstream of files) {
+            inventory.push({
+              school: school.label,
+              collection: collection.label,
+              itemHandle: href,
+              itemTitle: year,
+              bitstream,
+              filename: decodeEntities(
+                decodeURIComponent(bitstream.split("/").pop() ?? ""),
+              ),
+            });
+          }
         }
-      }
+
+        // Some schools (notably Business Studies) nest degree and year
+        // handles below the UG collection. Walk every child handle rather
+        // than assuming each direct child is already a PDF-bearing item.
+        for (const child of handleLinks(html)) {
+          if (child.href === href || /^(under|post)\s*graduate/i.test(child.label)) continue;
+          await walk(child.href, child.label, year);
+        }
+      };
+
+      console.log(`   ${collection.label}: crawling nested handles`);
+      await walk(collection.href, collection.label, "");
+      console.log(`      PDF-bearing items: ${itemCount}`);
     }
   }
 

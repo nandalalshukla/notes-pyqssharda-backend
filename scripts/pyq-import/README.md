@@ -1,6 +1,6 @@
 # PYQ bulk import
 
-Imports undergraduate question papers from the university's DSpace
+Imports undergraduate, postgraduate, and doctoral coursework papers from the university's DSpace
 repository into Cloudinary + MongoDB, so they don't have to be downloaded
 and re-uploaded by hand.
 
@@ -21,20 +21,21 @@ only metadata**. `classify.ts` parses it.
 ## Usage
 
 ```bash
-# 1. See what would happen. Writes nothing.
-npx tsx scripts/pyq-import/import.ts --dry-run
+# Refresh the full academic inventory (including nested school folders).
+npx tsx scripts/pyq-import/crawl.ts --refresh
 
-# 2. Small real run to sanity-check the output.
-npx tsx scripts/pyq-import/import.ts --limit 20
+# Preview the requested academic years without uploading.
+npx tsx scripts/pyq-import/import.ts --dry-run --min-year 2020 --min-confidence low
 
-# 3. The full run.
-npx tsx scripts/pyq-import/import.ts
+# Import all available papers from 2020-21 through the newest year.
+npx tsx scripts/pyq-import/import.ts --min-year 2020 --min-confidence low
 ```
 
 | Flag | Meaning |
 | --- | --- |
-| `--dry-run` | Classify and report; touch neither Cloudinary nor the DB |
+| `--dry-run` | Classify and compare against MongoDB; write local reports, but do not upload or change DB rows |
 | `--inventory <path>` | Reuse a previous crawl instead of re-crawling |
+| `--refresh` | Ignore cached HTML and fetch every source page again |
 | `--school <key>` | One school only (`Engineering`, `Law`, `Nursing`, …) |
 | `--limit <n>` | Stop after n papers |
 | `--concurrency <n>` | Parallel uploads (default 4) |
@@ -65,7 +66,13 @@ API's own `.env`:
 - `userId` is an admin. Contributions are deliberately **not** incremented:
   a bulk import isn't anyone's contribution.
 - Papers whose filename doesn't yield every required field are written to
-  `needs-review.json` rather than guessed into the database.
+  `metadata-review.json`. They are still preserved in the database using
+  `courseCode: "UNSPECIFIED"` and/or `semester: 0` where source metadata is
+  absent; the public library labels semester 0 as “Semester not listed” and
+  excludes it from semester filter options. Rows missing a title, program, or
+  academic year remain in `needs-review.json` and are not uploaded. PG and
+  doctoral records use the explicit program labels `Postgraduate (Other)` and
+  `PhD (Other)` when the source filename does not name a degree.
 
 ## Classification confidence
 
@@ -86,7 +93,8 @@ state a semester, as a holdout:
 npx tsx scripts/pyq-import/verify-semester.ts scripts/pyq-import/inventory.json
 ```
 
-At the time of writing that scores **85%**. Law is handled separately —
+At the time of writing that scores **85%**. Compact `0xx` course codes use
+their second digit as the semester (for example, `CSE 062` → 6). Law is handled separately —
 its codes number by year of study (`BAL_408` is semester 8), where the
 plain digit rule scored 6%.
 

@@ -284,7 +284,9 @@ export async function listFilterOptions<TDoc extends BaseResourceFields>(
     schools: (clean(schools) as string[]).sort(),
     // Newest academic year first — that's the order people look in.
     years: (clean(years) as string[]).sort().reverse(),
-    semesters: (clean(semesters) as number[]).sort((a, b) => a - b),
+    semesters: (clean(semesters) as number[])
+      .filter((semester) => semester > 0)
+      .sort((a, b) => a - b),
   };
 
   filterOptionsCache.set(config.displayName, {

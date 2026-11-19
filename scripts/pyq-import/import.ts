@@ -127,6 +127,20 @@ function loadCheckpoint(): Map<string, CheckpointRow["status"]> {
   return map;
 }
 
+/** True when a DSpace item label is a span or a bundle of multiple years. */
+function hasCompoundItemYear(row: ClassifiedEntry): boolean {
+  const matches = row.itemTitle.match(/20\d{2}\s*[-–]\s*\d{2,4}/g) ?? [];
+  if (matches.length !== 1) return matches.length > 1;
+  const range = /^(20\d{2})\s*[-–]\s*(\d{2,4})$/.exec(matches[0]);
+  if (!range) return true;
+  const start = Number(range[1]);
+  const suffix = range[2];
+  const end = suffix.length === 2
+    ? Number(`${range[1].slice(0, 2)}${suffix}`)
+    : Number(suffix);
+  return end - start !== 1;
+}
+
 /** Streams the PDF from DSpace straight into Cloudinary. */
 async function uploadPaper(entry: ClassifiedEntry, publicId: string) {
   const res = await fetch(BASE + entry.bitstream, {
@@ -135,6 +149,9 @@ async function uploadPaper(entry: ClassifiedEntry, publicId: string) {
   if (!res.ok) throw new Error(`download HTTP ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
   if (buffer.length === 0) throw new Error("empty file");
+  if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
+    throw new Error("source response is not a PDF (missing PDF signature)");
+  }
 
   return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -222,19 +239,27 @@ async function main() {
     console.log(`  years kept: ${kept.join(", ")}`);
   }
 
-  // The model requires courseCode, courseName, semester, year and program;
-  // a row missing any of them cannot be inserted at all.
+  // Keep every dated paper with a searchable title/program. For source
+  // filenames that omit a course code or semester, the importer records an
+  // explicit sentinel (UNSPECIFIED / 0) and leaves the row in the metadata
+  // review report instead of dropping the PDF.
   const importable = rows.filter(
     (r) =>
-      r.problems.length === 0 &&
+      r.year !== null && r.courseName !== null && r.program !== null &&
       CONFIDENCE_RANK[r.confidence] >= CONFIDENCE_RANK[MIN_CONFIDENCE],
   );
   const held = rows.filter((r) => !importable.includes(r));
+  const metadataReview = importable.filter((r) => r.problems.length > 0);
 
-  console.log(`\nImportable: ${importable.length}   held for review: ${held.length}`);
+  console.log(
+    `\nImportable: ${importable.length}   metadata review: ${metadataReview.length}   held: ${held.length}`,
+  );
   const reviewPath = join(HERE, "needs-review.json");
   writeFileSync(reviewPath, JSON.stringify(held, null, 1), "utf-8");
   console.log(`Held rows written to ${reviewPath}`);
+  const metadataReviewPath = join(HERE, "metadata-review.json");
+  writeFileSync(metadataReviewPath, JSON.stringify(metadataReview, null, 1), "utf-8");
+  console.log(`Imported rows needing metadata review written to ${metadataReviewPath}`);
 
   // ── 3. Connect ──────────────────────────────────────────────────────────
   const mongoUri = process.env.IMPORT_MONGO_URI ?? env.MONGO_URI;
@@ -263,26 +288,33 @@ async function main() {
   // Keyed on the source bitstream rather than the Cloudinary publicId:
   // provenance is stable, whereas a publicId changes the moment the folder
   // scheme does, which would make every previously-imported paper look new.
-  const existing = new Set<string>(
-    (
-      await Pyq.find({
-        "source.bitstream": { $in: candidates.map((c) => c.row.bitstream) },
-      })
-        .select("source.bitstream")
-        .lean()
-    ).map((d) => (d as { source?: { bitstream?: string } }).source?.bitstream ?? ""),
+  const existingRows = (await Pyq.find({
+    "source.bitstream": { $in: candidates.map((c) => c.row.bitstream) },
+  })
+    .select("source.bitstream year")
+    .lean()) as unknown as { source?: { bitstream?: string }; year: string }[];
+  const existingYearByBitstream = new Map(
+    existingRows.map((d) => [d.source?.bitstream ?? "", d.year]),
+  );
+  const existing = new Set(existingYearByBitstream.keys());
+  const yearCorrections = candidates.filter(
+    ({ row }) =>
+      existing.has(row.bitstream) &&
+      hasCompoundItemYear(row) &&
+      existingYearByBitstream.get(row.bitstream) !== row.year,
   );
 
+  // MongoDB is the source of truth for a completed import. An old
+  // checkpoint can say "uploaded" after its row was later removed, so only
+  // a matching source.bitstream row is allowed to suppress a re-import.
   const todo = candidates
-    .filter(
-      (c) =>
-        !existing.has(c.row.bitstream) && checkpoint.get(c.publicId) !== "uploaded",
-    )
+    .filter((c) => !existing.has(c.row.bitstream))
     .slice(0, LIMIT === Infinity ? undefined : LIMIT);
 
   console.log(
     `Already in DB: ${existing.size}   checkpointed: ${checkpoint.size}   to import now: ${todo.length}`,
   );
+  console.log(`Compound-item academic years to correct: ${yearCorrections.length}`);
 
   const bytesEstimate = (todo.length * 228) / 1024;
   console.log(`Estimated download/upload: ~${bytesEstimate.toFixed(2)} MB`);
@@ -304,6 +336,19 @@ async function main() {
   }
 
   // ── 5. Upload + insert ──────────────────────────────────────────────────
+  if (yearCorrections.length) {
+    const result = await Pyq.bulkWrite(
+      yearCorrections.map(({ row }) => ({
+        updateOne: {
+          filter: { "source.system": "dspace", "source.bitstream": row.bitstream },
+          update: { $set: { year: row.year } },
+        },
+      })),
+      { ordered: false },
+    );
+    console.log(`Corrected ${result.modifiedCount} academic-year labels from source filenames`);
+  }
+
   let done = 0;
   let failed = 0;
   const started = Date.now();
@@ -322,9 +367,9 @@ async function main() {
             userId: uploader._id,
             program: row.program,
             school: row.school,
-            courseCode: row.courseCode,
+            courseCode: row.courseCode ?? "UNSPECIFIED",
             courseName: row.courseName,
-            semester: row.semester,
+            semester: row.semester ?? 0,
             year: row.year,
             source: {
               system: "dspace",
