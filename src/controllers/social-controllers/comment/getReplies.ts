@@ -28,7 +28,7 @@ export const getReplies = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "content author post parentComment likesCount mentions createdAt updatedAt",
+          "content author post parentComment likesCount mentions mentionEveryone createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
@@ -92,6 +92,7 @@ export const getReplies = async (req: Request, res: Response) => {
         _id: reply._id,
         text: reply.content,
         mentions: serializeMentions(reply.mentions as never),
+        mentionEveryone: Boolean(reply.mentionEveryone),
         author: serializeUserSummary(reply.author),
         post: reply.post,
         parentComment: reply.parentComment,

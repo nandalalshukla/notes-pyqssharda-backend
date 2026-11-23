@@ -61,7 +61,7 @@ export const getFeed = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions mentionEveryone createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
@@ -138,6 +138,7 @@ export const getFeed = async (req: Request, res: Response) => {
         type: post.type || "general",
         content: post.content,
         mentions: serializeMentions(post.mentions as never),
+        mentionEveryone: Boolean(post.mentionEveryone),
         author: serializePostAuthor(post.author, {
           isAnonymous: post.isAnonymous,
           viewerId: userId,

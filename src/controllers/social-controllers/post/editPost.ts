@@ -14,8 +14,14 @@ import {
 } from "../../../utils/socialSerializers.js";
 import { mergeLostFoundFromBody } from "./lostFound.helpers.js";
 import { resolveModerationStatus } from "../../../utils/postModeration.js";
-import { resolveMentions } from "../../../services/social/mention.service.js";
-import { createNotification } from "../../../services/social/notification.service.js";
+import {
+  hasEveryoneMention,
+  resolveMentions,
+} from "../../../services/social/mention.service.js";
+import {
+  broadcastNotification,
+  createNotification,
+} from "../../../services/social/notification.service.js";
 
 export const editPost = async (req: Request, res: Response) => {
   try {
@@ -98,12 +104,18 @@ export const editPost = async (req: Request, res: Response) => {
     const previousMentionIds = new Set(
       (post.mentions || []).map((mention) => mention.userId.toString()),
     );
+    const previouslyMentionedEveryone = Boolean(post.mentionEveryone);
     const mentions = await resolveMentions(
       post.content,
       req.body.mentions,
       req.user!.userId,
     );
     post.mentions = mentions as unknown as typeof post.mentions;
+    post.mentionEveryone = hasEveryoneMention(
+      post.content,
+      req.body.mentions,
+      req.user!.userRole,
+    );
 
     if (req.body.type !== undefined) {
       post.type = req.body.type;
@@ -172,6 +184,18 @@ export const editPost = async (req: Request, res: Response) => {
 
     await post.save();
 
+    if (
+      post.moderationStatus === "approved" &&
+      post.mentionEveryone &&
+      !previouslyMentionedEveryone
+    ) {
+      await broadcastNotification({
+        actor: req.user!.userId,
+        type: "mention_post",
+        post: post._id.toString(),
+      });
+    }
+
     for (const mention of mentions) {
       if (!previousMentionIds.has(mention.userId.toString())) {
         await createNotification({
@@ -205,6 +229,7 @@ export const editPost = async (req: Request, res: Response) => {
         userId: mention.userId.toString(),
         username: mention.usernameSnapshot,
       })),
+      mentionEveryone: Boolean(populated.mentionEveryone),
       // Editing is author-only, so the viewer is by definition the author
       // and sees their real profile back even on an anonymous post.
       author: serializePostAuthor(author, {

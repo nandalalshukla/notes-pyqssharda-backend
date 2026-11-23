@@ -130,6 +130,12 @@ const postSchema = new Schema(
       default: [],
     },
 
+    mentionEveryone: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     // When true the author is masked out of every read path for everyone
     // except the author themselves (see utils/socialSerializers.ts). The
     // `author` ref is still stored — moderation, ownership checks and

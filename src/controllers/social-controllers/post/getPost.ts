@@ -31,7 +31,7 @@ export const getPost = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select(
-        "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions createdAt updatedAt",
+        "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions mentionEveryone createdAt updatedAt",
       )
       .populate({
         path: "mentions.userId",
@@ -98,6 +98,7 @@ export const getPost = async (req: Request, res: Response) => {
       type: post.type || "general",
       content: post.content,
       mentions: serializeMentions(post.mentions as never),
+      mentionEveryone: Boolean(post.mentionEveryone),
       author: serializePostAuthor(post.author, {
         isAnonymous: post.isAnonymous,
         viewerId: userId,

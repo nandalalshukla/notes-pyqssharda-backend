@@ -2,9 +2,15 @@
 import { Request, Response } from "express";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
-import { createNotification } from "../../../services/social/notification.service.js";
+import {
+  broadcastNotification,
+  createNotification,
+} from "../../../services/social/notification.service.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
-import { resolveMentions } from "../../../services/social/mention.service.js";
+import {
+  hasEveryoneMention,
+  resolveMentions,
+} from "../../../services/social/mention.service.js";
 
 export const createComment = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -56,10 +62,24 @@ export const createComment = async (req: Request, res: Response) => {
         req.body.mentions,
         userId,
       ),
+      mentionEveryone: hasEveryoneMention(
+        commentContent.trim(),
+        req.body.mentions,
+        req.user!.userRole,
+      ),
     });
 
     // Increment post commentsCount
     await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
+    if (comment.mentionEveryone) {
+      await broadcastNotification({
+        actor: userId,
+        type: "mention_comment",
+        post: postId,
+        comment: comment._id.toString(),
+      });
+    }
 
     for (const mention of comment.mentions) {
       await createNotification({
@@ -115,6 +135,7 @@ export const createComment = async (req: Request, res: Response) => {
             userId: mention.userId.toString(),
             username: mention.usernameSnapshot,
           })),
+          mentionEveryone: Boolean(populated.mentionEveryone),
           author: {
             _id: author._id,
             username: author.username || "Anonymous",

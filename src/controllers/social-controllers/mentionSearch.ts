@@ -16,6 +16,19 @@ export const mentionSearch = async (req: Request, res: Response) => {
     throw new AppError("Invalid username search", 400);
   }
 
+  const staffOnlySuggestion =
+    (req.user?.userRole === "admin" || req.user?.userRole === "mod") &&
+    "everyone".startsWith(query)
+      ? [
+          {
+            id: "everyone",
+            username: "everyone",
+            name: "Everyone",
+            profilePicture: null,
+          },
+        ]
+      : [];
+
   const users = await User.find({
     username: { $regex: `^${escapeRegex(query)}`, $options: "i" },
     isActive: true,
@@ -29,11 +42,14 @@ export const mentionSearch = async (req: Request, res: Response) => {
 
   return res.status(200).json({
     success: true,
-    users: users.map((user) => ({
-      id: user._id,
-      username: user.username,
-      name: user.name,
-      profilePicture: user.profilePic?.url || null,
-    })),
+    users: [
+      ...staffOnlySuggestion,
+      ...users.map((user) => ({
+        id: user._id,
+        username: user.username,
+        name: user.name,
+        profilePicture: user.profilePic?.url || null,
+      })),
+    ].slice(0, 10),
   });
 };

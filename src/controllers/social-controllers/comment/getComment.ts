@@ -32,7 +32,7 @@ export const getComment = async (req: Request, res: Response) => {
       post: postId,
       isDeleted: false,
     })
-      .select("content author post likesCount mentions createdAt updatedAt")
+      .select("content author post likesCount mentions mentionEveryone createdAt updatedAt")
       .populate<{ author: PopulatedUserSummary | null }>(
         "author",
         "_id username profilePic role",
@@ -73,6 +73,7 @@ export const getComment = async (req: Request, res: Response) => {
       _id: comment._id,
       text: comment.content,
       mentions: serializeMentions(comment.mentions as never),
+      mentionEveryone: Boolean(comment.mentionEveryone),
       author: serializeUserSummary(comment.author),
       post: comment.post,
       likes: comment.likesCount || 0,

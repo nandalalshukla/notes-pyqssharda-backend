@@ -79,3 +79,22 @@ export async function resolveMentions(
 
   return valid;
 }
+
+export function hasEveryoneMention(
+  content: string,
+  references: unknown,
+  actorRole?: string,
+): boolean {
+  if (actorRole !== "admin" && actorRole !== "mod") return false;
+  if (!/(^|[^a-zA-Z0-9._])@everyone(?![a-zA-Z0-9._])/i.test(content)) {
+    return false;
+  }
+  if (!Array.isArray(references)) return false;
+  return references.some(
+    (reference) =>
+      typeof reference === "object" &&
+      reference !== null &&
+      "userId" in reference &&
+      reference.userId === "everyone",
+  );
+}

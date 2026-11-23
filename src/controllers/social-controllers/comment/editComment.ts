@@ -4,8 +4,14 @@ import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
-import { resolveMentions } from "../../../services/social/mention.service.js";
-import { createNotification } from "../../../services/social/notification.service.js";
+import {
+  hasEveryoneMention,
+  resolveMentions,
+} from "../../../services/social/mention.service.js";
+import {
+  broadcastNotification,
+  createNotification,
+} from "../../../services/social/notification.service.js";
 
 export const editComment = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -58,12 +64,27 @@ export const editComment = async (req: Request, res: Response) => {
     const previousMentionIds = new Set(
       (comment.mentions || []).map((mention) => mention.userId.toString()),
     );
+    const previouslyMentionedEveryone = Boolean(comment.mentionEveryone);
     comment.mentions = (await resolveMentions(
       commentContent.trim(),
       req.body.mentions,
       userId,
     )) as unknown as typeof comment.mentions;
+    comment.mentionEveryone = hasEveryoneMention(
+      commentContent.trim(),
+      req.body.mentions,
+      req.user!.userRole,
+    );
     await comment.save();
+
+    if (comment.mentionEveryone && !previouslyMentionedEveryone) {
+      await broadcastNotification({
+        actor: userId,
+        type: "mention_comment",
+        post: comment.post.toString(),
+        comment: comment._id.toString(),
+      });
+    }
 
     for (const mention of comment.mentions) {
       if (!previousMentionIds.has(mention.userId.toString())) {
@@ -104,6 +125,7 @@ export const editComment = async (req: Request, res: Response) => {
             userId: mention.userId.toString(),
             username: mention.usernameSnapshot,
           })),
+          mentionEveryone: Boolean(populated.mentionEveryone),
           author: {
             _id: author._id,
             username: author.username || "Anonymous",

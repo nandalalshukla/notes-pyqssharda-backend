@@ -8,6 +8,7 @@ import {
   serializeUserSummary,
 } from "../../utils/socialSerializers.js";
 import { createNotification } from "../../services/social/notification.service.js";
+import { broadcastNotification } from "../../services/social/notification.service.js";
 
 /**
  * The review queue for events and announcements written by general
@@ -125,6 +126,14 @@ export const approvePost = async (req: Request, res: Response) => {
   for (const mention of post.mentions || []) {
     await createNotification({
       recipient: mention.userId.toString(),
+      actor: post.author.toString(),
+      type: "mention_post",
+      post: post._id.toString(),
+    });
+  }
+
+  if (post.mentionEveryone) {
+    await broadcastNotification({
       actor: post.author.toString(),
       type: "mention_post",
       post: post._id.toString(),

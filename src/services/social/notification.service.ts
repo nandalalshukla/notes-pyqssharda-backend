@@ -1,4 +1,5 @@
 import { Notification } from "../../models/social/notification.model.js";
+import { User } from "../../models/users/user.model.js";
 import { publishToUser } from "./notificationStream.service.js";
 
 export type NotificationType =
@@ -80,5 +81,53 @@ export async function createNotification({
     publishToUser(recipient, "unread-count", { unreadCount });
   } catch (error) {
     console.error("createNotification failed (non-fatal):", error);
+  }
+}
+
+export async function broadcastNotification(params: {
+  actor: string;
+  type: Extract<NotificationType, "mention_post" | "mention_comment">;
+  post?: string | null;
+  comment?: string | null;
+}): Promise<void> {
+  const cursor = User.find({
+    isActive: true,
+    isEmailVerified: true,
+    _id: { $ne: params.actor },
+  })
+    .select("_id")
+    .lean()
+    .cursor();
+
+  let batch: string[] = [];
+  for await (const recipient of cursor) {
+    batch.push(recipient._id.toString());
+    if (batch.length === 50) {
+      await Promise.all(
+        batch.map((recipientId) =>
+          createNotification({
+            recipient: recipientId,
+            actor: params.actor,
+            type: params.type,
+            post: params.post,
+            comment: params.comment,
+          }),
+        ),
+      );
+      batch = [];
+    }
+  }
+  if (batch.length > 0) {
+    await Promise.all(
+      batch.map((recipientId) =>
+        createNotification({
+          recipient: recipientId,
+          actor: params.actor,
+          type: params.type,
+          post: params.post,
+          comment: params.comment,
+        }),
+      ),
+    );
   }
 }

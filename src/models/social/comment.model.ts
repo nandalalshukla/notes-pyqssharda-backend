@@ -54,6 +54,11 @@ const commentSchema = new Schema(
       default: [],
     },
 
+    mentionEveryone: {
+      type: Boolean,
+      default: false,
+    },
+
     likesCount: {
       type: Number,
       default: 0,
