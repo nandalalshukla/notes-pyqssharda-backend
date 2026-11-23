@@ -9,6 +9,7 @@ import {
   hasPopulatedUserSummary,
   serializeLostFound,
   serializePostAuthor,
+  serializeMentions,
 } from "../../../utils/socialSerializers.js";
 
 export const getFeed = async (req: Request, res: Response) => {
@@ -60,12 +61,17 @@ export const getFeed = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason createdAt updatedAt",
+          "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
+        .populate({
+          path: "mentions.userId",
+          select: "_id username isActive",
+          match: { isActive: true },
+        })
         .lean(),
       Post.countDocuments(postFilter),
     ]);
@@ -131,6 +137,7 @@ export const getFeed = async (req: Request, res: Response) => {
         _id: post._id,
         type: post.type || "general",
         content: post.content,
+        mentions: serializeMentions(post.mentions as never),
         author: serializePostAuthor(post.author, {
           isAnonymous: post.isAnonymous,
           viewerId: userId,

@@ -82,6 +82,25 @@ const lostFoundSchema = new Schema(
   { _id: false },
 );
 
+const mentionSchema = new Schema(
+  {
+    userId: {
+      type: ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    usernameSnapshot: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 20,
+    },
+  },
+  { _id: false },
+);
+
 const postSchema = new Schema(
   {
     author: {
@@ -104,6 +123,11 @@ const postSchema = new Schema(
       trim: true,
       maxlength: [2000, "Post content too long"],
       default: "",
+    },
+
+    mentions: {
+      type: [mentionSchema],
+      default: [],
     },
 
     // When true the author is masked out of every read path for everyone

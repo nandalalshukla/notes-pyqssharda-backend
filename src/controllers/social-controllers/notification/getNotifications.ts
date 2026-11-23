@@ -90,6 +90,8 @@ type NotificationForFormatting = {
     | "like"
     | "comment"
     | "reply"
+    | "mention_post"
+    | "mention_comment"
     | "follow"
     | "share"
     | "post_approved"
@@ -103,7 +105,12 @@ function isBrokenNotification(notif: NotificationForFormatting): boolean {
   if (!hasPopulatedUserSummary(notif.actor)) return true;
   if (notif.type === "follow") return false;
   if (!notif.post) return true;
-  if ((notif.type === "comment" || notif.type === "reply") && !notif.comment) {
+  if (
+    (notif.type === "comment" ||
+      notif.type === "reply" ||
+      notif.type === "mention_comment") &&
+    !notif.comment
+  ) {
     return true;
   }
   return false;
@@ -121,6 +128,10 @@ function formatNotificationMessage(notif: NotificationForFormatting): string {
       return `${actorName} commented on your post.`;
     case "reply":
       return `${actorName} replied to your comment.`;
+    case "mention_post":
+      return `${actorName} mentioned you in a post.`;
+    case "mention_comment":
+      return `${actorName} mentioned you in a comment.`;
     case "share":
       return `${actorName} shared your post.`;
     // Deliberately impersonal: who reviewed a post is between the
@@ -142,6 +153,8 @@ function getActionLink(notif: NotificationForFormatting): string {
     notif.type === "like" ||
     notif.type === "comment" ||
     notif.type === "reply" ||
+    notif.type === "mention_post" ||
+    notif.type === "mention_comment" ||
     notif.type === "share" ||
     notif.type === "post_approved" ||
     notif.type === "post_rejected"

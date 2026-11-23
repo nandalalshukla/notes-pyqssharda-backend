@@ -40,6 +40,7 @@ import { streamNotifications } from "../../controllers/social-controllers/notifi
 
 // Controllers - Reports
 import { createReportController } from "../../controllers/social-controllers/report/createReport.js";
+import { mentionSearch } from "../../controllers/social-controllers/mentionSearch.js";
 
 // Validators
 import {
@@ -89,6 +90,13 @@ import { validateMiddleware } from "../../middlewares/auth/validate.middleware.j
 import { uploadPostFilesMulter } from "../../config/multer.js";
 
 const router = Router();
+
+router.get(
+  "/users/mention-search",
+  authMiddleware,
+  interactionLimiter,
+  mentionSearch,
+);
 
 // Global site metrics pulse. It records only anonymous, hashed browser IDs.
 router.post(

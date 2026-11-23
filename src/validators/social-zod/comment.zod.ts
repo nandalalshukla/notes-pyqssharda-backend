@@ -19,6 +19,18 @@ export const createCommentSchema = z
       .min(1, { message: "Comment cannot be empty" })
       .max(1000, { message: "Comment must not exceed 1000 characters" })
       .optional(),
+    mentions: z
+      .union([z.string(), z.array(z.unknown())])
+      .optional()
+      .transform((value) => {
+        if (typeof value !== "string") return value;
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }),
     parentComment: z.string().optional(),
   })
   .refine((data) => data.text || data.content, {
@@ -45,6 +57,18 @@ export const editCommentSchema = z
       .min(1, { message: "Comment cannot be empty" })
       .max(1000, { message: "Comment must not exceed 1000 characters" })
       .optional(),
+    mentions: z
+      .union([z.string(), z.array(z.unknown())])
+      .optional()
+      .transform((value) => {
+        if (typeof value !== "string") return value;
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }),
   })
   .refine((data) => data.text || data.content, {
     message: "Either 'text' or 'content' field is required",

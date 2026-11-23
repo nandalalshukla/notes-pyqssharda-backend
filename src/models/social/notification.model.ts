@@ -23,6 +23,8 @@ const notificationSchema = new Schema(
         "like",
         "comment",
         "reply",
+        "mention_post",
+        "mention_comment",
         "follow",
         "share",
         // Review verdicts on a member's event/announcement submission

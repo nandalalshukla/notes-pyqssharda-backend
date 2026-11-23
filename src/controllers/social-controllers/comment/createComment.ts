@@ -4,6 +4,7 @@ import { Comment } from "../../../models/social/comment.model.js";
 import { Post } from "../../../models/social/post.model.js";
 import { createNotification } from "../../../services/social/notification.service.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import { resolveMentions } from "../../../services/social/mention.service.js";
 
 export const createComment = async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -50,10 +51,25 @@ export const createComment = async (req: Request, res: Response) => {
       author: userId,
       content: commentContent.trim(),
       parentComment: parentComment || null,
+      mentions: await resolveMentions(
+        commentContent.trim(),
+        req.body.mentions,
+        userId,
+      ),
     });
 
     // Increment post commentsCount
     await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
+    for (const mention of comment.mentions) {
+      await createNotification({
+        recipient: mention.userId.toString(),
+        actor: userId,
+        type: "mention_comment",
+        post: postId,
+        comment: comment._id.toString(),
+      });
+    }
 
     // Notify the post author about the new comment...
     await createNotification({
@@ -95,6 +111,10 @@ export const createComment = async (req: Request, res: Response) => {
         comment: {
           _id: populated._id,
           text: populated.content,
+          mentions: (populated.mentions || []).map((mention) => ({
+            userId: mention.userId.toString(),
+            username: mention.usernameSnapshot,
+          })),
           author: {
             _id: author._id,
             username: author.username || "Anonymous",

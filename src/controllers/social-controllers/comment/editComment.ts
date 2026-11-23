@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import { Comment } from "../../../models/social/comment.model.js";
 import { Like } from "../../../models/social/like.model.js";
 import type { PopulatedUserSummary } from "../../../types/social.types.js";
+import { resolveMentions } from "../../../services/social/mention.service.js";
+import { createNotification } from "../../../services/social/notification.service.js";
 
 export const editComment = async (req: Request, res: Response) => {
   const { postId, commentId } = req.params;
@@ -53,7 +55,27 @@ export const editComment = async (req: Request, res: Response) => {
     }
 
     comment.content = commentContent.trim();
+    const previousMentionIds = new Set(
+      (comment.mentions || []).map((mention) => mention.userId.toString()),
+    );
+    comment.mentions = (await resolveMentions(
+      commentContent.trim(),
+      req.body.mentions,
+      userId,
+    )) as unknown as typeof comment.mentions;
     await comment.save();
+
+    for (const mention of comment.mentions) {
+      if (!previousMentionIds.has(mention.userId.toString())) {
+        await createNotification({
+          recipient: mention.userId.toString(),
+          actor: userId,
+          type: "mention_comment",
+          post: comment.post.toString(),
+          comment: comment._id.toString(),
+        });
+      }
+    }
 
     // Populate and get like data
     const populated = await comment.populate(
@@ -78,6 +100,10 @@ export const editComment = async (req: Request, res: Response) => {
         comment: {
           _id: populated._id,
           text: populated.content,
+          mentions: (populated.mentions || []).map((mention) => ({
+            userId: mention.userId.toString(),
+            username: mention.usernameSnapshot,
+          })),
           author: {
             _id: author._id,
             username: author.username || "Anonymous",

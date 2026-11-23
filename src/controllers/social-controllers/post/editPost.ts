@@ -14,6 +14,8 @@ import {
 } from "../../../utils/socialSerializers.js";
 import { mergeLostFoundFromBody } from "./lostFound.helpers.js";
 import { resolveModerationStatus } from "../../../utils/postModeration.js";
+import { resolveMentions } from "../../../services/social/mention.service.js";
+import { createNotification } from "../../../services/social/notification.service.js";
 
 export const editPost = async (req: Request, res: Response) => {
   try {
@@ -93,6 +95,16 @@ export const editPost = async (req: Request, res: Response) => {
       post.content = req.body.content.trim();
     }
 
+    const previousMentionIds = new Set(
+      (post.mentions || []).map((mention) => mention.userId.toString()),
+    );
+    const mentions = await resolveMentions(
+      post.content,
+      req.body.mentions,
+      req.user!.userId,
+    );
+    post.mentions = mentions as unknown as typeof post.mentions;
+
     if (req.body.type !== undefined) {
       post.type = req.body.type;
     }
@@ -160,6 +172,18 @@ export const editPost = async (req: Request, res: Response) => {
 
     await post.save();
 
+    for (const mention of mentions) {
+      if (!previousMentionIds.has(mention.userId.toString())) {
+        await createNotification({
+          recipient: mention.userId.toString(),
+          actor: req.user!.userId,
+          type: "mention_post",
+          post: post._id.toString(),
+          comment: null,
+        });
+      }
+    }
+
     const populated = await post.populate(
       "author",
       "_id username profilePic role",
@@ -177,6 +201,10 @@ export const editPost = async (req: Request, res: Response) => {
       _id: populated._id,
       type: populated.type,
       content: populated.content,
+      mentions: (populated.mentions || []).map((mention) => ({
+        userId: mention.userId.toString(),
+        username: mention.usernameSnapshot,
+      })),
       // Editing is author-only, so the viewer is by definition the author
       // and sees their real profile back even on an anonymous post.
       author: serializePostAuthor(author, {

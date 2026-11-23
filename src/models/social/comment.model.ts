@@ -1,6 +1,25 @@
 import mongoose, { Schema } from "mongoose";
 
 const ObjectId = Schema.Types.ObjectId;
+const mentionSchema = new Schema(
+  {
+    userId: {
+      type: ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    usernameSnapshot: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 20,
+    },
+  },
+  { _id: false },
+);
+
 const commentSchema = new Schema(
   {
     post: {
@@ -28,6 +47,11 @@ const commentSchema = new Schema(
       required: true,
       trim: true,
       maxlength: 1000,
+    },
+
+    mentions: {
+      type: [mentionSchema],
+      default: [],
     },
 
     likesCount: {

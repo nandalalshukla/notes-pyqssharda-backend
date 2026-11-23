@@ -106,3 +106,41 @@ export function serializeLostFound(
     resolvedAt: lostFound.resolvedAt ?? null,
   };
 }
+
+interface StoredMention {
+  userId:
+    | { _id: unknown; username?: string; isActive?: boolean }
+    | unknown;
+  usernameSnapshot?: string;
+}
+
+export function serializeMentions(mentions: StoredMention[] | null | undefined) {
+  if (!Array.isArray(mentions)) return [];
+
+  return mentions
+    .map((mention) => {
+      const populated = mention.userId;
+      if (
+        typeof populated !== "object" ||
+        populated === null ||
+        !("_id" in populated)
+      ) {
+        return null;
+      }
+      const user = populated as {
+        _id: { toString(): string };
+        username?: string;
+        isActive?: boolean;
+      };
+      if (user.isActive === false) return null;
+      return {
+        userId: user._id.toString(),
+        username: user.username || mention.usernameSnapshot || "anonymous",
+        usernameSnapshot: mention.usernameSnapshot || user.username,
+      };
+    })
+    .filter(
+      (mention): mention is { userId: string; username: string; usernameSnapshot: string } =>
+        Boolean(mention),
+    );
+}

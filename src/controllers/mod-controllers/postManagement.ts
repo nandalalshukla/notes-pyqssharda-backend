@@ -122,6 +122,15 @@ export const approvePost = async (req: Request, res: Response) => {
     post: post._id.toString(),
   });
 
+  for (const mention of post.mentions || []) {
+    await createNotification({
+      recipient: mention.userId.toString(),
+      actor: post.author.toString(),
+      type: "mention_post",
+      post: post._id.toString(),
+    });
+  }
+
   return res.status(200).json({
     success: true,
     message: "Post approved and published.",

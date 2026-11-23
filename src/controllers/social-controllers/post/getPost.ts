@@ -9,6 +9,7 @@ import {
   hasPopulatedUserSummary,
   serializeLostFound,
   serializePostAuthor,
+  serializeMentions,
 } from "../../../utils/socialSerializers.js";
 import { isPostReviewer } from "../../../utils/postModeration.js";
 
@@ -30,8 +31,13 @@ export const getPost = async (req: Request, res: Response) => {
       isDeleted: false,
     })
       .select(
-        "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason createdAt updatedAt",
+        "type content author media likesCount commentsCount isAnonymous lostFound moderationStatus rejectionReason mentions createdAt updatedAt",
       )
+      .populate({
+        path: "mentions.userId",
+        select: "_id username isActive",
+        match: { isActive: true },
+      })
       .populate<{ author: PopulatedUserSummary | null }>(
         "author",
         "_id username profilePic role",
@@ -91,6 +97,7 @@ export const getPost = async (req: Request, res: Response) => {
       _id: post._id,
       type: post.type || "general",
       content: post.content,
+      mentions: serializeMentions(post.mentions as never),
       author: serializePostAuthor(post.author, {
         isAnonymous: post.isAnonymous,
         viewerId: userId,

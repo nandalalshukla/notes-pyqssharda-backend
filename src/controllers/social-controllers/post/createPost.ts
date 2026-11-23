@@ -8,6 +8,8 @@ import {
 } from "../../../utils/socialSerializers.js";
 import { buildLostFoundFromBody } from "./lostFound.helpers.js";
 import { resolveModerationStatus } from "../../../utils/postModeration.js";
+import { resolveMentions } from "../../../services/social/mention.service.js";
+import { createNotification } from "../../../services/social/notification.service.js";
 
 export const createPost = async (req: Request, res: Response) => {
   try {
@@ -53,7 +55,24 @@ export const createPost = async (req: Request, res: Response) => {
       moderationStatus,
       ...(lostFound ? { lostFound } : {}),
       media,
+      mentions: await resolveMentions(
+        content?.trim() ?? "",
+        req.body.mentions,
+        req.user!.userId,
+      ),
     });
+
+    if (moderationStatus === "approved") {
+      for (const mention of post.mentions) {
+        await createNotification({
+          recipient: mention.userId.toString(),
+          actor: req.user!.userId,
+          type: "mention_post",
+          post: post._id.toString(),
+          comment: null,
+        });
+      }
+    }
 
     const populated = await post.populate(
       "author",
@@ -67,6 +86,10 @@ export const createPost = async (req: Request, res: Response) => {
       _id: populated._id,
       type: populated.type,
       content: populated.content,
+      mentions: (populated.mentions || []).map((mention) => ({
+        userId: mention.userId.toString(),
+        username: mention.usernameSnapshot,
+      })),
       // The creator is always the viewer here, so they see their real
       // profile back even on an anonymous post — `isAnonymous` below is
       // what tells the UI to show the "Posted anonymously" marker.

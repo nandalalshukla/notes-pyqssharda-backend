@@ -98,6 +98,18 @@ export const createPostSchema = z
         { message: "Content must be a string" },
       ),
     isAnonymous: formBoolean.optional().default(false),
+    mentions: z
+      .union([z.string(), z.array(z.unknown())])
+      .optional()
+      .transform((value) => {
+        if (typeof value !== "string") return value;
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }),
     ...lostFoundFields,
   })
   .superRefine((value, ctx) => {
@@ -135,6 +147,18 @@ export const editPostSchema = z.object({
     .max(2000, "Post content cannot exceed 2000 characters")
     .optional(),
   isAnonymous: formBoolean.optional(),
+  mentions: z
+    .union([z.string(), z.array(z.unknown())])
+    .optional()
+    .transform((value) => {
+      if (typeof value !== "string") return value;
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }),
   ...lostFoundFields,
   removePublicIds: z
     .string()

@@ -7,6 +7,7 @@ import type { PopulatedUserSummary } from "../../../types/social.types.js";
 import {
   hasPopulatedUserSummary,
   serializeUserSummary,
+  serializeMentions,
 } from "../../../utils/socialSerializers.js";
 
 export const getReplies = async (req: Request, res: Response) => {
@@ -27,12 +28,17 @@ export const getReplies = async (req: Request, res: Response) => {
         .skip(skip)
         .limit(limit)
         .select(
-          "content author post parentComment likesCount createdAt updatedAt",
+          "content author post parentComment likesCount mentions createdAt updatedAt",
         )
         .populate<{ author: PopulatedUserSummary | null }>(
           "author",
           "_id username profilePic role",
         )
+        .populate({
+          path: "mentions.userId",
+          select: "_id username isActive",
+          match: { isActive: true },
+        })
         .lean(),
       Comment.countDocuments({
         post: postId,
@@ -85,6 +91,7 @@ export const getReplies = async (req: Request, res: Response) => {
       return {
         _id: reply._id,
         text: reply.content,
+        mentions: serializeMentions(reply.mentions as never),
         author: serializeUserSummary(reply.author),
         post: reply.post,
         parentComment: reply.parentComment,
