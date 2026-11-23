@@ -48,6 +48,7 @@ export async function resolveMentions(
     _id: { $in: [...uniqueIds].map((id) => new mongoose.Types.ObjectId(id)) },
     isActive: true,
     isEmailVerified: true,
+    username: { $ne: "everyone" },
   })
     .select("_id username")
     .lean();

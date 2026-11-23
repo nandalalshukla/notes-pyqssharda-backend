@@ -23,6 +23,10 @@ const userSchema = new Schema(
         /^[a-z0-9._]+$/,
         "Username can only contain lowercase letters, numbers, dots and underscores",
       ],
+      validate: {
+        validator: (username: string) => username !== "everyone",
+        message: "This username is reserved",
+      },
       index: true,
     },
 

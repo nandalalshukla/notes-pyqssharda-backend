@@ -30,7 +30,7 @@ export const mentionSearch = async (req: Request, res: Response) => {
       : [];
 
   const users = await User.find({
-    username: { $regex: `^${escapeRegex(query)}`, $options: "i" },
+    username: { $ne: "everyone", $regex: `^${escapeRegex(query)}`, $options: "i" },
     isActive: true,
     isEmailVerified: true,
     _id: { $ne: req.user!.userId },

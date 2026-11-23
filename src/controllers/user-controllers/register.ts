@@ -13,6 +13,9 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 
   const normalizedUsername = username.toLowerCase();
+  if (normalizedUsername === "everyone") {
+    throw new ConflictError("This username is reserved");
+  }
   const now = new Date();
 
   // MongoDB's TTL monitor is asynchronous. Remove an expired reservation

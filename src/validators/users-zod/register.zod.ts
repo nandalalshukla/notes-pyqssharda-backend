@@ -66,6 +66,9 @@ export const registerSchema = z
       .regex(/^[a-z0-9._]+$/, {
         message:
           "Username can only contain lowercase letters, numbers, dots and underscores",
+      })
+      .refine((username) => username !== "everyone", {
+        message: "This username is reserved",
       }),
 
     email: shardaEmailSchema,
