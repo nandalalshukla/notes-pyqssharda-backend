@@ -6,7 +6,12 @@ import { editNotes } from "../../controllers/notes-controllers/editNotes.js";
 import { searchNotes } from "../../controllers/notes-controllers/searchNotes.js";
 import { deleteNotes } from "../../controllers/notes-controllers/deleteNotes.js";
 import { fetchSpecificUserNotes } from "../../controllers/notes-controllers/specificUserNotes.js";
-import { fetchAllNotes } from "../../controllers/notes-controllers/fetchNotes.js";
+import {
+  browseNotes,
+  fetchAllNotes,
+  fetchNoteById,
+  noteFilterOptions,
+} from "../../controllers/notes-controllers/fetchNotes.js";
 
 // Validators
 import {
@@ -46,6 +51,17 @@ router.get(
 
 // Fetch all approved notes
 router.get("/all-notes", interactionLimiter, fetchAllNotes);
+
+router.get(
+  "/browse-notes",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  browseNotes,
+);
+
+router.get("/note-filters", interactionLimiter, noteFilterOptions);
+
+router.get("/note/:noteId", interactionLimiter, fetchNoteById);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════

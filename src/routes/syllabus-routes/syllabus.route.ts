@@ -6,7 +6,12 @@ import { editSyllabus } from "../../controllers/syllabus-controllers/editSyllabu
 import { uploadSyllabus } from "../../controllers/syllabus-controllers/uploadSyllabus.js";
 import { searchSyllabus } from "../../controllers/syllabus-controllers/searchSyllabus.js";
 import { fetchSpecificUserSyllabus } from "../../controllers/syllabus-controllers/specificUserSyllabus.js";
-import { fetchAllSyllabus } from "../../controllers/syllabus-controllers/fetchAllSyllabus.js";
+import {
+  browseSyllabus,
+  fetchAllSyllabus,
+  fetchSyllabusById,
+  syllabusFilterOptions,
+} from "../../controllers/syllabus-controllers/fetchAllSyllabus.js";
 
 // Validators
 import {
@@ -46,6 +51,21 @@ router.get(
 
 // Fetch all approved Syllabus
 router.get("/all-syllabus", interactionLimiter, fetchAllSyllabus);
+
+router.get(
+  "/browse-syllabus",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  browseSyllabus,
+);
+
+router.get(
+  "/syllabus-filters",
+  interactionLimiter,
+  syllabusFilterOptions,
+);
+
+router.get("/document/:syllabusId", interactionLimiter, fetchSyllabusById);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
