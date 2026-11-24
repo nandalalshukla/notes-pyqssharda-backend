@@ -50,7 +50,12 @@ router.get(
 );
 
 // Fetch all approved notes
-router.get("/all-notes", interactionLimiter, fetchAllNotes);
+router.get(
+  "/all-notes",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  fetchAllNotes,
+);
 
 router.get(
   "/browse-notes",
@@ -108,6 +113,7 @@ router.get(
   "/my-notes",
   authMiddleware,
   interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   fetchSpecificUserNotes,
 );
 

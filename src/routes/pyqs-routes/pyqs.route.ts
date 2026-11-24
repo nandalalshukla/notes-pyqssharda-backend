@@ -45,7 +45,12 @@ router.get(
 );
 
 // Fetch all approved PYQs
-router.get("/all-pyqs", interactionLimiter, fetchAllPyqs);
+router.get(
+  "/all-pyqs",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  fetchAllPyqs,
+);
 
 // Paginated, filtered browse for the PYQs library page. Separate from
 // /all-pyqs (a flat top-N) so that endpoint's existing callers are
@@ -108,6 +113,7 @@ router.get(
   "/my-pyqs",
   authMiddleware,
   interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   fetchSpecificUserPyqs,
 );
 

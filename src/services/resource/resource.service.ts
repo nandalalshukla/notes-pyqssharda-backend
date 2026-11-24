@@ -131,10 +131,12 @@ export async function listApproved<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
   limit: number,
 ) {
+  const safeLimit = Math.min(100, Math.max(1, limit));
   return config.model
     .find({ status: "approved" } as QueryFilter<TDoc>)
     .sort({ createdAt: -1 })
-    .limit(limit)
+    .select("_id title fileUrl publicId userId program courseCode courseName semester year school status createdAt updatedAt")
+    .limit(safeLimit)
     .populate("userId", "username")
     .lean();
 }
@@ -343,11 +345,61 @@ export async function search<TDoc extends BaseResourceFields>(
 export async function listForUser<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
   userId: string,
+  params: {
+    page?: number;
+    limit?: number;
+    status?: "pending" | "approved" | "rejected";
+    query?: string;
+  } = {},
 ) {
-  return config.model
-    .find({ userId } as QueryFilter<TDoc>)
-    .sort({ createdAt: -1 })
-    .lean();
+  const page = Math.max(1, params.page || 1);
+  const limit = Math.min(50, Math.max(1, params.limit || 25));
+  const filter: Record<string, unknown> = { userId };
+
+  if (params.status) filter.status = params.status;
+  if (params.query?.trim()) {
+    const regex = toRegex(params.query.trim());
+    filter.$or = [
+      { title: regex },
+      { courseName: regex },
+      { courseCode: regex },
+    ];
+  }
+
+  const [docs, total, statusRows] = await Promise.all([
+    config.model
+      .find(filter as QueryFilter<TDoc>)
+      .select(
+        "_id title fileUrl publicId userId program courseCode courseName semester year school status approvedAt rejectedAt rejectionReason createdAt updatedAt",
+      )
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    config.model.countDocuments(filter as QueryFilter<TDoc>),
+    config.model.aggregate<{ _id: ResourceStatus; n: number }>([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $group: { _id: "$status", n: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const counts = { pending: 0, approved: 0, rejected: 0, all: 0 };
+  for (const row of statusRows) {
+    counts[row._id] = row.n;
+    counts.all += row.n;
+  }
+
+  return {
+    docs,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    },
+    counts,
+  };
 }
 
 export async function create<TDoc extends BaseResourceFields>(
@@ -543,11 +595,14 @@ export async function removeAdmin<TDoc extends BaseResourceFields>(
 
 export async function listPending<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
+  limit = 100,
 ) {
+  const safeLimit = Math.min(100, Math.max(1, limit));
   return config.model
     .find({ status: "pending" } as QueryFilter<TDoc>)
     .populate("userId", "name email username")
     .sort({ createdAt: -1 })
+    .limit(safeLimit)
     .lean();
 }
 

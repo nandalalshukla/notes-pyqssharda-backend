@@ -193,7 +193,7 @@ router.delete(
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 // Fetch endpoints
-router.get("/users", interactionLimiter, fetchAllUsers);
+router.get("/users", interactionLimiter, clampPagination({ maxLimit: 100 }), fetchAllUsers);
 router.get("/users/active", interactionLimiter, fetchActiveUsers);
 router.get("/users/inactive", interactionLimiter, fetchInactiveUsers);
 
@@ -226,7 +226,7 @@ router.patch(
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 // Fetch endpoints
-router.get("/mods", interactionLimiter, fetchAllMods);
+router.get("/mods", interactionLimiter, clampPagination({ maxLimit: 100 }), fetchAllMods);
 router.get(
   "/mods/requests",
   interactionLimiter,

@@ -50,7 +50,12 @@ router.get(
 );
 
 // Fetch all approved Syllabus
-router.get("/all-syllabus", interactionLimiter, fetchAllSyllabus);
+router.get(
+  "/all-syllabus",
+  interactionLimiter,
+  clampPagination({ maxLimit: 100 }),
+  fetchAllSyllabus,
+);
 
 router.get(
   "/browse-syllabus",
@@ -110,6 +115,7 @@ router.get(
   "/my-syllabus",
   authMiddleware,
   interactionLimiter,
+  clampPagination({ maxLimit: 50 }),
   fetchSpecificUserSyllabus,
 );
 

@@ -39,7 +39,9 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
 ) {
   const fetchAll = async (req: Request, res: Response) => {
     const requestedLimit = parseInt((req.query.limit as string) ?? "10", 10);
-    const limit = Number.isNaN(requestedLimit) ? 10 : requestedLimit;
+    const limit = Number.isNaN(requestedLimit)
+      ? 10
+      : Math.min(100, Math.max(1, requestedLimit));
     const docs = await resourceService.listApproved(config, limit);
     res.status(200).json({
       success: true,
@@ -132,10 +134,27 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const fetchMine = async (req: Request, res: Response) => {
-    const docs = await resourceService.listForUser(config, req.user!.userId);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 25));
+    const status =
+      req.query.status === "pending" ||
+      req.query.status === "approved" ||
+      req.query.status === "rejected"
+        ? req.query.status
+        : undefined;
+    const query =
+      typeof req.query.query === "string" ? req.query.query : undefined;
+
+    const result = await resourceService.listForUser(
+      config,
+      req.user!.userId,
+      { page, limit, status, query },
+    );
     res.status(200).json({
       success: true,
-      [config.responseKeys.myList]: docs,
+      [config.responseKeys.myList]: result.docs,
+      pagination: result.pagination,
+      counts: result.counts,
     });
   };
 
@@ -261,7 +280,7 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   // ── Moderation ─────────────────────────────────────────────────────────
 
   const fetchPending = async (_req: Request, res: Response) => {
-    const docs = await resourceService.listPending(config);
+    const docs = await resourceService.listPending(config, 100);
     res.status(200).json({
       success: true,
       [config.responseKeys.modList]: docs,

@@ -6,12 +6,40 @@ import { NotFoundError } from "../../utils/errors/AppError.js";
 
 //fetch all users
 export const fetchAllUsers = async (req: Request, res: Response) => {
-  const users = await User.find()
-    .select(
-      "name email username role contributions isEmailVerified isActive createdAt modRequest",
-    )
-    .lean();
-  res.status(200).json({ success: true, users });
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+  const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+  const filter: Record<string, unknown> = {};
+  if (query) {
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
+    filter.$or = [{ name: regex }, { username: regex }, { email: regex }];
+  }
+  if (req.query.isActive === "true") filter.isActive = true;
+  if (req.query.isActive === "false") filter.isActive = false;
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select(
+        "name email username role contributions isEmailVerified isActive createdAt modRequest",
+      )
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+  res.status(200).json({
+    success: true,
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    },
+  });
 };
 
 export const fetchActiveUsers = async (req: Request, res: Response) => {

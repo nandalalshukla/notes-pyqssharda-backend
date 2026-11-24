@@ -9,11 +9,29 @@ import {
 
 export const fetchModRequests = async (req: Request, res: Response) => {
   try {
-    const mods = await User.find(
-      { modRequest: "pending", role: "user" },
-      "-password -__v",
-    ).lean();
-    res.status(200).json({ success: true, mods });
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const filter = { modRequest: "pending", role: "user" };
+    const [mods, total] = await Promise.all([
+      User.find(filter)
+        .select("_id name email username role isActive contributions contactNo modMotivation modRequestAt")
+        .sort({ modRequestAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+    res.status(200).json({
+      success: true,
+      mods,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    });
   } catch (error) {
     throw error;
   }
@@ -76,12 +94,31 @@ export const reviewModRequest = async (req: Request, res: Response) => {
 
 export const fetchAllMods = async (req: Request, res: Response) => {
   try {
-    const mods = await User.find({ role: "mod" })
-      .select(
-        "name email username role contributions isEmailVerified isActive createdAt",
-      )
-      .lean();
-    res.status(200).json({ success: true, mods });
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const filter = { role: "mod" };
+    const [mods, total] = await Promise.all([
+      User.find(filter)
+        .select(
+          "name email username role contributions isEmailVerified isActive createdAt",
+        )
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+    res.status(200).json({
+      success: true,
+      mods,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    });
   } catch (error) {
     throw error;
   }
