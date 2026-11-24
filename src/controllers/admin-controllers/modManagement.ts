@@ -97,7 +97,7 @@ export const fetchAllMods = async (req: Request, res: Response) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const filter = { role: "mod" };
-    const [mods, total] = await Promise.all([
+    const [mods, total, active] = await Promise.all([
       User.find(filter)
         .select(
           "name email username role contributions isEmailVerified isActive createdAt",
@@ -107,10 +107,12 @@ export const fetchAllMods = async (req: Request, res: Response) => {
         .limit(limit)
         .lean(),
       User.countDocuments(filter),
+      User.countDocuments({ ...filter, isActive: true }),
     ]);
     res.status(200).json({
       success: true,
       mods,
+      counts: { active },
       pagination: {
         page,
         limit,

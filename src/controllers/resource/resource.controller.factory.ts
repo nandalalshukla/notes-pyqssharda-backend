@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { performance } from "node:perf_hooks";
 import { User } from "../../models/users/user.model.js";
 import { BaseResourceFields } from "../../models/resource/resourceSchema.js";
 import * as resourceService from "../../services/resource/resource.service.js";
@@ -134,21 +135,59 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
   };
 
   const fetchMine = async (req: Request, res: Response) => {
+    const handlerStartedAt = performance.now();
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 25));
-    const status =
-      req.query.status === "pending" ||
-      req.query.status === "approved" ||
-      req.query.status === "rejected"
-        ? req.query.status
-        : undefined;
+    const requestedStatus = req.query.status;
+    if (
+      requestedStatus !== undefined &&
+      requestedStatus !== "all" &&
+      requestedStatus !== "pending" &&
+      requestedStatus !== "approved" &&
+      requestedStatus !== "rejected"
+    ) {
+      throw new AppError("Invalid resource status", 400);
+    }
+    const status = requestedStatus === "all" ? undefined : requestedStatus;
     const query =
       typeof req.query.query === "string" ? req.query.query : undefined;
+    if (query && query.length > 100) {
+      throw new AppError("Search query is too long", 400);
+    }
+    const allowedSorts = ["createdAt", "updatedAt", "title", "courseCode", "year"] as const;
+    const sort = typeof req.query.sort === "string" ? req.query.sort : undefined;
+    if (sort && !allowedSorts.includes(sort as (typeof allowedSorts)[number])) {
+      throw new AppError("Invalid sort field", 400);
+    }
+    if (sort === "year" && !config.hasYearField) {
+      throw new AppError("This resource cannot be sorted by year", 400);
+    }
+    const direction = req.query.direction;
+    if (direction !== undefined && direction !== "asc" && direction !== "desc") {
+      throw new AppError("Invalid sort direction", 400);
+    }
 
     const result = await resourceService.listForUser(
       config,
       req.user!.userId,
-      { page, limit, status, query },
+      {
+        page,
+        limit,
+        status,
+        query,
+        sort: sort as (typeof allowedSorts)[number] | undefined,
+        direction: direction as "asc" | "desc" | undefined,
+      },
+    );
+    const duration = (value: number) => Math.max(0, value).toFixed(1);
+    res.set(
+      "Server-Timing",
+      [
+        `mongo-page;dur=${duration(result.timings.pageQueryMs)}`,
+        `mongo-count;dur=${duration(result.timings.countQueryMs)}`,
+        `mongo-status;dur=${duration(result.timings.statusAggregationMs)}`,
+        `handler;dur=${duration(performance.now() - handlerStartedAt)}`,
+      ].join(", "),
     );
     res.status(200).json({
       success: true,
@@ -260,8 +299,12 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
     });
   };
 
-  const fetchApprovedAdmin = async (_req: Request, res: Response) => {
-    const docs = await resourceService.listApprovedAdmin(config);
+  const fetchApprovedAdmin = async (req: Request, res: Response) => {
+    const requested = Number(req.query.limit) || 100;
+    const docs = await resourceService.listApprovedAdmin(
+      config,
+      Math.min(100, Math.max(1, Math.trunc(requested))),
+    );
     res.status(200).json({
       success: true,
       [config.responseKeys.adminList]: docs,

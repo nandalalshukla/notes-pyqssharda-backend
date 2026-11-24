@@ -18,7 +18,7 @@ export const fetchAllUsers = async (req: Request, res: Response) => {
   if (req.query.isActive === "true") filter.isActive = true;
   if (req.query.isActive === "false") filter.isActive = false;
 
-  const [users, total] = await Promise.all([
+  const [users, total, active, inactive] = await Promise.all([
     User.find(filter)
       .select(
         "name email username role contributions isEmailVerified isActive createdAt modRequest",
@@ -28,10 +28,13 @@ export const fetchAllUsers = async (req: Request, res: Response) => {
       .limit(limit)
       .lean(),
     User.countDocuments(filter),
+    User.countDocuments({ isActive: true }),
+    User.countDocuments({ isActive: false }),
   ]);
   res.status(200).json({
     success: true,
     users,
+    counts: { active, inactive },
     pagination: {
       page,
       limit,

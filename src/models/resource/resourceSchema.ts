@@ -137,5 +137,9 @@ export function buildResourceSchema(extraFields: SchemaDefinition = {}) {
 export function addResourceIndexes(schema: Schema) {
   schema.index({ status: 1, createdAt: -1 });
   schema.index({ userId: 1, createdAt: -1 });
+  // The owner dashboard also filters by status while retaining a newest-
+  // first sort; keep that frequent query covered without a second in-memory
+  // sort. The unfiltered owner query uses the index above.
+  schema.index({ userId: 1, status: 1, createdAt: -1 });
   schema.index({ courseCode: 1 });
 }

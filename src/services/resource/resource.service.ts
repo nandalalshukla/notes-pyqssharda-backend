@@ -1,4 +1,5 @@
 import mongoose, { QueryFilter, Model } from "mongoose";
+import { performance } from "node:perf_hooks";
 import { BaseResourceFields } from "../../models/resource/resourceSchema.js";
 import cloudinary from "../../config/cloudinary.js";
 import { getResourceType } from "../../config/multer.js";
@@ -135,7 +136,7 @@ export async function listApproved<TDoc extends BaseResourceFields>(
   return config.model
     .find({ status: "approved" } as QueryFilter<TDoc>)
     .sort({ createdAt: -1 })
-    .select("_id title fileUrl publicId userId program courseCode courseName semester year school status createdAt updatedAt")
+    .select("_id title fileUrl userId program courseCode courseName semester year school status createdAt updatedAt")
     .limit(safeLimit)
     .populate("userId", "username")
     .lean();
@@ -156,6 +157,7 @@ export async function getPublicById<TDoc extends BaseResourceFields>(
 
   return config.model
     .findOne({ _id: id, status: "approved" } as QueryFilter<TDoc>)
+    .select("_id title fileUrl userId program courseCode courseName semester year school status createdAt updatedAt")
     .populate("userId", "username")
     .lean();
 }
@@ -213,6 +215,7 @@ export async function listPublic<TDoc extends BaseResourceFields>(
       // Newest academic year first, then by course code so a semester's
       // papers read in a predictable order rather than upload order.
       .sort({ year: -1, semester: 1, courseCode: 1 })
+      .select("_id title fileUrl userId program courseCode courseName semester year school status createdAt updatedAt")
       .skip((page - 1) * limit)
       .limit(limit)
       .populate("userId", "username")
@@ -337,6 +340,7 @@ export async function search<TDoc extends BaseResourceFields>(
   return config.model
     .find(filter as QueryFilter<TDoc>)
     .sort({ createdAt: -1 })
+    .select("_id title fileUrl program courseCode courseName semester year school status createdAt updatedAt")
     .limit(MAX_SEARCH_RESULTS)
     .populate("userId", "username")
     .lean();
@@ -350,6 +354,8 @@ export async function listForUser<TDoc extends BaseResourceFields>(
     limit?: number;
     status?: "pending" | "approved" | "rejected";
     query?: string;
+    sort?: "createdAt" | "updatedAt" | "title" | "courseCode" | "year";
+    direction?: "asc" | "desc";
   } = {},
 ) {
   const page = Math.max(1, params.page || 1);
@@ -365,23 +371,36 @@ export async function listForUser<TDoc extends BaseResourceFields>(
       { courseCode: regex },
     ];
   }
+  const sortDirection: 1 | -1 = params.direction === "asc" ? 1 : -1;
+  const sort: Record<string, 1 | -1> = {
+    [params.sort || "createdAt"]: sortDirection,
+    _id: sortDirection,
+  };
 
-  const [docs, total, statusRows] = await Promise.all([
-    config.model
+  const timed = async <T>(work: PromiseLike<T>) => {
+    const startedAt = performance.now();
+    const value = await work;
+    return { value, durationMs: performance.now() - startedAt };
+  };
+  const [pageResult, totalResult, statusResult] = await Promise.all([
+    timed(config.model
       .find(filter as QueryFilter<TDoc>)
       .select(
         "_id title fileUrl publicId userId program courseCode courseName semester year school status approvedAt rejectedAt rejectionReason createdAt updatedAt",
       )
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit)
-      .lean(),
-    config.model.countDocuments(filter as QueryFilter<TDoc>),
-    config.model.aggregate<{ _id: ResourceStatus; n: number }>([
+      .lean()),
+    timed(config.model.countDocuments(filter as QueryFilter<TDoc>)),
+    timed(config.model.aggregate<{ _id: ResourceStatus; n: number }>([
       { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $group: { _id: "$status", n: { $sum: 1 } } },
-    ]),
+    ])),
   ]);
+  const docs = pageResult.value;
+  const total = totalResult.value;
+  const statusRows = statusResult.value;
 
   const counts = { pending: 0, approved: 0, rejected: 0, all: 0 };
   for (const row of statusRows) {
@@ -399,6 +418,11 @@ export async function listForUser<TDoc extends BaseResourceFields>(
       hasMore: page * limit < total,
     },
     counts,
+    timings: {
+      pageQueryMs: pageResult.durationMs,
+      countQueryMs: totalResult.durationMs,
+      statusAggregationMs: statusResult.durationMs,
+    },
   };
 }
 
@@ -488,8 +512,15 @@ export async function remove<TDoc extends BaseResourceFields>(
 
 export async function listApprovedAdmin<TDoc extends BaseResourceFields>(
   config: ResourceConfig<TDoc>,
+  limit = 100,
 ) {
-  return config.model.find({ status: "approved" } as QueryFilter<TDoc>).lean();
+  return config.model
+    .find({ status: "approved" } as QueryFilter<TDoc>)
+    .select("_id title fileUrl publicId userId program courseCode courseName semester year school status createdAt updatedAt")
+    .sort({ createdAt: -1 })
+    .limit(Math.min(100, Math.max(1, limit)))
+    .populate("userId", "username name email")
+    .lean();
 }
 
 export type ResourceStatus = BaseResourceFields["status"];
@@ -534,6 +565,7 @@ export async function listForAdmin<TDoc extends BaseResourceFields>(
   const [docs, total] = await Promise.all([
     config.model
       .find(filter as QueryFilter<TDoc>)
+      .select("_id title fileUrl publicId userId program courseCode courseName semester year school status rejectionReason approvedAt rejectedAt createdAt updatedAt")
       // Newest first: an admin is nearly always here to deal with what
       // arrived most recently.
       .sort({ createdAt: -1 })
@@ -600,6 +632,7 @@ export async function listPending<TDoc extends BaseResourceFields>(
   const safeLimit = Math.min(100, Math.max(1, limit));
   return config.model
     .find({ status: "pending" } as QueryFilter<TDoc>)
+    .select("_id title fileUrl userId program courseCode courseName semester year school status rejectionReason createdAt updatedAt")
     .populate("userId", "name email username")
     .sort({ createdAt: -1 })
     .limit(safeLimit)

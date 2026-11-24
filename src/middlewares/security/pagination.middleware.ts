@@ -6,21 +6,19 @@ type PaginationOptions = {
 
 export const clampPagination = ({ maxLimit = 50 }: PaginationOptions = {}) => {
   return (req: Request, _res: Response, next: NextFunction) => {
-    const pageValue = req.query.page;
-    const limitValue = req.query.limit;
+    const asPositiveInteger = (value: unknown, fallback: number) => {
+      if (typeof value !== "string" || !/^\d+$/.test(value)) return fallback;
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+    };
 
-    const page = typeof pageValue === "string" ? Number(pageValue) : undefined;
-    const limit =
-      typeof limitValue === "string" ? Number(limitValue) : undefined;
-
-    if (Number.isFinite(page) && page !== undefined) {
-      req.query.page = String(Math.max(1, page));
-    }
-
-    if (Number.isFinite(limit) && limit !== undefined) {
-      const clamped = Math.min(maxLimit, Math.max(1, limit));
-      req.query.limit = String(clamped);
-    }
+    const page = asPositiveInteger(req.query.page, 1);
+    // Keep skip arithmetic safe and reject pathological offsets that can
+    // otherwise force MongoDB to walk millions of index entries.
+    const safePage = Math.min(page, 1_000_000);
+    const limit = Math.min(maxLimit, asPositiveInteger(req.query.limit, 25));
+    req.query.page = String(safePage);
+    req.query.limit = String(limit);
 
     next();
   };
