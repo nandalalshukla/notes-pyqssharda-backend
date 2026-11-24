@@ -4,6 +4,7 @@ import type { Request, Response, NextFunction } from "express";
 import { clampPagination } from "../src/middlewares/security/pagination.middleware.js";
 import { listForUser, type ResourceConfig } from "../src/services/resource/resource.service.js";
 import type { BaseResourceFields } from "../src/models/resource/resourceSchema.js";
+import { mergeResourcePage } from "../src/services/resource/mergeResourcePages.js";
 
 function resourceConfig(seed: {
   docs?: unknown[];
@@ -62,10 +63,11 @@ test("pagination safely normalizes negative, fractional, and malformed values", 
 });
 
 test("pagination bounds offsets to a safe maximum", () => {
-  assert.deepEqual(run({ page: "900000000", limit: "10" }), {
-    page: "1000000",
-    limit: "10",
-  });
+  const request = { query: { page: "4002", limit: "25" } } as unknown as Request;
+  let error: unknown;
+  clampPagination({ maxLimit: 50 })(request, {} as Response, (value) => { error = value; });
+  assert.equal(error instanceof Error, true);
+  assert.equal((error as { statusCode?: number }).statusCode, 400);
 });
 
 test("owner resource pages use the exact owner filter and bounded page query", async () => {
@@ -112,4 +114,23 @@ test("owner resource service keeps empty results as a valid paginated response",
     hasMore: false,
   });
   assert.deepEqual(result.counts, { pending: 0, approved: 0, rejected: 0, all: 0 });
+});
+
+test("combined resource pages use global order and stable cross-type ties", () => {
+  const notes = [
+    { _id: "n2", resourceType: "note", createdAt: new Date("2025-01-02") },
+    { _id: "n1", resourceType: "note", createdAt: new Date("2025-01-01") },
+  ];
+  const pyqs = [
+    { _id: "p1", resourceType: "pyq", createdAt: new Date("2025-01-02") },
+    { _id: "p2", resourceType: "pyq", createdAt: new Date("2025-01-03") },
+  ];
+  const syllabuses = [
+    { _id: "s1", resourceType: "syllabus", createdAt: new Date("2025-01-02") },
+  ];
+
+  const secondPage = mergeResourcePage([notes, pyqs, syllabuses], 2, 2, "createdAt", -1);
+  assert.deepEqual(secondPage.map((row) => row._id), ["p1", "s1"]);
+  const ascendingPage = mergeResourcePage([notes, pyqs, syllabuses], 1, 2, "createdAt", 1);
+  assert.deepEqual(ascendingPage.map((row) => row._id), ["n1", "n2"]);
 });

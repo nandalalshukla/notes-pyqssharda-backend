@@ -149,6 +149,9 @@ export function createResourceControllers<TDoc extends BaseResourceFields>(
       throw new AppError("Invalid resource status", 400);
     }
     const status = requestedStatus === "all" ? undefined : requestedStatus;
+    if (req.query.query !== undefined && typeof req.query.query !== "string") {
+      throw new AppError("Search query must be a string", 400);
+    }
     const query =
       typeof req.query.query === "string" ? req.query.query : undefined;
     if (query && query.length > 100) {

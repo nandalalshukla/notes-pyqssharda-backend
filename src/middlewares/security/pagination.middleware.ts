@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { AppError } from "../../utils/errors/AppError.js";
 
 type PaginationOptions = {
   maxLimit?: number;
@@ -13,11 +14,16 @@ export const clampPagination = ({ maxLimit = 50 }: PaginationOptions = {}) => {
     };
 
     const page = asPositiveInteger(req.query.page, 1);
-    // Keep skip arithmetic safe and reject pathological offsets that can
-    // otherwise force MongoDB to walk millions of index entries.
-    const safePage = Math.min(page, 1_000_000);
     const limit = Math.min(maxLimit, asPositiveInteger(req.query.limit, 25));
-    req.query.page = String(safePage);
+    // Offset pagination is intentionally capped. Reject an offset beyond
+    // this bound instead of silently returning a different page or asking
+    // MongoDB to walk an unbounded number of index entries.
+    const maxPage = Math.floor(100_000 / limit) + 1;
+    if (page > maxPage) {
+      next(new AppError(`Page exceeds the supported offset of ${100_000} rows`, 400));
+      return;
+    }
+    req.query.page = String(page);
     req.query.limit = String(limit);
 
     next();
