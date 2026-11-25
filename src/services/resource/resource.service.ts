@@ -100,6 +100,35 @@ function courseCodePattern(input: string): RegExp {
   return new RegExp(escapeRegex(cleaned || input), "i");
 }
 
+/**
+ * Literal, case-insensitive patterns for a word with at most one typo.
+ *
+ * Generating bounded variants keeps regex work predictable and avoids
+ * accepting fuzzy matches for short words, where they would be noisy.
+ */
+function fuzzyWordPatterns(word: string): RegExp[] {
+  const patterns = new Set<string>([escapeRegex(word)]);
+  if (word.length >= 5 && word.length <= 24) {
+    for (let index = 0; index < word.length; index += 1) {
+      const before = word.slice(0, index);
+      const after = word.slice(index + 1);
+      // Query contains one extra character, or one character was mistyped.
+      patterns.add(escapeRegex(before + after));
+      patterns.add(`${escapeRegex(before)}.${escapeRegex(after)}`);
+      // Stored title contains one extra character.
+      patterns.add(`${escapeRegex(word.slice(0, index))}.${escapeRegex(word.slice(index))}`);
+    }
+  }
+  return [...patterns].map((pattern) => new RegExp(pattern, "i"));
+}
+
+function queryWordGroups(query: string): RegExp[][] {
+  return (query.slice(0, 100).match(/[\p{L}\p{N}]+/gu) ?? [])
+    .filter((word) => word.length >= 2)
+    .slice(0, 8)
+    .map((word) => fuzzyWordPatterns(word));
+}
+
 async function destroyAsset(
   publicId: string,
   resourceType: BaseResourceFields["resourceType"],
@@ -191,23 +220,31 @@ export async function listPublic<TDoc extends BaseResourceFields>(
   const limit = Math.min(100, Math.max(1, params.limit || 24));
 
   const filter: Record<string, unknown> = { status: "approved" };
-  if (params.program) filter.program = params.program;
-  if (params.school) filter.school = params.school;
-  if (params.year) filter.year = params.year;
+  const anyMatch: Record<string, unknown>[] = [];
+  const wordGroups = params.query ? queryWordGroups(params.query) : [];
+
+  // Every meaningful word in the title search must be present, but each
+  // word may match any searchable field and tolerate one character typo.
+  if (wordGroups.length) {
+    anyMatch.push({
+      $and: wordGroups.map((patterns) => ({
+        $or: patterns.flatMap((pattern) => [
+          { courseName: pattern },
+          { courseCode: pattern },
+          { title: pattern },
+        ]),
+      })),
+    });
+  }
+  if (params.program) anyMatch.push({ program: toRegex(params.program) });
+  if (params.school) anyMatch.push({ school: toRegex(params.school) });
+  if (params.year) anyMatch.push({ year: toRegex(params.year) });
   if (params.semester && !Number.isNaN(Number(params.semester))) {
-    filter.semester = Number(params.semester);
+    anyMatch.push({ semester: Number(params.semester) });
   }
-  if (params.courseCode) {
-    filter.courseCode = courseCodePattern(params.courseCode);
-  }
-  if (params.query) {
-    const regex = toRegex(params.query);
-    filter.$or = [
-      { courseName: regex },
-      { courseCode: regex },
-      { title: regex },
-    ];
-  }
+  if (params.courseCode) anyMatch.push({ courseCode: courseCodePattern(params.courseCode) });
+
+  if (anyMatch.length) filter.$or = anyMatch;
 
   const [docs, total] = await Promise.all([
     config.model
