@@ -1,0 +1,50 @@
+name: Audit PYQ PDF metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/audit-pyq-pdf-metadata.ts"
+      - ".github/workflows/audit-pyq-pdfs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pyq-pdf-metadata-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Read PDFs and correct explicit semester mismatches
+        run: pnpm exec tsx scripts/audit-pyq-pdf-metadata.ts --apply --output output/pyq-pdf-metadata-audit.jsonl
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+
+      - name: Save audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyq-pdf-metadata-audit
+          path: output/pyq-pdf-metadata-audit.jsonl
+          if-no-files-found: warn
+          retention-days: 30

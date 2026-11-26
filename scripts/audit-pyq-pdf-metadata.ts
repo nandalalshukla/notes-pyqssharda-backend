@@ -45,6 +45,10 @@ const outputPath = resolve(argIndex >= 0 && process.argv[argIndex + 1]
   : "output/pyq-pdf-metadata-audit.jsonl");
 const limitIndex = process.argv.indexOf("--limit");
 const limit = limitIndex >= 0 ? Number(process.argv[limitIndex + 1]) : undefined;
+const retryReportIndex = process.argv.indexOf("--retry-report");
+const retryReportPath = retryReportIndex >= 0 && process.argv[retryReportIndex + 1]
+  ? resolve(process.argv[retryReportIndex + 1])
+  : undefined;
 const CONCURRENCY = 6;
 const PAGE_LIMIT = 2;
 const FETCH_TIMEOUT_MS = 45_000;
@@ -64,6 +68,9 @@ function romanToNumber(raw: string): number | null {
 }
 
 function semesterMatches(text: string): { values: number[]; evidence: string[] } {
+  const normalized = text
+    .replace(/S\s*E\s*M\s*E\s*S\s*T\s*E\s*R/gi, "SEMESTER")
+    .replace(/(\d)\s+(?=\d)/g, "$1");
   const patterns = [
     /\bSEMESTER\s*(?:NO\.?\s*)?[:.#-]?\s*(\d{1,2}|I{1,3}|IV|V|VI{0,3}|IX|X|XI|XII)\b/gi,
     /\b(\d{1,2}|I{1,3}|IV|V|VI{0,3}|IX|X|XI|XII)\s*(?:ST|ND|RD|TH)?\s+SEMESTER\b/gi,
@@ -71,7 +78,7 @@ function semesterMatches(text: string): { values: number[]; evidence: string[] }
   ];
   const found: { value: number; evidence: string }[] = [];
   for (const pattern of patterns) {
-    for (const match of text.matchAll(pattern)) {
+    for (const match of normalized.matchAll(pattern)) {
       const value = romanToNumber(match[1]);
       if (value !== null && value >= 1 && value <= 12) {
         found.push({ value, evidence: match[0].replace(/\s+/g, " ").trim() });
@@ -123,6 +130,21 @@ async function readCompletedIds(path: string): Promise<Set<string>> {
   return ids;
 }
 
+async function readRetryIds(path: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  if (!existsSync(path)) throw new Error(`Retry report not found: ${path}`);
+  const rl = createInterface({ input: createReadStream(path), crlfDelay: Infinity });
+  for await (const line of rl) {
+    try {
+      const row = JSON.parse(line) as AuditRow;
+      if (row.id && row.status === "no-explicit-semester") ids.add(row.id);
+    } catch {
+      // Ignore a final partial line left by an interrupted process.
+    }
+  }
+  return ids;
+}
+
 async function main() {
   await mkdir(dirname(outputPath), { recursive: true });
   const completed = await readCompletedIds(outputPath);
@@ -134,8 +156,12 @@ async function main() {
   const mongo = mongoose.connection;
   await mongoose.connect(mongoUri, { dbName: mongoDbName });
   const collection = mongo.collection<PyqRecord>("pyqs");
-  const total = await collection.countDocuments();
-  const pending = collection.find({}, {
+  const retryIds = retryReportPath ? await readRetryIds(retryReportPath) : null;
+  const total = retryIds ? retryIds.size : await collection.countDocuments();
+  const filter = retryIds
+    ? { _id: { $in: [...retryIds].map((id) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+  const pending = collection.find(filter, {
     projection: { _id: 1, fileUrl: 1, semester: 1, title: 1, courseCode: 1 },
     sort: { _id: 1 },
   }).limit(Number.isInteger(limit) && (limit ?? 0) > 0 ? limit! : 0);
@@ -212,4 +238,3 @@ main().catch(async (error) => {
   await mongoose.disconnect().catch(() => {});
   process.exitCode = 1;
 });
-

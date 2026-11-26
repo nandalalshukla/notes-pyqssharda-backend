@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Request, Response, NextFunction } from "express";
 import { clampPagination } from "../src/middlewares/security/pagination.middleware.js";
-import { listForUser, type ResourceConfig } from "../src/services/resource/resource.service.js";
+import { listForUser, listPublic, type ResourceConfig } from "../src/services/resource/resource.service.js";
 import type { BaseResourceFields } from "../src/models/resource/resourceSchema.js";
 import { mergeResourcePage } from "../src/services/resource/mergeResourcePages.js";
 
@@ -17,6 +17,7 @@ function resourceConfig(seed: {
     sort(value: unknown) { calls.sort = value; return this; },
     skip(value: number) { calls.skip = value; return this; },
     limit(value: number) { calls.limit = value; return this; },
+    populate() { return this; },
     lean: async () => seed.docs ?? [],
   };
   const model = {
@@ -38,6 +39,32 @@ function run(query: Record<string, unknown>, maxLimit = 50) {
   assert.equal(called, true);
   return request.query as Record<string, unknown>;
 }
+
+test("public browse requires all selected filters and all search words for both rows and count", async () => {
+  const { config, calls } = resourceConfig({});
+  await listPublic(config, {
+    query: "cloud computing", semester: "5", program: "B.Tech CS",
+    year: "2024-25", courseCode: "cse021",
+  });
+  const filter = calls.filter as {
+    $and: { $or: { courseName?: RegExp }[] }[];
+    courseCode: RegExp;
+  };
+  assert.deepEqual(filter, {
+    status: "approved", semester: 5, program: "B.Tech CS", year: "2024-25",
+    courseCode: filter.courseCode, $and: filter.$and,
+  });
+  assert.deepEqual(calls.countFilter, filter);
+  assert.ok(filter.courseCode.test("CSE 021"));
+  assert.ok(filter.courseCode.test("CSE-021"));
+  assert.equal(filter.courseCode.test("CSE 022"), false);
+  const matchesTitle = (title: string) => filter.$and.every(
+    ({ $or }) => $or.some(({ courseName }) => courseName?.test(title)),
+  );
+  assert.ok(matchesTitle("Introduction to Cloud Computing"));
+  assert.equal(matchesTitle("Distributed Computing"), false);
+  assert.equal(matchesTitle("Cloud Security"), false);
+});
 
 test("pagination applies defaults and clamps oversized values", () => {
   assert.deepEqual(run({}), { page: "1", limit: "25" });

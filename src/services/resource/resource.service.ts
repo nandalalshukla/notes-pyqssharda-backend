@@ -86,11 +86,8 @@ function courseCodePattern(input: string): RegExp {
 
   if (split) {
     const [, letters, digits] = split;
-    // "\\s*" — a literal backslash-s reaching the RegExp, not the string
-    // escape "\s" (which JavaScript would collapse to a plain "s" and quietly
-    // turn "CSE 252" into a search for "CSEs252").
     return new RegExp(
-      "^" + escapeRegex(letters) + "\\s*" + escapeRegex(digits),
+      "^" + escapeRegex(letters) + "[\\s-]*" + escapeRegex(digits),
       "i",
     );
   }
@@ -106,27 +103,24 @@ function courseCodePattern(input: string): RegExp {
  * Generating bounded variants keeps regex work predictable and avoids
  * accepting fuzzy matches for short words, where they would be noisy.
  */
-function fuzzyWordPatterns(word: string): RegExp[] {
-  const patterns = new Set<string>([escapeRegex(word)]);
-  if (word.length >= 5 && word.length <= 24) {
-    for (let index = 0; index < word.length; index += 1) {
-      const before = word.slice(0, index);
-      const after = word.slice(index + 1);
-      // Query contains one extra character, or one character was mistyped.
-      patterns.add(escapeRegex(before + after));
-      patterns.add(`${escapeRegex(before)}.${escapeRegex(after)}`);
-      // Stored title contains one extra character.
-      patterns.add(`${escapeRegex(word.slice(0, index))}.${escapeRegex(word.slice(index))}`);
-    }
+function searchWordPattern(word: string): RegExp {
+  const literal = escapeRegex(word);
+  if (word.length === 1) return new RegExp("\\b" + literal + "\\b", "i");
+  if (word.length < 5 || word.length > 24 || !/^[a-z]+$/i.test(word)) {
+    return toRegex(word);
   }
-  return [...patterns].map((pattern) => new RegExp(pattern, "i"));
-}
 
-function queryWordGroups(query: string): RegExp[][] {
-  return (query.slice(0, 100).match(/[\p{L}\p{N}]+/gu) ?? [])
-    .filter((word) => word.length >= 2)
-    .slice(0, 8)
-    .map((word) => fuzzyWordPatterns(word));
+  // Partial words are useful while typing. A typo, however, must match an
+  // entire word so that deleting a letter cannot match an unrelated fragment.
+  const variants = new Set<string>();
+  for (let index = 0; index < word.length; index += 1) {
+    const before = word.slice(0, index);
+    const after = word.slice(index + 1);
+    variants.add(before + after);
+    variants.add(before + "[a-z]" + after);
+    variants.add(before + "[a-z]" + word.slice(index));
+  }
+  return new RegExp(literal + "|\\b(?:" + [...variants].join("|") + ")\\b", "i");
 }
 
 async function destroyAsset(
@@ -220,38 +214,38 @@ export async function listPublic<TDoc extends BaseResourceFields>(
   const limit = Math.min(100, Math.max(1, params.limit || 24));
 
   const filter: Record<string, unknown> = { status: "approved" };
-  const anyMatch: Record<string, unknown>[] = [];
-  const wordGroups = params.query ? queryWordGroups(params.query) : [];
+  if (params.program) filter.program = params.program;
+  if (params.school) filter.school = params.school;
+  if (params.year) filter.year = params.year;
+  if (params.semester) {
+    const semester = Number(params.semester);
+    if (!Number.isInteger(semester)) throw new AppError("Invalid semester", 400);
+    filter.semester = semester;
+  }
+  if (params.courseCode) filter.courseCode = courseCodePattern(params.courseCode);
 
-  // Every meaningful word in the title search must be present, but each
-  // word may match any searchable field and tolerate one character typo.
-  if (wordGroups.length) {
-    anyMatch.push({
-      $and: wordGroups.map((patterns) => ({
-        $or: patterns.flatMap((pattern) => [
+  const query = params.query?.trim();
+  if (query) {
+    if (query.length > 100) throw new AppError("Search query is too long", 400);
+    const words = query.match(/[\p{L}\p{N}]+/gu) ?? [query];
+    filter.$and = [...new Set(words)].map((word) => {
+      const pattern = searchWordPattern(word);
+      return {
+        $or: [
           { courseName: pattern },
-          { courseCode: pattern },
           { title: pattern },
-        ]),
-      })),
+          { courseCode: /^[a-z]+\d+$/i.test(word) ? courseCodePattern(word) : toRegex(word) },
+        ],
+      };
     });
   }
-  if (params.program) anyMatch.push({ program: toRegex(params.program) });
-  if (params.school) anyMatch.push({ school: toRegex(params.school) });
-  if (params.year) anyMatch.push({ year: toRegex(params.year) });
-  if (params.semester && !Number.isNaN(Number(params.semester))) {
-    anyMatch.push({ semester: Number(params.semester) });
-  }
-  if (params.courseCode) anyMatch.push({ courseCode: courseCodePattern(params.courseCode) });
-
-  if (anyMatch.length) filter.$or = anyMatch;
 
   const [docs, total] = await Promise.all([
     config.model
       .find(filter as QueryFilter<TDoc>)
       // Newest academic year first, then by course code so a semester's
       // papers read in a predictable order rather than upload order.
-      .sort({ year: -1, semester: 1, courseCode: 1 })
+      .sort({ year: -1, semester: 1, courseCode: 1, _id: 1 })
       .select("_id title fileUrl userId program courseCode courseName semester year school status createdAt updatedAt")
       .skip((page - 1) * limit)
       .limit(limit)
