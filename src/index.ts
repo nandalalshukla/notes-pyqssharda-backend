@@ -43,6 +43,12 @@ app.use(
 
 // CORS must be first to handle preflight requests
 app.use(corsConfig);
+// JSON endpoints and the API host's landing page are not search landing pages.
+// Keep them crawlable so engines can actually read the noindex directive.
+app.use((_req, res, next) => {
+  res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  next();
+});
 app.options("/{*path}", corsConfig);
 
 // Body parsing middleware
